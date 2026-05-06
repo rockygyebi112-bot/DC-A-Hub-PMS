@@ -1,0 +1,245 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* SRSF Brand Colors - Green */
+  --color-srsf-green-50: #f0fbe8;
+  --color-srsf-green-100: #ddf5cc;
+  --color-srsf-green-200: #bbeb99;
+  --color-srsf-green-300: #8fdb5c;
+  --color-srsf-green-400: #6bcc33;
+  --color-srsf-green-500: #5BBF3A;
+  --color-srsf-green-600: #3d9922;
+  --color-srsf-green-700: #2f7319;
+  --color-srsf-green-800: #285c18;
+  --color-srsf-green-900: #244d19;
+  --color-srsf-green-950: #0f2b08;
+
+  /* SRSF Brand Colors - Purple */
+  --color-srsf-purple-50: #f5f1f9;
+  --color-srsf-purple-100: #ebe4f3;
+  --color-srsf-purple-200: #d4c5e5;
+  --color-srsf-purple-300: #b89cd3;
+  --color-srsf-purple-400: #9a6fbd;
+  --color-srsf-purple-500: #7f4fa6;
+  --color-srsf-purple-600: #6B2D7B;
+  --color-srsf-purple-700: #5a2b72;
+  --color-srsf-purple-800: #4b265e;
+  --color-srsf-purple-900: #3f224e;
+  --color-srsf-purple-950: #250e32;
+}
+
+:root {
+  --background: hsl(0 0% 97%);
+  --foreground: hsl(260 20% 16%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(260 20% 16%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(260 20% 16%);
+  --primary: hsl(104 53% 49%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(284 46% 33%);
+  --secondary-foreground: hsl(0 0% 100%);
+  --muted: hsl(260 10% 93%);
+  --muted-foreground: hsl(260 10% 45%);
+  --accent: hsl(104 53% 93%);
+  --accent-foreground: hsl(104 53% 25%);
+  --destructive: hsl(0 84% 60%);
+  --border: hsl(260 10% 88%);
+  --input: hsl(260 10% 88%);
+  --ring: hsl(104 53% 49%);
+  --chart-1: hsl(104 53% 49%);
+  --chart-2: hsl(284 46% 33%);
+  --chart-3: hsl(104 53% 35%);
+  --chart-4: hsl(284 46% 45%);
+  --chart-5: hsl(104 30% 60%);
+  --radius: 0.5rem;
+  --sidebar: hsl(0 0% 100%);
+  --sidebar-foreground: hsl(260 20% 16%);
+  --sidebar-primary: hsl(104 53% 49%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(104 53% 93%);
+  --sidebar-accent-foreground: hsl(104 53% 25%);
+  --sidebar-border: hsl(260 10% 88%);
+  --sidebar-ring: hsl(104 53% 49%);
+  --activity-sub-indent: 38px;
+  --milestone-header-h: 44px;
+  --progress-bar-h: 5px;
+  --priority-flag-w: 5px;
+  --priority-flag-h: 12px;
+  --mobile-bottom-nav-h: 56px;
+}
+
+.dark {
+  --background: hsl(240 12% 9%);
+  --foreground: hsl(220 15% 92%);
+  --card: hsl(240 11% 13%);
+  --card-foreground: hsl(220 15% 92%);
+  --popover: hsl(240 11% 15%);
+  --popover-foreground: hsl(220 15% 92%);
+  --primary: hsl(104 55% 52%);
+  --primary-foreground: hsl(240 12% 9%);
+  --secondary: hsl(284 46% 55%);
+  --secondary-foreground: hsl(0 0% 100%);
+  --muted: hsl(240 10% 18%);
+  --muted-foreground: hsl(220 10% 58%);
+  --accent: hsl(104 30% 22%);
+  --accent-foreground: hsl(104 53% 85%);
+  --destructive: hsl(0 72% 60%);
+  --border: hsl(240 10% 22%);
+  --input: hsl(240 10% 22%);
+  --ring: hsl(104 55% 52%);
+  --chart-1: hsl(104 55% 52%);
+  --chart-2: hsl(284 46% 60%);
+  --chart-3: hsl(104 53% 70%);
+  --chart-4: hsl(284 46% 75%);
+  --chart-5: hsl(104 30% 50%);
+  --chart-bg: hsl(240 11% 13%);
+  --chart-text: hsl(220 15% 75%);
+  --chart-axis: hsl(220 10% 45%);
+  --chart-grid: hsl(240 10% 22%);
+  --sidebar: hsl(240 12% 9%);
+  --sidebar-foreground: hsl(220 15% 92%);
+  --sidebar-primary: hsl(104 55% 52%);
+  --sidebar-primary-foreground: hsl(240 12% 9%);
+  --sidebar-accent: hsl(104 30% 22%);
+  --sidebar-accent-foreground: hsl(104 53% 85%);
+  --sidebar-border: hsl(240 10% 22%);
+  --sidebar-ring: hsl(104 55% 52%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  html {
+    @apply font-sans;
+  }
+
+  /* Smooth scrolling for the entire page */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Consistent focus states */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  [role="button"]:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline-offset: 2px;
+  }
+
+  /* Subtle scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(260 10% 70%);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(260 10% 60%);
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: hsl(260 10% 30%);
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: hsl(260 10% 40%);
+  }
+}
+
+@layer utilities {
+  /* Smooth transitions for interactive elements */
+  .transition-smooth {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .transition-colors-smooth {
+    transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .transition-transform-smooth {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .transition-shadow-smooth {
+    transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Hover lift effect for cards */
+  .hover-lift {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Standardized shadows */
+  .shadow-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  }
+  .shadow-card-hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  }
+}

@@ -4,7 +4,7 @@ import { decideRedirect } from '@/lib/auth/decide-redirect';
 import type { Database } from '@/lib/supabase/types';
 import type { AppRole } from '@/lib/auth/require-role';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient<Database>(

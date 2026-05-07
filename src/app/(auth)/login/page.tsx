@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
-import Link from "next/link";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -24,7 +23,6 @@ function LoginForm() {
 
   const errorParam = searchParams.get("error");
   const errorMessages: Record<string, string> = {
-    inactive: "Your account has been deactivated. Contact an administrator.",
     auth: "Authentication failed. Please try again.",
   };
 
@@ -45,52 +43,23 @@ function LoginForm() {
       return;
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (user) {
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("status, role_id")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile) {
-        router.push("/dashboard");
-        return;
-      }
-
-      if (profile.status === "pending" || profile.status === "rejected") {
-        router.push("/pending");
-        return;
-      }
-
-      if (profile.status === "inactive") {
-        await supabase.auth.signOut();
-        setError("Your account has been deactivated. Contact an administrator.");
-        setLoading(false);
-        return;
-      }
-    }
-
-    router.push("/dashboard");
+    router.push("/");
   }
 
   return (
     <div className="relative bg-black/90 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
-      <div className="h-[3px] bg-gradient-to-r from-srsf-green-500 to-srsf-green-400" />
+      <div className="h-[3px] bg-gradient-to-r from-sky-500 to-cyan-400" />
       <div className="flex items-center gap-3 px-6 sm:px-8 pt-6">
         <Image
-          src="/srsf-logo.png"
-          alt="SRSF"
+          src="/logo.png"
+          alt="DC&A Hub"
           width={44}
           height={44}
           className="rounded-lg"
           priority
         />
         <div>
-          <h1 className="text-lg font-bold tracking-tight text-white">Springboard MIS</h1>
+          <h1 className="text-lg font-bold tracking-tight text-white">DC&A Hub PMS</h1>
           <p className="text-[11px] text-white/50">Sign in to continue</p>
         </div>
       </div>
@@ -106,7 +75,6 @@ function LoginForm() {
             <Input
               id="email"
               type="email"
-
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -136,17 +104,11 @@ function LoginForm() {
         <div className="flex flex-col gap-4 px-6 sm:px-8 pt-5 pb-8">
           <Button
             type="submit"
-            className="w-full h-10 bg-gradient-to-r from-srsf-green-500 to-srsf-green-400 hover:from-srsf-green-600 hover:to-srsf-green-500 font-semibold text-white shadow-[0_4px_16px_rgba(91,191,58,0.4)] transition-all"
+            className="w-full h-10 bg-gradient-to-r from-sky-500 to-cyan-400 hover:from-sky-600 hover:to-cyan-500 font-semibold text-white shadow-[0_4px_16px_rgba(14,165,233,0.4)] transition-all"
             disabled={loading}
           >
             {loading ? "Signing in..." : "Sign in"}
           </Button>
-          <p className="text-xs text-white/50 text-center">
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-srsf-purple-400 font-medium hover:underline">
-              Request an account
-            </Link>
-          </p>
         </div>
       </form>
     </div>

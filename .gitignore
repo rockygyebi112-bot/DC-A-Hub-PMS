@@ -44,6 +44,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Supabase CLI cache
+/supabase/.temp/
+
 # PWA generated files
 /public/sw.js
 /public/sw.js.map

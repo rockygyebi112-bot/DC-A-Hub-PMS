@@ -189,6 +189,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          archived_at: string | null
           contact_email: string | null
           created_at: string
           id: string
@@ -197,6 +198,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           contact_email?: string | null
           created_at?: string
           id?: string
@@ -205,6 +207,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           contact_email?: string | null
           created_at?: string
           id?: string
@@ -265,6 +268,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          is_active: boolean
           role: string
           updated_at: string
           user_id: string
@@ -275,6 +279,7 @@ export type Database = {
           email: string
           full_name: string
           id?: string
+          is_active?: boolean
           role: string
           updated_at?: string
           user_id: string
@@ -285,6 +290,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          is_active?: boolean
           role?: string
           updated_at?: string
           user_id?: string
@@ -325,6 +331,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          archived_at: string | null
           client_id: string
           code: string
           cover_image_url: string | null
@@ -338,6 +345,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           client_id: string
           code: string
           cover_image_url?: string | null
@@ -351,6 +359,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           client_id?: string
           code?: string
           cover_image_url?: string | null

@@ -1,5 +1,9 @@
+import { config } from 'dotenv';
+import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../src/lib/supabase/types';
+
+config({ path: path.resolve(__dirname, '..', '.env.local') });
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY!;

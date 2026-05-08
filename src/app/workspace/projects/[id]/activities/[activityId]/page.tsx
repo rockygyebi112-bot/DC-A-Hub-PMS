@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { FileText, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -41,13 +40,9 @@ export default async function WorkspaceActivityPage({
       <PageHeader
         title={activity.name}
         subtitle={`${activity.phase?.project?.name ?? "Project"} / ${activity.phase?.name ?? "Phase"}`}
+        backFallbackHref={`/workspace/projects/${id}`}
         action={
-          <div className="flex flex-wrap items-center gap-2">
-            <ActivityStatus status={activity.status} />
-            <Button variant="ghost" size="sm" render={<Link href={`/workspace/projects/${id}`} />}>
-              Back
-            </Button>
-          </div>
+          <ActivityStatus status={activity.status} />
         }
       />
 
@@ -81,7 +76,7 @@ export default async function WorkspaceActivityPage({
                   className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
                 >
                   <option value="not_started">Not started</option>
-                  <option value="in_progress">In progress</option>
+                  <option value="in_progress">Ongoing</option>
                   <option value="done">Done</option>
                 </select>
               </label>
@@ -161,4 +156,3 @@ export default async function WorkspaceActivityPage({
     </main>
   );
 }
-

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -47,11 +46,7 @@ export default async function UserDetailPage({
       <PageHeader
         title={user.full_name}
         subtitle={user.email}
-        action={
-          <Button variant="ghost" size="sm" render={<Link href="/admin/users" />}>
-            Back to users
-          </Button>
-        }
+        backFallbackHref="/admin/users"
       />
 
       <div className="flex items-center gap-4 rounded-[var(--admin-card-radius)] border bg-card p-5 shadow-sm">

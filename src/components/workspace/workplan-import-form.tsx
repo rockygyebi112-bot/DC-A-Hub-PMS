@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { FileSpreadsheet, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { importWorkplanSheet } from "@/lib/workspace/actions";
 
 export function WorkplanImportForm({ projectId }: { projectId: string }) {
+  const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState("");
   const [pending, startTransition] = useTransition();
@@ -27,6 +29,7 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
       );
       if (fileRef.current) fileRef.current.value = "";
       setFileName("");
+      router.refresh();
     });
   }
 

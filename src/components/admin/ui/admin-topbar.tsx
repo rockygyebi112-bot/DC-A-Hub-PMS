@@ -10,9 +10,11 @@ export function AdminTopbar({
   email: string;
 }) {
   return (
-    <header className="h-14 border-b flex items-center justify-between px-4 md:px-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20">
-      <Breadcrumbs />
-      <div className="flex items-center gap-1">
+    <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
+      <div className="min-w-0 overflow-hidden">
+        <Breadcrumbs />
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
         <ThemeToggle />
         <UserDropdown name={name} email={email} />
       </div>

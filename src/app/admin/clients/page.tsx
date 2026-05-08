@@ -97,7 +97,7 @@ export default async function ClientsPage({
                     <TableCell>{c.contact_email ?? "-"}</TableCell>
                     <TableCell>{c.project_count}</TableCell>
                     <TableCell>
-                      <StatusPill status={c.archived_at ? "archived" : "active"} />
+                      <StatusPill status={c.archived_at ? "archived" : "active-user"} />
                     </TableCell>
                     <TableCell className="text-right">
                       <Button

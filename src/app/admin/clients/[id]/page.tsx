@@ -1,11 +1,14 @@
 import Link from "next/link";
+import { Eye, FolderKanban, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ClientForm } from "@/components/admin/forms/client-form";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
+import { ProjectProgress } from "@/components/workspace/project-progress";
 import { archiveClient, restoreClient } from "@/lib/admin/actions/clients";
-import { getClient } from "@/lib/admin/queries";
+import { getClient, listClientProjects } from "@/lib/admin/queries";
 
 export default async function EditClientPage({
   params,
@@ -13,7 +16,10 @@ export default async function EditClientPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const client = await getClient(id);
+  const [client, projects] = await Promise.all([
+    getClient(id),
+    listClientProjects(id),
+  ]);
 
   async function archive() {
     "use server";
@@ -26,7 +32,7 @@ export default async function EditClientPage({
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <PageHeader
         title={client.name}
         subtitle={
@@ -36,12 +42,10 @@ export default async function EditClientPage({
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <StatusPill status={client.archived_at ? "archived" : "active"} />
-            <Button variant="ghost" size="sm" render={<Link href="/admin/clients" />}>
-              Back
-            </Button>
+            <StatusPill status={client.archived_at ? "archived" : "active-user"} />
           </div>
         }
+        backFallbackHref="/admin/clients"
       />
 
       <ClientForm
@@ -53,6 +57,75 @@ export default async function EditClientPage({
           logo_url: client.logo_url ?? "",
         }}
       />
+
+      <SectionCard
+        title="Projects and checklists"
+        description="Each client checklist lives inside one of their projects."
+      >
+        {projects.length === 0 ? (
+          <EmptyState
+            icon={FolderKanban}
+            title="No projects for this client"
+            description="Create a project before importing a checklist or workplan."
+            action={
+              <Button render={<Link href="/admin/projects/new" />}>
+                New project
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid gap-3">
+            {projects.map((project) => (
+              <div
+                key={project.id}
+                className="grid gap-4 rounded-lg border bg-background p-4 lg:grid-cols-[minmax(0,1fr)_260px_auto]"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-sm font-semibold">{project.name}</p>
+                    <StatusPill
+                      status={
+                        project.archived_at
+                          ? "archived"
+                          : (project.status as "planning" | "active" | "paused" | "completed")
+                      }
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {project.code} / {project.start_date ?? "TBD"} - {project.end_date ?? "TBD"}
+                  </p>
+                </div>
+                <ProjectProgress done={project.doneCount} total={project.totalCount} />
+                <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    render={<Link href={`/admin/projects/${project.id}`} />}
+                  >
+                    Open
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    render={<Link href={`/workspace/projects/${project.id}`} />}
+                  >
+                    <ListChecks className="size-4" />
+                    Workplan
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    render={<Link href={`/portal/projects/${project.id}`} />}
+                  >
+                    <Eye className="size-4" />
+                    Client view
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </SectionCard>
 
       <SectionCard
         title="Danger zone"

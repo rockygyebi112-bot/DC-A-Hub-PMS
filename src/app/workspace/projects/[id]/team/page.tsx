@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   Table,
@@ -32,52 +30,49 @@ export default async function WorkspaceTeamPage({
       <PageHeader
         title={`${project.name} team`}
         subtitle="Project members and client viewers."
-        action={
-          <Button variant="ghost" size="sm" render={<Link href={`/workspace/projects/${id}`} />}>
-            Back to project
-          </Button>
-        }
+        backFallbackHref={`/workspace/projects/${id}`}
       />
       <SectionCard title="Team">
         {team.length === 0 ? (
           <EmptyState icon={Users} title="No team members" />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Global role</TableHead>
-                <TableHead>Project role</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {team.map((member) => {
-                const name = member.profile?.full_name ?? "Unknown user";
-                const email = member.profile?.email ?? "unknown@example.com";
-                return (
-                  <TableRow key={member.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <UserAvatar email={email} name={name} size="sm" />
-                        <span className="font-medium">{name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{member.profile?.email ?? "-"}</TableCell>
-                    <TableCell>
-                      <StatusPill status={(member.profile?.role ?? "client") as "admin" | "staff" | "client"} />
-                    </TableCell>
-                    <TableCell>
-                      <StatusPill status={member.project_role as "member" | "viewer"} />
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Global role</TableHead>
+                  <TableHead>Project role</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {team.map((member) => {
+                  const name = member.profile?.full_name ?? "Unknown user";
+                  const email = member.profile?.email ?? "unknown@example.com";
+                  return (
+                    <TableRow key={member.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <UserAvatar email={email} name={name} size="sm" />
+                          <span className="font-medium">{name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{member.profile?.email ?? "-"}</TableCell>
+                      <TableCell>
+                        <StatusPill status={(member.profile?.role ?? "client") as "admin" | "staff" | "client"} />
+                      </TableCell>
+                      <TableCell>
+                        <StatusPill status={member.project_role as "member" | "viewer"} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </SectionCard>
     </main>
   );
 }
-

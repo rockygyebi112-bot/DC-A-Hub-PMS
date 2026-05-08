@@ -5,7 +5,7 @@ import type { Database } from '@/lib/supabase/types';
 import type { AppRole } from '@/lib/auth/require-role';
 
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const response = NextResponse.next({ request });
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
@@ -20,13 +18,9 @@ export default async function PortalActivityPage({
       <PageHeader
         title={activity.name}
         subtitle={`${activity.phase?.project?.name ?? "Project"} / ${activity.phase?.name ?? "Phase"}`}
+        backFallbackHref={`/portal/projects/${id}`}
         action={
-          <div className="flex flex-wrap items-center gap-2">
-            <ActivityStatus status={activity.status} />
-            <Button variant="ghost" size="sm" render={<Link href={`/portal/projects/${id}`} />}>
-              Back to project
-            </Button>
-          </div>
+          <ActivityStatus status={activity.status} />
         }
       />
 
@@ -87,4 +81,3 @@ export default async function PortalActivityPage({
     </main>
   );
 }
-

@@ -9,4 +9,3 @@ export function ActivityStatus({
   if (status === "in_progress") return <StatusPill status="active" />;
   return <StatusPill status="planning" />;
 }
-

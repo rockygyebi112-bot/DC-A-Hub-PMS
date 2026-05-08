@@ -182,7 +182,7 @@ export default async function AdminOverview() {
           icon={Building2}
         />
         <StatCard
-          label="Active projects"
+          label="Ongoing projects"
           value={counts.activeProjects}
           href="/admin/projects"
           hint="Open project shells"
@@ -213,7 +213,7 @@ export default async function AdminOverview() {
               status="planning"
             />
             <HealthMetric
-              label="Active"
+              label="Ongoing"
               value={snapshot.statusCounts.active}
               status="active"
             />

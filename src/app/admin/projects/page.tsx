@@ -19,10 +19,10 @@ import { StatusPill } from "@/components/admin/ui/status-pill";
 import { listProjects } from "@/lib/admin/queries";
 
 const STATUS_OPTIONS = [
-  { value: "planning", label: "Planning" },
-  { value: "active", label: "Active" },
+  { value: "planning", label: "Not started" },
+  { value: "active", label: "Ongoing" },
   { value: "paused", label: "Paused" },
-  { value: "completed", label: "Completed" },
+  { value: "completed", label: "Done" },
 ];
 
 export default async function ProjectsPage({

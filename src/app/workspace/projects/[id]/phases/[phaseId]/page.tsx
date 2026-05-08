@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,11 +24,7 @@ export default async function WorkspacePhasePage({
       <PageHeader
         title={phase.name}
         subtitle="Edit phase details and dates."
-        action={
-          <Button variant="ghost" size="sm" render={<Link href={`/workspace/projects/${id}`} />}>
-            Back to project
-          </Button>
-        }
+        backFallbackHref={`/workspace/projects/${id}`}
       />
 
       <SectionCard title="Phase details">
@@ -51,4 +46,3 @@ export default async function WorkspacePhasePage({
     </main>
   );
 }
-

@@ -143,10 +143,10 @@ export function ProjectForm({ mode, clients, initial }: Props) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="planning">Planning</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="planning">Not started</SelectItem>
+                      <SelectItem value="active">Ongoing</SelectItem>
                       <SelectItem value="paused">Paused</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="completed">Done</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

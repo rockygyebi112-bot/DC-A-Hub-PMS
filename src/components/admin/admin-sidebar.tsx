@@ -79,30 +79,33 @@ export function AdminSidebar({ counts }: { counts: AdminCounts }) {
     <>
       <aside
         className={cn(
-          "sticky top-0 hidden h-screen shrink-0 border-r bg-muted/30 px-3 py-4 transition-[width] duration-200 md:flex md:flex-col",
-          collapsed ? "w-[76px]" : "w-64",
+          "sticky top-0 hidden h-screen shrink-0 border-r bg-sidebar transition-[width] duration-200 md:flex md:flex-col",
+          collapsed ? "w-16" : "w-[var(--sidebar-width,240px)]",
         )}
       >
-        <div className="mb-5 flex items-center gap-3 px-2">
-          <div className="flex h-12 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+        <div className="flex h-[var(--topbar-height,58px)] items-center gap-2.5 border-b px-3">
+          <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 shadow-sm">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="DC&A Hub logo" className="h-full w-full object-contain" />
+            <img src="/logo.png" alt="DC&A Hub logo" className="h-7 w-7 object-contain" />
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">DC&amp;A Hub PMS</p>
-              <p className="truncate text-xs text-muted-foreground">Admin Console</p>
+              <p className="font-heading truncate text-sm font-bold tracking-tight">DC&amp;A Hub PMS</p>
+              <p className="truncate text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Admin Console</p>
             </div>
           )}
         </div>
 
-        <SidebarToggle collapsed={collapsed} onToggle={toggle} />
+        <div className="px-3 pt-3">
 
-        <nav className="mt-4 flex flex-col gap-5">
+        <SidebarToggle collapsed={collapsed} onToggle={toggle} />
+        </div>
+
+        <nav className="mt-4 flex flex-col gap-5 px-3">
           {NAV.map((group) => (
             <div key={group.group} className="space-y-1">
               {!collapsed && (
-                <p className="px-3 pb-1 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                <p className="nav-group-label px-3 pb-1">
                   {group.group}
                 </p>
               )}
@@ -117,19 +120,35 @@ export function AdminSidebar({ counts }: { counts: AdminCounts }) {
                     href={item.href}
                     title={collapsed ? item.label : undefined}
                     className={cn(
-                      "flex h-10 items-center gap-3 rounded-lg px-3 text-sm transition-colors",
+                      "flex h-9 items-center gap-2.5 rounded-[10px] px-2.5 text-sm transition-colors-smooth",
                       collapsed && "justify-center px-0",
                       active
-                        ? "bg-background font-medium text-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-background/80 hover:text-foreground",
+                        ? "sidebar-item-active bg-accent font-medium text-foreground"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                     )}
                   >
-                    <Icon className="size-4 shrink-0" />
+                    <span
+                      className={cn(
+                        "flex size-[26px] shrink-0 items-center justify-center rounded-[7px] transition-smooth",
+                        active
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "bg-muted/60 text-muted-foreground",
+                      )}
+                    >
+                      <Icon className="size-3.5" />
+                    </span>
                     {!collapsed && (
                       <>
                         <span className="min-w-0 flex-1 truncate">{item.label}</span>
                         {typeof count === "number" && (
-                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 font-mono text-[10px]",
+                              active
+                                ? "bg-primary/15 text-primary"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
                             {count}
                           </span>
                         )}
@@ -143,8 +162,8 @@ export function AdminSidebar({ counts }: { counts: AdminCounts }) {
         </nav>
 
         {!collapsed && (
-          <div className="mt-auto rounded-lg border bg-background/70 p-3 text-xs text-muted-foreground">
-            <p className="font-medium text-foreground">Operations snapshot</p>
+          <div className="mt-auto mx-3 mb-3 rounded-[10px] bg-muted/50 p-3 text-xs text-muted-foreground">
+            <p className="text-xs font-semibold text-foreground">Operations snapshot</p>
             <p className="mt-1">
               {counts.activeProjects} ongoing projects across {counts.activeClients} clients.
             </p>
@@ -152,7 +171,7 @@ export function AdminSidebar({ counts }: { counts: AdminCounts }) {
         )}
       </aside>
 
-      <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-[var(--admin-card-radius)] border bg-background/95 p-1 shadow-lg backdrop-blur md:hidden">
+      <nav className="mobile-nav fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-2xl border border-border/60 p-1 shadow-card-elevated md:hidden">
         {NAV.flatMap((group) => group.items).map((item) => {
           const Icon = item.icon;
           const active = isActive(item);
@@ -161,7 +180,7 @@ export function AdminSidebar({ counts }: { counts: AdminCounts }) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-[0.7rem] font-medium transition-colors",
+                "flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[0.65rem] font-semibold transition-colors-smooth",
                 active
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",

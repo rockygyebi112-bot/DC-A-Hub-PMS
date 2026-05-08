@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { Suspense } from "react";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,8 +48,8 @@ function LoginForm() {
   }
 
   return (
-    <div className="relative bg-black/90 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
-      <div className="h-[3px] bg-gradient-to-r from-sky-500 to-cyan-400" />
+    <div className="relative bg-card border rounded-2xl shadow-card-elevated overflow-hidden">
+      <div className="h-[3px] bg-gradient-to-r from-primary via-primary/70 to-secondary" />
       <div className="flex items-center gap-3 px-6 sm:px-8 pt-6">
         <Image
           src="/logo.png"
@@ -59,55 +60,65 @@ function LoginForm() {
           priority
         />
         <div>
-          <h1 className="text-lg font-bold tracking-tight text-white">DC&A Hub PMS</h1>
-          <p className="text-[11px] text-white/50">Sign in to continue</p>
+          <h1 className="font-heading text-lg font-bold tracking-tight text-foreground">DC&A Hub PMS</h1>
+          <p className="text-[11px] text-muted-foreground">Sign in to continue</p>
         </div>
       </div>
       <form onSubmit={handleLogin}>
         <div className="space-y-4 px-6 sm:px-8 pt-6">
           {(error || errorParam) && (
-            <div className="p-3 text-sm text-red-300 bg-red-900/30 rounded-lg border border-red-500/30">
+            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-lg border border-destructive/30">
               {error || errorMessages[errorParam!] || "An error occurred."}
             </div>
           )}
           <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs font-medium text-white/70">Email</Label>
+            <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email</Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="h-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
+              placeholder="you@example.com"
+              autoComplete="email"
+              className="h-10"
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="password" className="text-xs font-medium text-white/70">Password</Label>
+            <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Password</Label>
             <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="h-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
+              placeholder="••••••••"
+              autoComplete="current-password"
+              className="h-10"
             />
           </div>
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <Checkbox
               checked={remember}
               onCheckedChange={(v) => setRemember(v === true)}
-              className="border-white/30"
             />
-            <span className="text-xs text-white/70">Remember me</span>
+            <span className="text-xs text-muted-foreground">Remember me</span>
           </label>
         </div>
         <div className="flex flex-col gap-4 px-6 sm:px-8 pt-5 pb-8">
           <Button
             type="submit"
-            className="w-full h-10 bg-gradient-to-r from-sky-500 to-cyan-400 hover:from-sky-600 hover:to-cyan-500 font-semibold text-white shadow-[0_4px_16px_rgba(14,165,233,0.4)] transition-all"
+            className="w-full h-10 font-semibold transition-smooth"
             disabled={loading}
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              "Sign in"
+            )}
           </Button>
         </div>
       </form>

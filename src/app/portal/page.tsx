@@ -21,7 +21,7 @@ export default async function PortalHome() {
     <main className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
       <PageHeader
         title="Client portal"
-        subtitle={`Welcome ${profile?.fullName ?? "there"}. View progress and proof for your assigned projects.`}
+        subtitle={`${profile?.fullName ?? "Client"} / project progress`}
       />
 
       {projects.length === 0 ? (

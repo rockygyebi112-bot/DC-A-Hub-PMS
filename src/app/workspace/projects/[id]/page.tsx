@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Columns3,
+  FileSpreadsheet,
   ListChecks,
   Plus,
   Users,
@@ -85,6 +86,10 @@ export default async function WorkspaceProjectPage({
         subtitle={`${project.client?.name ?? "Client"} / ${project.code}`}
         action={
           <div className="flex flex-wrap gap-2">
+            <Button variant="outline" render={<a href="#import-checklist" />}>
+              <FileSpreadsheet className="size-4" />
+              Import checklist
+            </Button>
             <Button variant="outline" render={<Link href={`/workspace/projects/${id}/team`} />}>
               <Users className="size-4" />
               Team
@@ -156,9 +161,11 @@ export default async function WorkspaceProjectPage({
         </Tabs>
 
         <aside className="space-y-4">
-          <SectionCard title="Import checklist">
+          <div id="import-checklist" className="scroll-mt-20">
+            <SectionCard title="Import checklist">
             <WorkplanImportForm projectId={id} />
-          </SectionCard>
+            </SectionCard>
+          </div>
 
           <SectionCard title="Add phase">
             <form action={addPhase} className="space-y-3">

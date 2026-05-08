@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import * as XLSX from "xlsx";
 import { createClient } from "@/lib/supabase/server";
 import {
   activitySchema,
@@ -26,6 +27,44 @@ function formValue(formData: FormData, key: string) {
   return typeof value === "string" ? value : "";
 }
 
+function normalizeKey(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeStatus(value: unknown): "not_started" | "in_progress" | "done" {
+  const text = String(value ?? "").toLowerCase().trim();
+  if (["done", "complete", "completed", "closed"].includes(text)) return "done";
+  if (["in progress", "in-progress", "ongoing", "started"].includes(text)) return "in_progress";
+  return "not_started";
+}
+
+function getCell(row: Record<string, unknown>, names: string[]) {
+  const entries = Object.entries(row);
+  for (const name of names) {
+    const found = entries.find(([key]) => normalizeKey(key) === normalizeKey(name));
+    if (found && found[1] != null) return String(found[1]).trim();
+  }
+  return "";
+}
+
+function buildActivityDescription({
+  deliverable,
+  notes,
+  responsible,
+}: {
+  deliverable: string;
+  notes: string;
+  responsible: string;
+}) {
+  return [
+    deliverable && `Deliverable: ${deliverable}`,
+    notes && `Notes/Dependencies: ${notes}`,
+    responsible && `Responsible: ${responsible}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export async function createPhase(projectId: string, formData: FormData): Promise<ActionResult> {
   const parsed = phaseSchema.safeParse({
     name: formValue(formData, "name"),
@@ -49,6 +88,130 @@ export async function createPhase(projectId: string, formData: FormData): Promis
 
   revalidatePath(`/workspace/projects/${projectId}`);
   return { ok: true };
+}
+
+export async function importWorkplanSheet(
+  projectId: string,
+  formData: FormData,
+): Promise<ActionResult<{ phasesCreated: number; activitiesCreated: number; activitiesUpdated: number }>> {
+  const file = formData.get("workplan");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "Choose an Excel checklist to import" };
+  }
+
+  const bytes = await file.arrayBuffer();
+  const workbook = XLSX.read(bytes, { type: "array", cellDates: true });
+  const sheetName =
+    workbook.SheetNames.find((name) => name.toLowerCase() === "checklist") ??
+    workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  if (!sheet) return { ok: false, error: "No worksheet found in the upload" };
+
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+    defval: "",
+    raw: false,
+  });
+  if (rows.length === 0) return { ok: false, error: "No checklist rows found" };
+
+  const sb = await createClient();
+  const userId = await currentUserId();
+  const { data: existingPhases, error: phaseError } = await sb
+    .from("phases")
+    .select("id, name, order_index")
+    .eq("project_id", projectId)
+    .order("order_index", { ascending: true });
+  if (phaseError) return { ok: false, error: phaseError.message };
+
+  const phaseByName = new Map(
+    (existingPhases ?? []).map((phase) => [normalizeKey(phase.name), phase]),
+  );
+  let nextPhaseIndex =
+    (existingPhases ?? []).reduce((max, phase) => Math.max(max, phase.order_index), -1) + 1;
+  let currentPhaseName = "";
+  let phasesCreated = 0;
+  let activitiesCreated = 0;
+  let activitiesUpdated = 0;
+
+  for (const row of rows) {
+    const phaseName = getCell(row, ["Category", "Phase"]);
+    const activityName = getCell(row, ["Activity", "Task Description", "Task"]);
+    if (phaseName) currentPhaseName = phaseName;
+    if (!currentPhaseName || !activityName) continue;
+
+    let phase = phaseByName.get(normalizeKey(currentPhaseName));
+    if (!phase) {
+      const { data: created, error } = await sb
+        .from("phases")
+        .insert({
+          project_id: projectId,
+          name: currentPhaseName,
+          order_index: nextPhaseIndex++,
+        })
+        .select("id, name, order_index")
+        .single();
+      if (error) return { ok: false, error: error.message };
+      phase = created;
+      phaseByName.set(normalizeKey(currentPhaseName), phase);
+      phasesCreated += 1;
+    }
+
+    const deliverable = getCell(row, ["Deliverable"]);
+    const notes = getCell(row, ["Notes/Dependencies", "Notes", "Dependencies"]);
+    const responsible = getCell(row, ["Responsible Team Member/Team", "Responsible"]);
+    const status = normalizeStatus(getCell(row, ["Status"]));
+    const description = buildActivityDescription({ deliverable, notes, responsible });
+
+    const { data: existingActivity, error: existingError } = await sb
+      .from("activities")
+      .select("id")
+      .eq("phase_id", phase.id)
+      .ilike("name", activityName)
+      .maybeSingle();
+    if (existingError) return { ok: false, error: existingError.message };
+
+    if (existingActivity) {
+      const { error } = await sb
+        .from("activities")
+        .update({
+          description: description || null,
+          status,
+        })
+        .eq("id", existingActivity.id);
+      if (error) return { ok: false, error: error.message };
+      activitiesUpdated += 1;
+    } else {
+      const { count } = await sb
+        .from("activities")
+        .select("*", { count: "exact", head: true })
+        .eq("phase_id", phase.id);
+      const { data: activity, error } = await sb
+        .from("activities")
+        .insert({
+          phase_id: phase.id,
+          name: activityName,
+          description: description || null,
+          status,
+          order_index: count ?? 0,
+          created_by: userId,
+        })
+        .select("id")
+        .single();
+      if (error) return { ok: false, error: error.message };
+
+      await sb.from("activity_log").insert({
+        project_id: projectId,
+        activity_id: activity.id,
+        actor_user_id: userId,
+        action: "created",
+        meta: { source: "workplan_import", sheet: sheetName },
+      });
+      activitiesCreated += 1;
+    }
+  }
+
+  revalidatePath(`/workspace/projects/${projectId}`);
+  revalidatePath(`/portal/projects/${projectId}`);
+  return { ok: true, data: { phasesCreated, activitiesCreated, activitiesUpdated } };
 }
 
 export async function updatePhase(phaseId: string, formData: FormData): Promise<ActionResult> {
@@ -209,4 +372,3 @@ export async function uploadProofs(activityId: string, formData: FormData): Prom
   revalidatePath(`/portal/projects/${projectId}/activities/${activityId}`);
   return { ok: true };
 }
-

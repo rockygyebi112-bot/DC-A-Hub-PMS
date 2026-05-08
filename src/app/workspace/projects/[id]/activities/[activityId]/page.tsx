@@ -1,4 +1,4 @@
-import { FileText, Upload } from "lucide-react";
+import { FileText, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { ActivityStatus } from "@/components/workspace/status-badge";
-import { updateActivity, uploadProofs } from "@/lib/workspace/actions";
+import { DeleteConfirm } from "@/components/workspace/delete-confirm";
+import { deleteActivity, updateActivity, uploadProofs } from "@/lib/workspace/actions";
 import {
   getActivity,
   listActivityProofs,
@@ -36,13 +37,34 @@ export default async function WorkspaceActivityPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8">
+    <div className="mx-auto w-full max-w-5xl">
       <PageHeader
         title={activity.name}
-        subtitle={`${activity.phase?.project?.name ?? "Project"} / ${activity.phase?.name ?? "Phase"}`}
+        subtitle={`${activity.phase?.project?.name ?? "Project"} · ${activity.phase?.name ?? "Phase"}`}
         backFallbackHref={`/workspace/projects/${id}`}
         action={
-          <ActivityStatus status={activity.status} />
+          <div className="flex flex-wrap items-center gap-2">
+            <ActivityStatus status={activity.status} />
+            <DeleteConfirm
+              trigger={
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="size-4" />
+                  Delete
+                </Button>
+              }
+              title="Delete activity"
+              description={
+                <>
+                  Permanently delete <strong>{activity.name}</strong>? All proofs uploaded to it will be removed.
+                </>
+              }
+              redirectTo={`/workspace/projects/${id}`}
+              action={async () => {
+                "use server";
+                return deleteActivity(activityId);
+              }}
+            />
+          </div>
         }
       />
 
@@ -153,6 +175,6 @@ export default async function WorkspaceActivityPage({
           </SectionCard>
         </aside>
       </div>
-    </main>
+    </div>
   );
 }

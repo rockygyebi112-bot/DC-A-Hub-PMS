@@ -26,7 +26,7 @@ export default async function WorkspaceTeamPage({
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8">
+    <div className="mx-auto w-full max-w-5xl">
       <PageHeader
         title={`${project.name} team`}
         subtitle="Project members and client viewers."
@@ -73,6 +73,6 @@ export default async function WorkspaceTeamPage({
           </div>
         )}
       </SectionCard>
-    </main>
+    </div>
   );
 }

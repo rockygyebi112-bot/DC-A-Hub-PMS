@@ -25,7 +25,7 @@ export default async function NewWorkspaceActivityPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6 md:px-8">
+    <div className="mx-auto w-full max-w-3xl">
       <PageHeader
         title="New activity"
         subtitle={`Add an activity to ${project.name}.`}
@@ -63,6 +63,6 @@ export default async function NewWorkspaceActivityPage({
           </Button>
         </form>
       </SectionCard>
-    </main>
+    </div>
   );
 }

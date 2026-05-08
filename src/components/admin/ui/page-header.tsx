@@ -8,8 +8,8 @@ export function PageHeader({
   backFallbackHref = "/",
   showBack = true,
 }: {
-  title: string;
-  subtitle?: string;
+  title: ReactNode;
+  subtitle?: ReactNode;
   action?: ReactNode;
   backFallbackHref?: string;
   showBack?: boolean;

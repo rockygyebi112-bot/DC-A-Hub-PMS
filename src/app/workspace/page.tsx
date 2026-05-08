@@ -19,7 +19,7 @@ export default async function WorkspaceHome() {
     <main className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
       <PageHeader
         title="Workspace"
-        subtitle={`Signed in as ${profile?.fullName ?? "unknown"}. Build workplans and complete project activities.`}
+        subtitle={`${profile?.fullName ?? "Workspace"} / assigned projects`}
       />
 
       {projects.length === 0 ? (
@@ -53,7 +53,7 @@ export default async function WorkspaceHome() {
               </div>
               <Button className="mt-5" variant="outline" size="sm">
                 <Plus className="size-4" />
-                Open workplan
+                Open
               </Button>
             </Link>
           ))}

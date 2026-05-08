@@ -22,8 +22,8 @@ export function SectionCard({
       )}
     >
       {(title || description || action) && (
-        <header className="flex items-start justify-between gap-4 px-5 py-4 border-b">
-          <div className="space-y-1">
+        <header className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-1">
             {title && (
               <h2
                 className={cn(

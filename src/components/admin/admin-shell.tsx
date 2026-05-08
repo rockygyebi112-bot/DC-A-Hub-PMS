@@ -1,21 +1,27 @@
 import type { ReactNode } from "react";
 import { AdminSidebar } from "./admin-sidebar";
+import { AdminTopbar } from "./ui/admin-topbar";
+import type { AdminCounts } from "@/lib/admin/queries";
 
 export function AdminShell({
   children,
-  userLabel,
+  counts,
+  user,
 }: {
   children: ReactNode;
-  userLabel: string;
+  counts: AdminCounts;
+  user: { name: string; email: string };
 }) {
   return (
-    <div className="flex min-h-screen">
-      <AdminSidebar />
-      <div className="flex-1 flex flex-col">
-        <header className="h-14 border-b flex items-center justify-end px-6 text-sm text-muted-foreground">
-          {userLabel}
-        </header>
-        <main className="flex-1 p-6">{children}</main>
+    <div className="flex min-h-screen bg-background text-foreground">
+      <AdminSidebar counts={counts} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <AdminTopbar name={user.name} email={user.email} />
+        <main className="flex-1 animate-in fade-in-0 duration-300">
+          <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

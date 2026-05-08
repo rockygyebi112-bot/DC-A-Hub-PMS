@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
-import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { getAdminCounts } from "@/lib/admin/queries";
+import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
 export default async function AdminLayout({
   children,
@@ -11,6 +12,14 @@ export default async function AdminLayout({
   if (!profile) redirect("/login");
   if (profile.role !== "admin") redirect("/");
 
-  const userLabel = `${profile.fullName} · ${profile.email}`;
-  return <AdminShell userLabel={userLabel}>{children}</AdminShell>;
+  const counts = await getAdminCounts();
+
+  return (
+    <AdminShell
+      counts={counts}
+      user={{ name: profile.fullName, email: profile.email }}
+    >
+      {children}
+    </AdminShell>
+  );
 }

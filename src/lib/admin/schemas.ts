@@ -16,7 +16,8 @@ export const clientFormSchema = z.object({
     .optional()
     .transform((v) => (v === "" ? undefined : v)),
 });
-export type ClientFormInput = z.infer<typeof clientFormSchema>;
+export type ClientFormInput = z.input<typeof clientFormSchema>;
+export type ClientFormParsed = z.output<typeof clientFormSchema>;
 
 export const projectStatusSchema = z.enum([
   "planning",
@@ -47,7 +48,8 @@ export const projectFormSchema = z.object({
     .or(z.literal(""))
     .transform((v) => (v === "" ? undefined : v)),
 });
-export type ProjectFormInput = z.infer<typeof projectFormSchema>;
+export type ProjectFormInput = z.input<typeof projectFormSchema>;
+export type ProjectFormParsed = z.output<typeof projectFormSchema>;
 
 export const inviteUserSchema = z.object({
   email: z.string().trim().email("Must be a valid email"),

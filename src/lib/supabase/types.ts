@@ -53,6 +53,7 @@ export type Database = {
           participants_count: number | null
           phase_id: string
           planned_date: string | null
+          responsible: string | null
           status: string
           updated_at: string
         }
@@ -69,6 +70,7 @@ export type Database = {
           participants_count?: number | null
           phase_id: string
           planned_date?: string | null
+          responsible?: string | null
           status?: string
           updated_at?: string
         }
@@ -85,6 +87,7 @@ export type Database = {
           participants_count?: number | null
           phase_id?: string
           planned_date?: string | null
+          responsible?: string | null
           status?: string
           updated_at?: string
         }
@@ -149,33 +152,39 @@ export type Database = {
           caption: string | null
           created_at: string
           file_name: string
-          file_path: string
+          file_path: string | null
           id: string
+          kind: string
           mime_type: string | null
           size_bytes: number | null
           uploaded_by: string | null
+          url: string | null
         }
         Insert: {
           activity_id: string
           caption?: string | null
           created_at?: string
           file_name: string
-          file_path: string
+          file_path?: string | null
           id?: string
+          kind?: string
           mime_type?: string | null
           size_bytes?: number | null
           uploaded_by?: string | null
+          url?: string | null
         }
         Update: {
           activity_id?: string
           caption?: string | null
           created_at?: string
           file_name?: string
-          file_path?: string
+          file_path?: string | null
           id?: string
+          kind?: string
           mime_type?: string | null
           size_bytes?: number | null
           uploaded_by?: string | null
+          url?: string | null
         }
         Relationships: [
           {

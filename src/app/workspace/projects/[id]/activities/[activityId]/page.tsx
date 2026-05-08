@@ -1,4 +1,4 @@
-import { FileText, Trash2, Upload } from "lucide-react";
+import { ExternalLink, FileText, Link2, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,12 @@ import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { ActivityStatus } from "@/components/workspace/status-badge";
 import { DeleteConfirm } from "@/components/workspace/delete-confirm";
-import { deleteActivity, updateActivity, uploadProofs } from "@/lib/workspace/actions";
+import {
+  addProofLink,
+  deleteActivity,
+  updateActivity,
+  uploadProofs,
+} from "@/lib/workspace/actions";
 import {
   getActivity,
   listActivityProofs,
@@ -34,6 +39,11 @@ export default async function WorkspaceActivityPage({
   async function upload(formData: FormData) {
     "use server";
     await uploadProofs(activityId, formData);
+  }
+
+  async function addLink(formData: FormData) {
+    "use server";
+    await addProofLink(activityId, formData);
   }
 
   return (
@@ -104,6 +114,11 @@ export default async function WorkspaceActivityPage({
               </label>
             </div>
             <Input name="name" defaultValue={activity.name} required />
+            <Input
+              name="responsible"
+              placeholder="Responsible team member or team"
+              defaultValue={activity.responsible ?? ""}
+            />
             <div className="grid gap-3 sm:grid-cols-2">
               <Input name="planned_date" type="date" defaultValue={activity.planned_date ?? ""} />
               <Input name="completed_date" type="date" defaultValue={activity.completed_date ?? ""} />
@@ -134,8 +149,8 @@ export default async function WorkspaceActivityPage({
 
         <aside className="space-y-4">
           <SectionCard
-            title="Proof upload"
-            description="Files are stored privately and shared through signed links."
+            title="Upload files"
+            description="Photos, PDFs, documents, or any other proof file."
           >
             <form action={upload} className="space-y-3">
               <Input name="proofs" type="file" multiple required />
@@ -147,29 +162,51 @@ export default async function WorkspaceActivityPage({
             </form>
           </SectionCard>
 
-          <SectionCard title="Proofs" description={`${proofs.length} uploaded`}>
+          <SectionCard
+            title="Add link"
+            description="Share an external link as proof (Drive, Notion, video, etc.)."
+          >
+            <form action={addLink} className="space-y-3">
+              <Input name="url" type="url" placeholder="https://…" required />
+              <Input name="file_name" placeholder="Display name (optional)" />
+              <Textarea name="caption" placeholder="Optional caption" rows={2} />
+              <Button type="submit" variant="outline" className="w-full">
+                <Link2 className="size-4" />
+                Save link
+              </Button>
+            </form>
+          </SectionCard>
+
+          <SectionCard title="Proofs" description={`${proofs.length} attached`}>
             {proofs.length === 0 ? (
               <EmptyState
                 icon={FileText}
                 title="No proofs yet"
-                description="Upload photos, PDFs, or other completion evidence."
+                description="Upload files or add links to share evidence of completion."
               />
             ) : (
               <div className="space-y-2">
-                {proofs.map((proof) => (
-                  <a
-                    key={proof.id}
-                    href={proof.signedUrl ?? "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block rounded-lg border bg-background p-3 text-sm transition-colors hover:bg-accent"
-                  >
-                    <span className="font-medium">{proof.file_name}</span>
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      {proof.caption ?? "No caption"}
-                    </span>
-                  </a>
-                ))}
+                {proofs.map((proof) => {
+                  const href = proof.kind === "link" ? proof.url ?? "#" : proof.signedUrl ?? "#";
+                  const Icon = proof.kind === "link" ? ExternalLink : FileText;
+                  return (
+                    <a
+                      key={proof.id}
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-start gap-2 rounded-lg border bg-background p-3 text-sm transition-colors hover:bg-accent"
+                    >
+                      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{proof.file_name}</span>
+                        <span className="mt-1 block truncate text-xs text-muted-foreground">
+                          {proof.caption ?? (proof.kind === "link" ? proof.url : "No caption")}
+                        </span>
+                      </div>
+                    </a>
+                  );
+                })}
               </div>
             )}
           </SectionCard>

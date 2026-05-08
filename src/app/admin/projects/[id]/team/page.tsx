@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
+import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Table,
   TableBody,
@@ -9,14 +10,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  getProject,
-  listProjectMembers,
-  listAssignableUsers,
-} from "@/lib/admin/queries";
-import { removeProjectMember } from "@/lib/admin/actions/members";
 import { AssignMemberForm } from "@/components/admin/forms/assign-member-form";
 import { InviteClientViewerForm } from "@/components/admin/forms/invite-client-viewer-form";
+import { PageHeader } from "@/components/admin/ui/page-header";
+import { SectionCard } from "@/components/admin/ui/section-card";
+import { StatusPill } from "@/components/admin/ui/status-pill";
+import { UserAvatar } from "@/components/admin/ui/user-avatar";
+import { removeProjectMember } from "@/lib/admin/actions/members";
+import {
+  getProject,
+  listAssignableUsers,
+  listProjectMembers,
+} from "@/lib/admin/queries";
 
 export default async function ProjectTeamPage({
   params,
@@ -32,83 +37,111 @@ export default async function ProjectTeamPage({
   ]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href={`/admin/projects/${id}`} className="text-sm text-muted-foreground hover:underline">
-          ← Back to project
-        </Link>
-        <h1 className="text-2xl font-semibold mt-2">{project.name} — Team</h1>
-      </div>
+    <div className="max-w-5xl space-y-6">
+      <PageHeader
+        title={`${project.name} team`}
+        subtitle={`${members.length} member${members.length === 1 ? "" : "s"} with project access`}
+        action={
+          <Button
+            variant="ghost"
+            size="sm"
+            render={<Link href={`/admin/projects/${id}`} />}
+          >
+            Back to project
+          </Button>
+        }
+      />
 
-      <div className="flex flex-wrap gap-3">
-        <AssignMemberForm
-          projectId={id}
-          candidates={staffCandidates.map((c) => ({
-            user_id: c.user_id,
-            full_name: c.full_name,
-            email: c.email,
-          }))}
-          projectRole="member"
-          buttonLabel="Add staff member"
-        />
-        <AssignMemberForm
-          projectId={id}
-          candidates={clientCandidates.map((c) => ({
-            user_id: c.user_id,
-            full_name: c.full_name,
-            email: c.email,
-          }))}
-          projectRole="viewer"
-          buttonLabel="Add existing client viewer"
-        />
-        <InviteClientViewerForm projectId={id} />
-      </div>
+      <SectionCard
+        title="Team access"
+        description="Staff get delivery access. Client viewers get read-only progress visibility."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <AssignMemberForm
+              projectId={id}
+              candidates={staffCandidates.map((candidate) => ({
+                user_id: candidate.user_id,
+                full_name: candidate.full_name,
+                email: candidate.email,
+              }))}
+              projectRole="member"
+              buttonLabel="Add staff"
+            />
+            <AssignMemberForm
+              projectId={id}
+              candidates={clientCandidates.map((candidate) => ({
+                user_id: candidate.user_id,
+                full_name: candidate.full_name,
+                email: candidate.email,
+              }))}
+              projectRole="viewer"
+              buttonLabel="Add viewer"
+            />
+            <InviteClientViewerForm projectId={id} />
+          </div>
+        }
+      >
+        {members.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No team members yet"
+            description="Add staff or invite a client viewer to give them access."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Global role</TableHead>
+                  <TableHead>Project role</TableHead>
+                  <TableHead className="w-24" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {members.map((member) => {
+                  async function remove() {
+                    "use server";
+                    await removeProjectMember(id, member.id);
+                  }
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Global role</TableHead>
-            <TableHead>Project role</TableHead>
-            <TableHead className="w-24" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {members.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground py-12">
-                No team members yet.
-              </TableCell>
-            </TableRow>
-          )}
-          {members.map((m) => {
-            async function remove() {
-              "use server";
-              await removeProjectMember(id, m.id);
-            }
-            return (
-              <TableRow key={m.id}>
-                <TableCell className="font-medium">{m.profile?.full_name}</TableCell>
-                <TableCell>{m.profile?.email}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{m.profile?.role}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge>{m.project_role}</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <form action={remove}>
-                    <Button type="submit" variant="ghost" size="sm">
-                      Remove
-                    </Button>
-                  </form>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+                  const profile = member.profile;
+                  const displayName = profile?.full_name ?? "Unknown user";
+                  const email = profile?.email ?? "unknown@example.com";
+
+                  return (
+                    <TableRow key={member.id} style={{ height: "var(--admin-row-h)" }}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <UserAvatar email={email} name={displayName} size="sm" />
+                          <span className="font-medium">{displayName}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{profile?.email ?? "-"}</TableCell>
+                      <TableCell>
+                        <StatusPill
+                          status={(profile?.role ?? "client") as "admin" | "staff" | "client"}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <StatusPill status={member.project_role} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <form action={remove}>
+                          <Button type="submit" variant="ghost" size="sm">
+                            Remove
+                          </Button>
+                        </form>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </SectionCard>
     </div>
   );
 }

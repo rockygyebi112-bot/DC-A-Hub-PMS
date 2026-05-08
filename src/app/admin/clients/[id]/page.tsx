@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ClientForm } from "@/components/admin/forms/client-form";
+import { PageHeader } from "@/components/admin/ui/page-header";
+import { SectionCard } from "@/components/admin/ui/section-card";
+import { StatusPill } from "@/components/admin/ui/status-pill";
+import { archiveClient, restoreClient } from "@/lib/admin/actions/clients";
 import { getClient } from "@/lib/admin/queries";
-import {
-  archiveClient,
-  restoreClient,
-} from "@/lib/admin/actions/clients";
 
 export default async function EditClientPage({
   params,
@@ -13,52 +13,61 @@ export default async function EditClientPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const c = await getClient(id);
+  const client = await getClient(id);
 
   async function archive() {
     "use server";
     await archiveClient(id);
   }
+
   async function restore() {
     "use server";
     await restoreClient(id);
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href="/admin/clients" className="text-sm text-muted-foreground hover:underline">
-          ← Back to clients
-        </Link>
-        <h1 className="text-2xl font-semibold mt-2">{c.name}</h1>
-        {c.archived_at && (
-          <p className="text-sm text-muted-foreground">
-            Archived on {new Date(c.archived_at).toLocaleDateString()}
-          </p>
-        )}
-      </div>
+    <div className="max-w-3xl space-y-6">
+      <PageHeader
+        title={client.name}
+        subtitle={
+          client.archived_at
+            ? `Archived on ${new Date(client.archived_at).toLocaleDateString()}`
+            : "Client profile and contact settings"
+        }
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill status={client.archived_at ? "archived" : "active"} />
+            <Button variant="ghost" size="sm" render={<Link href="/admin/clients" />}>
+              Back
+            </Button>
+          </div>
+        }
+      />
 
       <ClientForm
         mode="edit"
         initial={{
-          id: c.id,
-          name: c.name,
-          contact_email: c.contact_email ?? "",
-          logo_url: c.logo_url ?? "",
+          id: client.id,
+          name: client.name,
+          contact_email: client.contact_email ?? "",
+          logo_url: client.logo_url ?? "",
         }}
       />
 
-      <div className="border-t pt-6">
-        <h2 className="text-lg font-medium">Danger zone</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Archived clients are hidden from non-admin users. Their projects keep running unless archived separately.
-        </p>
-        <form action={c.archived_at ? restore : archive} className="mt-4">
-          <Button type="submit" variant={c.archived_at ? "default" : "destructive"}>
-            {c.archived_at ? "Restore client" : "Archive client"}
+      <SectionCard
+        title="Danger zone"
+        description="Archived clients are hidden from non-admin users. Their projects are not archived automatically."
+        tone="destructive"
+      >
+        <form action={client.archived_at ? restore : archive}>
+          <Button
+            type="submit"
+            variant={client.archived_at ? "default" : "destructive"}
+          >
+            {client.archived_at ? "Restore client" : "Archive client"}
           </Button>
         </form>
-      </div>
+      </SectionCard>
     </div>
   );
 }

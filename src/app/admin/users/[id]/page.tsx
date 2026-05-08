@@ -7,13 +7,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { getUserByProfileId } from "@/lib/admin/queries";
+import { PageHeader } from "@/components/admin/ui/page-header";
+import { SectionCard } from "@/components/admin/ui/section-card";
+import { StatusPill } from "@/components/admin/ui/status-pill";
+import { UserAvatar } from "@/components/admin/ui/user-avatar";
 import {
-  setUserRole,
   deactivateUser,
   reactivateUser,
+  setUserRole,
 } from "@/lib/admin/actions/users";
+import { getUserByProfileId } from "@/lib/admin/queries";
 
 export default async function UserDetailPage({
   params,
@@ -21,67 +24,85 @@ export default async function UserDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const u = await getUserByProfileId(id);
+  const user = await getUserByProfileId(id);
 
   async function changeRole(formData: FormData) {
     "use server";
     const role = formData.get("role")?.toString();
     await setUserRole(id, { role });
   }
+
   async function deactivate() {
     "use server";
     await deactivateUser(id);
   }
+
   async function reactivate() {
     "use server";
     await reactivateUser(id);
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href="/admin/users" className="text-sm text-muted-foreground hover:underline">
-          ← Back to users
-        </Link>
-        <h1 className="text-2xl font-semibold mt-2">{u.full_name}</h1>
-        <p className="text-sm text-muted-foreground">{u.email}</p>
-        <div className="mt-2">
-          {u.is_active ? (
-            <Badge>Active</Badge>
-          ) : (
-            <Badge variant="secondary">Inactive</Badge>
-          )}
+    <div className="max-w-3xl space-y-6">
+      <PageHeader
+        title={user.full_name}
+        subtitle={user.email}
+        action={
+          <Button variant="ghost" size="sm" render={<Link href="/admin/users" />}>
+            Back to users
+          </Button>
+        }
+      />
+
+      <div className="flex items-center gap-4 rounded-[var(--admin-card-radius)] border bg-card p-5 shadow-sm">
+        <UserAvatar email={user.email} name={user.full_name} size="lg" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-lg font-semibold">{user.full_name}</p>
+          <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <StatusPill status={user.role as "admin" | "staff" | "client"} />
+            <StatusPill status={user.is_active ? "active-user" : "inactive-user"} />
+          </div>
         </div>
       </div>
 
-      <form action={changeRole} className="space-y-2 max-w-sm">
-        <label className="text-sm font-medium">Global role</label>
-        <Select name="role" defaultValue={u.role}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="staff">Staff</SelectItem>
-            <SelectItem value="client">Client</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button type="submit" variant="secondary">
-          Save role
-        </Button>
-      </form>
-
-      <div className="border-t pt-6">
-        <h2 className="text-lg font-medium">Danger zone</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Deactivating revokes the user&apos;s sessions and prevents future sign-ins.
-        </p>
-        <form action={u.is_active ? deactivate : reactivate} className="mt-4">
-          <Button type="submit" variant={u.is_active ? "destructive" : "default"}>
-            {u.is_active ? "Deactivate user" : "Reactivate user"}
+      <SectionCard
+        title="Role"
+        description="Determines which surfaces this user can access."
+      >
+        <form action={changeRole} className="flex max-w-sm items-end gap-2">
+          <div className="flex-1 space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              Global role
+            </label>
+            <Select name="role" defaultValue={user.role}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="staff">Staff</SelectItem>
+                <SelectItem value="client">Client</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button type="submit" variant="secondary">
+            Save
           </Button>
         </form>
-      </div>
+      </SectionCard>
+
+      <SectionCard
+        title="Danger zone"
+        description="Deactivating revokes this user's sessions and prevents future sign-ins."
+        tone="destructive"
+      >
+        <form action={user.is_active ? deactivate : reactivate}>
+          <Button type="submit" variant={user.is_active ? "destructive" : "default"}>
+            {user.is_active ? "Deactivate user" : "Reactivate user"}
+          </Button>
+        </form>
+      </SectionCard>
     </div>
   );
 }

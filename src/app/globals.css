@@ -113,6 +113,17 @@
   --priority-flag-w: 5px;
   --priority-flag-h: 12px;
   --mobile-bottom-nav-h: 56px;
+
+  /* admin density */
+  --admin-row-h: 44px;
+  --admin-card-radius: 12px;
+
+  /* status colors (light) */
+  --status-planning: hsl(220 13% 70%);
+  --status-active:   hsl(104 53% 49%);
+  --status-paused:   hsl(38 92% 50%);
+  --status-completed: hsl(220 13% 50%);
+  --status-archived: hsl(220 13% 80%);
 }
 
 .dark {
@@ -151,6 +162,13 @@
   --sidebar-accent-foreground: hsl(104 53% 85%);
   --sidebar-border: hsl(240 10% 22%);
   --sidebar-ring: hsl(104 55% 52%);
+
+  /* status colors (dark) */
+  --status-planning: hsl(220 13% 45%);
+  --status-active:   hsl(104 55% 52%);
+  --status-paused:   hsl(38 92% 55%);
+  --status-completed: hsl(220 13% 55%);
+  --status-archived: hsl(220 13% 35%);
 }
 
 @layer base {

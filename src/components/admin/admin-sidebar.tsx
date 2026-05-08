@@ -84,7 +84,7 @@ export function AdminSidebar({ counts }: { counts: AdminCounts }) {
         )}
       >
         <div className="mb-5 flex items-center gap-3 px-2">
-          <div className="flex size-9 items-center justify-center overflow-hidden rounded-lg">
+          <div className="flex h-12 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="DC&A Hub logo" className="h-full w-full object-contain" />
           </div>

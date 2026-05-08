@@ -9,11 +9,21 @@ export default async function WorkspaceLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const profile = await getCurrentProfile();
+  let profile: Awaited<ReturnType<typeof getCurrentProfile>>;
+  try {
+    profile = await getCurrentProfile();
+  } catch (err) {
+    return renderLayoutError("getCurrentProfile", err);
+  }
   if (!profile) redirect("/login");
   if (profile.role !== "admin" && profile.role !== "staff") redirect("/portal");
 
-  const projects = await listWorkspaceProjects().catch(() => []);
+  let projects: Awaited<ReturnType<typeof listWorkspaceProjects>>;
+  try {
+    projects = await listWorkspaceProjects();
+  } catch (err) {
+    return renderLayoutError("listWorkspaceProjects", err);
+  }
   const activeCount = projects.filter((p) => p.status === "active").length;
 
   const groups = [
@@ -71,5 +81,29 @@ export default async function WorkspaceLayout({
     >
       {children}
     </AppShell>
+  );
+}
+
+function renderLayoutError(where: string, err: unknown) {
+  const e = err as Error & { code?: string; details?: string; hint?: string };
+  return (
+    <div className="mx-auto max-w-3xl p-6">
+      <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6">
+        <h1 className="font-heading text-xl font-bold text-destructive">
+          Workspace layout failed
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Source: <code className="font-mono">{where}</code>
+        </p>
+        <pre className="mt-4 overflow-auto rounded-lg bg-muted p-3 text-xs">
+{`Name:    ${e?.name ?? "(no name)"}
+Message: ${e?.message ?? "(no message)"}
+Code:    ${e?.code ?? "(none)"}
+Details: ${e?.details ?? "(none)"}
+Hint:    ${e?.hint ?? "(none)"}
+Stack:   ${e?.stack ?? "(no stack)"}`}
+        </pre>
+      </div>
+    </div>
   );
 }

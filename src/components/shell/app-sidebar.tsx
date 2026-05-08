@@ -75,30 +75,30 @@ export function AppSidebar({
   return (
     <aside
       className={cn(
-        "sticky top-0 hidden h-screen shrink-0 border-r bg-card px-3 py-4 transition-[width] duration-200 md:flex md:flex-col",
-        collapsed ? "w-[76px]" : "w-60",
+        "sticky top-0 hidden h-screen shrink-0 border-r bg-sidebar transition-[width] duration-200 md:flex md:flex-col",
+        collapsed ? "w-16" : "w-[var(--sidebar-width,240px)]",
       )}
     >
-      <div className="mb-5 flex items-center gap-3 px-2">
-        <div className="flex h-12 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+      <div className="flex h-[var(--topbar-height,58px)] items-center gap-2.5 border-b px-3">
+        <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 shadow-sm">
           {displayLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={displayLogo}
               alt={`${displayBrand} logo`}
-              className="h-full w-full object-contain"
+              className="h-7 w-7 object-contain"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm">
-              <Sparkles className="size-5" />
+              <Sparkles className="size-4" />
             </div>
           )}
         </div>
         {!collapsed && (
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold leading-tight">{displayBrand}</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-heading truncate text-sm font-bold tracking-tight leading-tight">{displayBrand}</p>
             {displaySubtitle && (
-              <p className="truncate text-[11px] text-muted-foreground">{displaySubtitle}</p>
+              <p className="truncate text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{displaySubtitle}</p>
             )}
           </div>
         )}
@@ -113,11 +113,11 @@ export function AppSidebar({
         </Button>
       </div>
 
-      <nav className="mt-2 flex flex-1 flex-col gap-5 overflow-y-auto">
+      <nav className="mt-3 flex flex-1 flex-col gap-5 overflow-y-auto px-3">
         {groups.map((group, idx) => (
-          <div key={idx} className="space-y-0.5">
+          <div key={idx} className="space-y-1">
             {!collapsed && group.group && (
-              <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="nav-group-label px-3 pb-1">
                 {group.group}
               </p>
             )}
@@ -133,20 +133,29 @@ export function AppSidebar({
                   href={item.href}
                   title={collapsed ? item.label : undefined}
                   className={cn(
-                    "flex h-9 items-center gap-3 rounded-lg px-3 text-sm transition-colors",
+                    "flex h-9 items-center gap-2.5 rounded-[10px] px-2.5 text-sm transition-colors-smooth",
                     collapsed && "justify-center px-0",
                     active
-                      ? "bg-primary/10 font-medium text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      ? "sidebar-item-active bg-accent font-medium text-foreground"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                   )}
                 >
-                  <Icon className={cn("size-4 shrink-0", active && "text-primary")} />
+                  <span
+                    className={cn(
+                      "flex size-[26px] shrink-0 items-center justify-center rounded-[7px] transition-smooth",
+                      active
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-muted/60 text-muted-foreground",
+                    )}
+                  >
+                    <Icon className="size-3.5" />
+                  </span>
                   {!collapsed && (
                     <>
                       <span className="min-w-0 flex-1 truncate">{item.label}</span>
                       {item.badge != null && (
                         <span className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                          "rounded-full px-2 py-0.5 font-mono text-[10px]",
                           active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
                         )}>
                           {item.badge}
@@ -161,7 +170,7 @@ export function AppSidebar({
         ))}
       </nav>
 
-      {!collapsed && footer && <div className="mt-4">{footer}</div>}
+      {!collapsed && footer && <div className="mx-3 mb-3 mt-4">{footer}</div>}
     </aside>
   );
 }

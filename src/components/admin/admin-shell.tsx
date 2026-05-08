@@ -17,8 +17,8 @@ export function AdminShell({
       <AdminSidebar counts={counts} />
       <div className="flex min-w-0 flex-1 flex-col">
         <AdminTopbar name={user.name} email={user.email} />
-        <main className="flex-1 animate-in fade-in-0 pb-[calc(var(--mobile-bottom-nav-h)+1rem)] duration-300 md:pb-0">
-          <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
+        <main className="flex-1 pb-[calc(var(--mobile-bottom-nav-h)+1rem)] md:pb-0">
+          <div className="page-enter mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
             {children}
           </div>
         </main>

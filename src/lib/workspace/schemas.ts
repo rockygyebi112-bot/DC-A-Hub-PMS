@@ -21,7 +21,19 @@ export const activitySchema = z.object({
   description: z.string().trim().max(2000).optional(),
   planned_date: optionalDate,
   location: z.string().trim().max(200).optional(),
+  responsible: z.string().trim().max(200).optional(),
 });
+
+export const proofLinkSchema = z.object({
+  url: z
+    .string()
+    .trim()
+    .min(1, "Link URL is required")
+    .url("Enter a valid URL (https://…)"),
+  file_name: z.string().trim().max(200).optional(),
+  caption: z.string().trim().max(500).optional(),
+});
+export type ProofLinkInput = z.input<typeof proofLinkSchema>;
 export type ActivityInput = z.input<typeof activitySchema>;
 export type ActivityParsed = z.output<typeof activitySchema>;
 

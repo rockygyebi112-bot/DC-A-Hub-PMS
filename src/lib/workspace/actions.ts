@@ -7,6 +7,7 @@ import {
   activitySchema,
   activityUpdateSchema,
   phaseSchema,
+  proofLinkSchema,
 } from "@/lib/workspace/schemas";
 import { notifyClientViewersActivityDone } from "@/lib/workspace/notifications";
 
@@ -50,16 +51,13 @@ function getCell(row: Record<string, unknown>, names: string[]) {
 function buildActivityDescription({
   deliverable,
   notes,
-  responsible,
 }: {
   deliverable: string;
   notes: string;
-  responsible: string;
 }) {
   return [
     deliverable && `Deliverable: ${deliverable}`,
     notes && `Notes/Dependencies: ${notes}`,
-    responsible && `Responsible: ${responsible}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -160,7 +158,7 @@ export async function importWorkplanSheet(
     const notes = getCell(row, ["Notes/Dependencies", "Notes", "Dependencies"]);
     const responsible = getCell(row, ["Responsible Team Member/Team", "Responsible"]);
     const status = normalizeStatus(getCell(row, ["Status"]));
-    const description = buildActivityDescription({ deliverable, notes, responsible });
+    const description = buildActivityDescription({ deliverable, notes });
 
     const { data: existingActivity, error: existingError } = await sb
       .from("activities")
@@ -175,6 +173,7 @@ export async function importWorkplanSheet(
         .from("activities")
         .update({
           description: description || null,
+          responsible: responsible || null,
           status,
         })
         .eq("id", existingActivity.id);
@@ -191,6 +190,7 @@ export async function importWorkplanSheet(
           phase_id: phase.id,
           name: activityName,
           description: description || null,
+          responsible: responsible || null,
           status,
           order_index: count ?? 0,
           created_by: userId,
@@ -243,6 +243,7 @@ export async function createActivity(projectId: string, formData: FormData): Pro
     description: formValue(formData, "description"),
     planned_date: formValue(formData, "planned_date"),
     location: formValue(formData, "location"),
+    responsible: formValue(formData, "responsible"),
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
@@ -282,6 +283,7 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
     description: formValue(formData, "description"),
     planned_date: formValue(formData, "planned_date"),
     location: formValue(formData, "location"),
+    responsible: formValue(formData, "responsible"),
     status: formValue(formData, "status"),
     completed_date: formValue(formData, "completed_date"),
     participants_count: formValue(formData, "participants_count"),
@@ -340,7 +342,9 @@ async function collectProofPaths(sb: Awaited<ReturnType<typeof createClient>>, a
     .from("activity_proofs")
     .select("file_path")
     .in("activity_id", activityIds);
-  return (data ?? []).map((p) => p.file_path).filter(Boolean);
+  return (data ?? [])
+    .map((p) => p.file_path)
+    .filter((path): path is string => typeof path === "string" && path.length > 0);
 }
 
 async function removeStorageFiles(
@@ -454,6 +458,7 @@ export async function uploadProofs(activityId: string, formData: FormData): Prom
 
     const { error: insertError } = await sb.from("activity_proofs").insert({
       activity_id: activityId,
+      kind: "file",
       file_path: path,
       file_name: file.name,
       mime_type: file.type || null,
@@ -470,6 +475,62 @@ export async function uploadProofs(activityId: string, formData: FormData): Prom
     actor_user_id: userId,
     action: "proof_added",
     meta: { count: files.length },
+  });
+
+  revalidatePath(`/workspace/projects/${projectId}/activities/${activityId}`);
+  revalidatePath(`/portal/projects/${projectId}/activities/${activityId}`);
+  revalidatePath(`/admin/projects/${projectId}`);
+  return { ok: true };
+}
+
+export async function addProofLink(
+  activityId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = proofLinkSchema.safeParse({
+    url: formValue(formData, "url"),
+    file_name: formValue(formData, "file_name"),
+    caption: formValue(formData, "caption"),
+  });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+
+  const sb = await createClient();
+  const userId = await currentUserId();
+  const { data: activity } = await sb
+    .from("activities")
+    .select("phase:phases(project_id)")
+    .eq("id", activityId)
+    .single();
+  const phase = Array.isArray(activity?.phase) ? activity?.phase[0] : activity?.phase;
+  const projectId = phase?.project_id;
+  if (!projectId) return { ok: false, error: "Project not found" };
+
+  // Default the displayed name to the URL hostname when none is provided.
+  let displayName = parsed.data.file_name?.trim() || "";
+  if (!displayName) {
+    try {
+      displayName = new URL(parsed.data.url).hostname;
+    } catch {
+      displayName = parsed.data.url;
+    }
+  }
+
+  const { error: insertError } = await sb.from("activity_proofs").insert({
+    activity_id: activityId,
+    kind: "link",
+    url: parsed.data.url,
+    file_name: displayName,
+    caption: parsed.data.caption || null,
+    uploaded_by: userId,
+  });
+  if (insertError) return { ok: false, error: insertError.message };
+
+  await sb.from("activity_log").insert({
+    project_id: projectId,
+    activity_id: activityId,
+    actor_user_id: userId,
+    action: "proof_added",
+    meta: { kind: "link" },
   });
 
   revalidatePath(`/workspace/projects/${projectId}/activities/${activityId}`);

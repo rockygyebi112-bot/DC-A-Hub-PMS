@@ -37,6 +37,7 @@ export type WorkspaceActivity = {
   location: string | null;
   participants_count: number | null;
   narrative_note: string | null;
+  responsible: string | null;
   order_index: number;
   proofCount: number;
 };
@@ -44,11 +45,13 @@ export type WorkspaceActivity = {
 export type WorkspaceProof = {
   id: string;
   activity_id: string;
-  file_path: string;
+  kind: "file" | "link";
+  file_path: string | null;
   file_name: string;
   mime_type: string | null;
   size_bytes: number | null;
   caption: string | null;
+  url: string | null;
   created_at: string;
   signedUrl: string | null;
 };
@@ -115,7 +118,7 @@ export async function listProjectPhases(projectId: string): Promise<WorkspacePha
   const phaseIds = phases.map((phase) => phase.id);
   const { data: activities, error: activityError } = await sb
     .from("activities")
-    .select("id, phase_id, name, description, planned_date, completed_date, status, location, participants_count, narrative_note, order_index")
+    .select("id, phase_id, name, description, planned_date, completed_date, status, location, participants_count, narrative_note, responsible, order_index")
     .in("phase_id", phaseIds)
     .order("order_index", { ascending: true });
   if (activityError) throw activityError;
@@ -161,7 +164,7 @@ export async function getActivity(activityId: string) {
   const sb = await createClient();
   const { data, error } = await sb
     .from("activities")
-    .select("id, phase_id, name, description, planned_date, completed_date, status, location, participants_count, narrative_note, order_index, phase:phases(id, name, project_id, project:projects(id, name, code))")
+    .select("id, phase_id, name, description, planned_date, completed_date, status, location, participants_count, narrative_note, responsible, order_index, phase:phases(id, name, project_id, project:projects(id, name, code))")
     .eq("id", activityId)
     .single();
   if (error) throw error;
@@ -176,17 +179,22 @@ export async function listActivityProofs(activityId: string): Promise<WorkspaceP
   const sb = await createClient();
   const { data, error } = await sb
     .from("activity_proofs")
-    .select("id, activity_id, file_path, file_name, mime_type, size_bytes, caption, created_at")
+    .select("id, activity_id, kind, file_path, file_name, mime_type, size_bytes, caption, url, created_at")
     .eq("activity_id", activityId)
     .order("created_at", { ascending: false });
   if (error) throw error;
 
   return Promise.all(
-    (data ?? []).map(async (proof) => {
-      const { data: signed } = await sb.storage
-        .from("proofs")
-        .createSignedUrl(proof.file_path, 60 * 60);
-      return { ...proof, signedUrl: signed?.signedUrl ?? null };
+    (data ?? []).map(async (proof): Promise<WorkspaceProof> => {
+      const kind = (proof.kind === "link" ? "link" : "file") as "file" | "link";
+      let signedUrl: string | null = null;
+      if (kind === "file" && proof.file_path) {
+        const { data: signed } = await sb.storage
+          .from("proofs")
+          .createSignedUrl(proof.file_path, 60 * 60);
+        signedUrl = signed?.signedUrl ?? null;
+      }
+      return { ...proof, kind, signedUrl };
     }),
   );
 }

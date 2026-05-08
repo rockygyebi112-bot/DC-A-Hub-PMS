@@ -3,15 +3,59 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronsLeft, ChevronsRight, Sparkles } from "lucide-react";
+import {
+  ChevronsLeft,
+  ChevronsRight,
+  Sparkles,
+  LayoutDashboard,
+  FolderKanban,
+  ListChecks,
+  Users,
+  Building2,
+  Activity,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  FileText,
+  Settings,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
+// Icons must be referenced by string name (not component) when crossing
+// the Server -> Client component boundary, since RSC cannot serialize functions.
+export type IconName =
+  | "layout-dashboard"
+  | "folder-kanban"
+  | "list-checks"
+  | "users"
+  | "building-2"
+  | "activity"
+  | "calendar-days"
+  | "check-circle-2"
+  | "clipboard-list"
+  | "file-text"
+  | "settings";
+
+const ICONS: Record<IconName, LucideIcon> = {
+  "layout-dashboard": LayoutDashboard,
+  "folder-kanban": FolderKanban,
+  "list-checks": ListChecks,
+  users: Users,
+  "building-2": Building2,
+  activity: Activity,
+  "calendar-days": CalendarDays,
+  "check-circle-2": CheckCircle2,
+  "clipboard-list": ClipboardList,
+  "file-text": FileText,
+  settings: Settings,
+};
+
 export type NavItem = {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: IconName;
   exact?: boolean;
   badge?: string | number;
 };
@@ -125,7 +169,7 @@ export function AppSidebar({
               const active = item.exact
                 ? pathname === item.href
                 : pathname === item.href || pathname.startsWith(item.href + "/");
-              const Icon = item.icon;
+              const Icon = ICONS[item.icon] ?? LayoutDashboard;
 
               return (
                 <Link

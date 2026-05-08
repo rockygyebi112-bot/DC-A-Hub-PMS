@@ -104,7 +104,11 @@ export function InviteUserForm() {
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue>
+                          {(value: string) =>
+                            ({ staff: "Staff", client: "Client" } as Record<string, string>)[value] ?? value
+                          }
+                        </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

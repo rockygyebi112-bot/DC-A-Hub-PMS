@@ -115,7 +115,11 @@ export function ProjectForm({ mode, clients, initial }: Props) {
                   <Select value={field.value || undefined} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Pick a client" />
+                        <SelectValue placeholder="Pick a client">
+                          {(value: string) =>
+                            clients.find((c) => c.id === value)?.name ?? "Pick a client"
+                          }
+                        </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -133,25 +137,35 @@ export function ProjectForm({ mode, clients, initial }: Props) {
             <FormField
               control={form.control}
               name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="planning">Not started</SelectItem>
-                      <SelectItem value="active">Ongoing</SelectItem>
-                      <SelectItem value="paused">Paused</SelectItem>
-                      <SelectItem value="completed">Done</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const statusLabels: Record<string, string> = {
+                  planning: "Not started",
+                  active: "Ongoing",
+                  paused: "Paused",
+                  completed: "Done",
+                };
+                return (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue>
+                            {(value: string) => statusLabels[value] ?? value}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="planning">Not started</SelectItem>
+                        <SelectItem value="active">Ongoing</SelectItem>
+                        <SelectItem value="paused">Paused</SelectItem>
+                        <SelectItem value="completed">Done</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
           </div>
         </SectionCard>

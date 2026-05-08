@@ -31,12 +31,22 @@ export default async function PortalLayout({
     },
   ].filter((g) => g.items.length > 0);
 
+  const projectBrands = Object.fromEntries(
+    projects.map((p) => [
+      p.id,
+      { name: p.client?.name ?? p.name, logoUrl: p.client?.logo_url ?? null },
+    ]),
+  );
+
   return (
     <AppShell
       brand="DC&A Hub"
       subtitle="Client Portal"
       groups={groups}
       storageKey="portal-sidebar-collapsed"
+      defaultLogoUrl="/logo.png"
+      projectBrands={projectBrands}
+      projectPathPrefix="/portal/projects"
       user={{ name: profile.fullName, email: profile.email }}
     >
       {children}

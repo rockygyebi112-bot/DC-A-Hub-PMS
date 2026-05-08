@@ -21,18 +21,29 @@ export type NavGroup = {
   items: NavItem[];
 };
 
+export type ProjectBrand = {
+  name: string;
+  logoUrl: string | null;
+};
+
 export function AppSidebar({
   brand,
   subtitle,
   groups,
   storageKey,
   footer,
+  defaultLogoUrl,
+  projectBrands,
+  projectPathPrefix,
 }: {
   brand: string;
   subtitle?: string;
   groups: NavGroup[];
   storageKey: string;
   footer?: React.ReactNode;
+  defaultLogoUrl?: string;
+  projectBrands?: Record<string, ProjectBrand>;
+  projectPathPrefix?: string;
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -40,6 +51,18 @@ export function AppSidebar({
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(storageKey) === "1");
   }, [storageKey]);
+
+  const activeProject = (() => {
+    if (!projectPathPrefix || !projectBrands) return null;
+    if (!pathname.startsWith(projectPathPrefix + "/")) return null;
+    const rest = pathname.slice(projectPathPrefix.length + 1);
+    const projectId = rest.split("/")[0];
+    return projectBrands[projectId] ?? null;
+  })();
+
+  const displayBrand = activeProject?.name ?? brand;
+  const displaySubtitle = activeProject ? subtitle : subtitle;
+  const displayLogo = activeProject?.logoUrl ?? defaultLogoUrl ?? null;
 
   function toggle() {
     setCollapsed((current) => {
@@ -57,14 +80,23 @@ export function AppSidebar({
       )}
     >
       <div className="mb-5 flex items-center gap-3 px-2">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm">
-          <Sparkles className="size-4" />
+        <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm">
+          {displayLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={displayLogo}
+              alt={`${displayBrand} logo`}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <Sparkles className="size-4" />
+          )}
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold leading-tight">{brand}</p>
-            {subtitle && (
-              <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>
+            <p className="truncate text-sm font-semibold leading-tight">{displayBrand}</p>
+            {displaySubtitle && (
+              <p className="truncate text-[11px] text-muted-foreground">{displaySubtitle}</p>
             )}
           </div>
         )}

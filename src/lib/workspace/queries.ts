@@ -10,7 +10,7 @@ export type WorkspaceProject = {
   start_date: string | null;
   end_date: string | null;
   description: string | null;
-  client: { id: string; name: string } | null;
+  client: { id: string; name: string; logo_url: string | null } | null;
   doneCount: number;
   totalCount: number;
 };
@@ -57,7 +57,7 @@ export async function listWorkspaceProjects(): Promise<WorkspaceProject[]> {
   const sb = await createClient();
   const { data: projects, error } = await sb
     .from("projects")
-    .select("id, name, code, status, start_date, end_date, description, client:clients(id, name)")
+    .select("id, name, code, status, start_date, end_date, description, client:clients(id, name, logo_url)")
     .is("archived_at", null)
     .order("name", { ascending: true });
   if (error) throw error;

@@ -45,12 +45,22 @@ export default async function WorkspaceLayout({
       : { items: [] },
   ].filter((g) => g.items.length > 0);
 
+  const projectBrands = Object.fromEntries(
+    projects.map((p) => [
+      p.id,
+      { name: p.client?.name ?? p.name, logoUrl: p.client?.logo_url ?? null },
+    ]),
+  );
+
   return (
     <AppShell
       brand="DC&A Hub"
       subtitle="Workspace"
       groups={groups}
       storageKey="workspace-sidebar-collapsed"
+      defaultLogoUrl="/logo.png"
+      projectBrands={projectBrands}
+      projectPathPrefix="/workspace/projects"
       user={{ name: profile.fullName, email: profile.email }}
       sidebarFooter={
         <div className="rounded-lg border bg-background/70 p-3 text-xs text-muted-foreground">

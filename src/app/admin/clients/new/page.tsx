@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { ClientForm } from "@/components/admin/forms/client-form";
 import { PageHeader } from "@/components/admin/ui/page-header";
 
@@ -9,11 +7,7 @@ export default function NewClientPage() {
       <PageHeader
         title="New client"
         subtitle="Create the organization record used by admin and project views."
-        action={
-          <Button variant="ghost" size="sm" render={<Link href="/admin/clients" />}>
-            Back to clients
-          </Button>
-        }
+        backFallbackHref="/admin/clients"
       />
       <ClientForm mode="create" />
     </div>

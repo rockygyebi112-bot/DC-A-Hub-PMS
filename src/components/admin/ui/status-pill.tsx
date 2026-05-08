@@ -30,6 +30,9 @@ const STYLES: Record<Status, string> = {
 };
 
 const LABELS: Partial<Record<Status, string>> = {
+  planning: "Not started",
+  active: "Ongoing",
+  completed: "Done",
   "active-user": "Active",
   "inactive-user": "Inactive",
 };

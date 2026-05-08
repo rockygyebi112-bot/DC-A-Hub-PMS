@@ -15,7 +15,13 @@ export async function listClients(opts: { includeArchived?: boolean } = {}) {
   return (data ?? []).map((c) => {
     const projects = (c.projects ?? []) as { id: string; archived_at: string | null }[];
     const projectCount = projects.filter((p) => p.archived_at === null).length;
-    const { projects: _projects, ...rest } = c;
+    const rest = {
+      id: c.id,
+      name: c.name,
+      contact_email: c.contact_email,
+      archived_at: c.archived_at,
+      created_at: c.created_at,
+    };
     return { ...rest, project_count: projectCount };
   });
 }
@@ -29,6 +35,59 @@ export async function getClient(id: string) {
     .single();
   if (error) throw error;
   return data;
+}
+
+export type ClientProjectRow = {
+  id: string;
+  name: string;
+  code: string;
+  status: string;
+  archived_at: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  doneCount: number;
+  totalCount: number;
+};
+
+export async function listClientProjects(clientId: string): Promise<ClientProjectRow[]> {
+  const sb = await createClient();
+  const { data: projects, error } = await sb
+    .from("projects")
+    .select("id, name, code, status, archived_at, start_date, end_date")
+    .eq("client_id", clientId)
+    .order("name", { ascending: true });
+  if (error) throw error;
+  if (!projects?.length) return [];
+
+  const projectIds = projects.map((project) => project.id);
+  const { data: phases } = await sb
+    .from("phases")
+    .select("id, project_id")
+    .in("project_id", projectIds);
+  const phaseIds = (phases ?? []).map((phase) => phase.id);
+  const { data: activities } = phaseIds.length
+    ? await sb.from("activities").select("id, phase_id, status").in("phase_id", phaseIds)
+    : { data: [] };
+
+  const phaseToProject = new Map((phases ?? []).map((phase) => [phase.id, phase.project_id]));
+  const counts = new Map<string, { done: number; total: number }>();
+  for (const activity of activities ?? []) {
+    const projectId = phaseToProject.get(activity.phase_id);
+    if (!projectId) continue;
+    const current = counts.get(projectId) ?? { done: 0, total: 0 };
+    current.total += 1;
+    if (activity.status === "done") current.done += 1;
+    counts.set(projectId, current);
+  }
+
+  return projects.map((project) => {
+    const count = counts.get(project.id) ?? { done: 0, total: 0 };
+    return {
+      ...project,
+      doneCount: count.done,
+      totalCount: count.total,
+    };
+  });
 }
 
 export async function listProjects(opts: { includeArchived?: boolean } = {}) {

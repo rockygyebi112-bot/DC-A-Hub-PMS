@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,11 +29,7 @@ export default async function NewWorkspaceActivityPage({
       <PageHeader
         title="New activity"
         subtitle={`Add an activity to ${project.name}.`}
-        action={
-          <Button variant="ghost" size="sm" render={<Link href={`/workspace/projects/${id}`} />}>
-            Back to project
-          </Button>
-        }
+        backFallbackHref={`/workspace/projects/${id}`}
       />
 
       <SectionCard title="Activity details">
@@ -71,4 +66,3 @@ export default async function NewWorkspaceActivityPage({
     </main>
   );
 }
-

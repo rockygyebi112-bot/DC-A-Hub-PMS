@@ -87,6 +87,7 @@ export async function createPhase(projectId: string, formData: FormData): Promis
   if (error) return { ok: false, error: error.message };
 
   revalidatePath(`/workspace/projects/${projectId}`);
+  revalidatePath(`/admin/projects/${projectId}`);
   return { ok: true };
 }
 
@@ -211,6 +212,7 @@ export async function importWorkplanSheet(
 
   revalidatePath(`/workspace/projects/${projectId}`);
   revalidatePath(`/portal/projects/${projectId}`);
+  revalidatePath(`/admin/projects/${projectId}`);
   return { ok: true, data: { phasesCreated, activitiesCreated, activitiesUpdated } };
 }
 
@@ -229,6 +231,7 @@ export async function updatePhase(phaseId: string, formData: FormData): Promise<
   if (error) return { ok: false, error: error.message };
 
   revalidatePath(`/workspace/projects/${phase?.project_id}`);
+  revalidatePath(`/admin/projects/${phase?.project_id}`);
   revalidatePath(`/workspace/projects/${phase?.project_id}/phases/${phaseId}`);
   return { ok: true };
 }
@@ -268,6 +271,7 @@ export async function createActivity(projectId: string, formData: FormData): Pro
   });
 
   revalidatePath(`/workspace/projects/${projectId}`);
+  revalidatePath(`/admin/projects/${projectId}`);
   return { ok: true, data };
 }
 
@@ -317,9 +321,11 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
 
     revalidatePath(`/workspace/projects/${projectId}`);
     revalidatePath(`/portal/projects/${projectId}`);
+    revalidatePath(`/admin/projects/${projectId}`);
   }
   revalidatePath(`/workspace/projects/${projectId}/activities/${activityId}`);
   revalidatePath(`/portal/projects/${projectId}/activities/${activityId}`);
+  revalidatePath(`/admin/projects/${projectId}`);
   return { ok: true };
 }
 
@@ -370,5 +376,6 @@ export async function uploadProofs(activityId: string, formData: FormData): Prom
 
   revalidatePath(`/workspace/projects/${projectId}/activities/${activityId}`);
   revalidatePath(`/portal/projects/${projectId}/activities/${activityId}`);
+  revalidatePath(`/admin/projects/${projectId}`);
   return { ok: true };
 }

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { CalendarDays, CheckCircle2, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
@@ -24,11 +23,7 @@ export default async function PortalProjectPage({
       <PageHeader
         title={project.name}
         subtitle="Live progress and completion evidence from DC&A Hub."
-        action={
-          <Button variant="ghost" size="sm" render={<Link href="/portal" />}>
-            All projects
-          </Button>
-        }
+        backFallbackHref="/portal"
       />
 
       <section className="mb-6 rounded-[var(--admin-card-radius)] border bg-card p-5 shadow-sm">
@@ -132,4 +127,3 @@ export default async function PortalProjectPage({
     </main>
   );
 }
-

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -41,20 +40,7 @@ export default async function ProjectTeamPage({
       <PageHeader
         title={`${project.name} team`}
         subtitle={`${members.length} member${members.length === 1 ? "" : "s"} with project access`}
-        action={
-          <Button
-            variant="ghost"
-            size="sm"
-            render={<Link href={`/admin/projects/${id}`} />}
-          >
-            Back to project
-          </Button>
-        }
-      />
-
-      <SectionCard
-        title="Team access"
-        description="Staff get delivery access. Client viewers get read-only progress visibility."
+        backFallbackHref={`/admin/projects/${id}`}
         action={
           <div className="flex flex-wrap gap-2">
             <AssignMemberForm
@@ -80,6 +66,11 @@ export default async function ProjectTeamPage({
             <InviteClientViewerForm projectId={id} />
           </div>
         }
+      />
+
+      <SectionCard
+        title="Team access"
+        description="Staff get delivery access. Client viewers get read-only progress visibility."
       >
         {members.length === 0 ? (
           <EmptyState

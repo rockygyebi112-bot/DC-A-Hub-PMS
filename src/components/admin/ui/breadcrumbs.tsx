@@ -22,20 +22,20 @@ export function Breadcrumbs({ trail }: { trail?: Crumb[] }) {
   if (segments.length <= 1) return null;
 
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm">
+    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1 overflow-hidden text-sm">
       {segments.map((c, i) => {
         const isLast = i === segments.length - 1;
         return (
-          <span key={c.href} className="flex items-center gap-1">
+          <span key={c.href} className="flex min-w-0 items-center gap-1">
             {i > 0 && (
               <ChevronRight className="size-3.5 text-muted-foreground" />
             )}
             {isLast ? (
-              <span className="font-medium text-foreground">{c.label}</span>
+              <span className="truncate font-medium text-foreground">{c.label}</span>
             ) : (
               <Link
                 href={c.href}
-                className="text-muted-foreground hover:text-foreground"
+                className="truncate text-muted-foreground hover:text-foreground"
               >
                 {c.label}
               </Link>

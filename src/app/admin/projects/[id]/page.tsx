@@ -2,11 +2,13 @@ import Link from "next/link";
 import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProjectForm } from "@/components/admin/forms/project-form";
+import { ProjectWorkplanPanel } from "@/components/admin/project-workplan-panel";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { archiveProject, restoreProject } from "@/lib/admin/actions/projects";
 import { getProject, listClients } from "@/lib/admin/queries";
+import { listProjectPhases } from "@/lib/workspace/queries";
 
 export default async function EditProjectPage({
   params,
@@ -14,9 +16,10 @@ export default async function EditProjectPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [project, clients] = await Promise.all([
+  const [project, clients, phases] = await Promise.all([
     getProject(id),
     listClients({ includeArchived: true }),
+    listProjectPhases(id),
   ]);
 
   async function archive() {
@@ -30,7 +33,7 @@ export default async function EditProjectPage({
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="max-w-6xl space-y-6">
       <PageHeader
         title={project.name}
         subtitle={`${project.code} / ${project.client?.name ?? "No client"}`}
@@ -51,11 +54,9 @@ export default async function EditProjectPage({
               <Users className="size-4" />
               Team
             </Button>
-            <Button variant="ghost" size="sm" render={<Link href="/admin/projects" />}>
-              Back
-            </Button>
           </div>
         }
+        backFallbackHref="/admin/projects"
       />
 
       <ProjectForm
@@ -72,6 +73,8 @@ export default async function EditProjectPage({
           end_date: project.end_date ?? "",
         }}
       />
+
+      <ProjectWorkplanPanel projectId={id} phases={phases} />
 
       <SectionCard
         title="Danger zone"

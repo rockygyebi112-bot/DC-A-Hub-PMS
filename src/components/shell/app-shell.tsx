@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AppSidebar, type NavGroup } from "./app-sidebar";
+import { AppSidebar, type NavGroup, type ProjectBrand } from "./app-sidebar";
 import { AppTopbar } from "./app-topbar";
 
 export function AppShell({
@@ -10,6 +10,9 @@ export function AppShell({
   storageKey,
   user,
   sidebarFooter,
+  defaultLogoUrl,
+  projectBrands,
+  projectPathPrefix,
 }: {
   children: ReactNode;
   brand: string;
@@ -18,6 +21,9 @@ export function AppShell({
   storageKey: string;
   user: { name: string; email: string };
   sidebarFooter?: ReactNode;
+  defaultLogoUrl?: string;
+  projectBrands?: Record<string, ProjectBrand>;
+  projectPathPrefix?: string;
 }) {
   return (
     <div className="flex min-h-screen bg-muted/30 text-foreground">
@@ -27,6 +33,9 @@ export function AppShell({
         groups={groups}
         storageKey={storageKey}
         footer={sidebarFooter}
+        defaultLogoUrl={defaultLogoUrl}
+        projectBrands={projectBrands}
+        projectPathPrefix={projectPathPrefix}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <AppTopbar name={user.name} email={user.email} />

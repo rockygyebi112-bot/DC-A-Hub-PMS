@@ -72,7 +72,12 @@ export function AssignMemberForm({
           <Label>User</Label>
           <Select value={userId || undefined} onValueChange={(v) => setUserId(v ?? "")}>
             <SelectTrigger>
-              <SelectValue placeholder="Pick a user" />
+              <SelectValue placeholder="Pick a user">
+                {(value: string) => {
+                  const c = candidates.find((cand) => cand.user_id === value);
+                  return c ? `${c.full_name} (${c.email})` : "Pick a user";
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {candidates.length === 0 && (

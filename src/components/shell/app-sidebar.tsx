@@ -80,16 +80,18 @@ export function AppSidebar({
       )}
     >
       <div className="mb-5 flex items-center gap-3 px-2">
-        <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm">
+        <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl">
           {displayLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={displayLogo}
               alt={`${displayBrand} logo`}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
             />
           ) : (
-            <Sparkles className="size-4" />
+            <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm">
+              <Sparkles className="size-4" />
+            </div>
           )}
         </div>
         {!collapsed && (

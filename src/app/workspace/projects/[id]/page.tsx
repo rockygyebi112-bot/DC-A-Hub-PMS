@@ -27,6 +27,7 @@ import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { ActivityStatus } from "@/components/workspace/status-badge";
 import { ProjectProgress } from "@/components/workspace/project-progress";
+import { WorkplanImportForm } from "@/components/workspace/workplan-import-form";
 import { createActivity, createPhase } from "@/lib/workspace/actions";
 import {
   getWorkspaceProject,
@@ -155,6 +156,10 @@ export default async function WorkspaceProjectPage({
         </Tabs>
 
         <aside className="space-y-4">
+          <SectionCard title="Import checklist">
+            <WorkplanImportForm projectId={id} />
+          </SectionCard>
+
           <SectionCard title="Add phase">
             <form action={addPhase} className="space-y-3">
               <Input name="name" placeholder="Inception" required />

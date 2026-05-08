@@ -25,7 +25,16 @@ export default async function PortalActivityPage({
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <SectionCard title="Completion notes">
+        <SectionCard
+          title={activity.status === "done" ? "Completion notes" : "Activity details"}
+          description={
+            activity.status === "in_progress"
+              ? "This activity is currently in progress."
+              : activity.status === "not_started"
+                ? "This activity has not started yet."
+                : undefined
+          }
+        >
           <dl className="grid gap-4 sm:grid-cols-2">
             <div>
               <dt className="text-xs font-medium text-muted-foreground">Completed date</dt>

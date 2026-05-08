@@ -304,6 +304,10 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
 
   if (projectId) {
     const markedDone = before?.status !== "done" && parsed.data.status === "done";
+    const markedStarted =
+      before?.status !== "in_progress" &&
+      before?.status !== "done" &&
+      parsed.data.status === "in_progress";
     const notification = markedDone
       ? await notifyClientViewersActivityDone({ projectId, activityId }).catch((err) => ({
           ok: false,
@@ -311,11 +315,12 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
         }))
       : { ok: true };
 
+    const action = markedDone ? "marked_done" : markedStarted ? "started" : "updated";
     await sb.from("activity_log").insert({
       project_id: projectId,
       activity_id: activityId,
       actor_user_id: userId,
-      action: markedDone ? "marked_done" : "updated",
+      action,
       meta: notification.ok ? {} : { email_error: notification.reason },
     });
 

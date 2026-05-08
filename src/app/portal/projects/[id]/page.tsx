@@ -60,40 +60,53 @@ export default async function PortalProjectPage({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-4">
-          {phases.map((phase) => (
-            <SectionCard key={phase.id} title={phase.name} description={phase.description ?? undefined}>
-              <div className="grid gap-2">
-                {phase.activities.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No activities yet.</p>
-                ) : (
-                  phase.activities.map((activity) => {
-                    const content = (
-                      <div className="flex flex-col gap-3 rounded-lg border bg-background p-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{activity.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {activity.planned_date ?? "No planned date"}
-                          </p>
-                        </div>
-                        <ActivityStatus status={activity.status} />
-                      </div>
-                    );
-                    return activity.status === "done" ? (
+          {phases.map((phase) => {
+            const phaseTotal = phase.activities.length;
+            const phaseDone = phase.activities.filter((a) => a.status === "done").length;
+            const phaseInProgress = phase.activities.filter((a) => a.status === "in_progress").length;
+            return (
+              <SectionCard key={phase.id} title={phase.name} description={phase.description ?? undefined}>
+                {phaseTotal > 0 && (
+                  <div className="mb-3">
+                    <ProjectProgress done={phaseDone} total={phaseTotal} />
+                    {phaseInProgress > 0 && (
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {phaseInProgress} in progress
+                      </p>
+                    )}
+                  </div>
+                )}
+                <div className="grid gap-2">
+                  {phase.activities.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No activities yet.</p>
+                  ) : (
+                    phase.activities.map((activity) => (
                       <Link
                         key={activity.id}
                         href={`/portal/projects/${id}/activities/${activity.id}`}
-                        className="block"
+                        className="block rounded-lg border bg-background p-3 transition-colors hover:bg-accent"
                       >
-                        {content}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{activity.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {activity.planned_date ?? "No planned date"}
+                              {activity.proofCount > 0 && (
+                                <span className="ml-2">
+                                  · {activity.proofCount} proof{activity.proofCount === 1 ? "" : "s"}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <ActivityStatus status={activity.status} />
+                        </div>
                       </Link>
-                    ) : (
-                      <div key={activity.id}>{content}</div>
-                    );
-                  })
-                )}
-              </div>
-            </SectionCard>
-          ))}
+                    ))
+                  )}
+                </div>
+              </SectionCard>
+            );
+          })}
         </div>
 
         <SectionCard

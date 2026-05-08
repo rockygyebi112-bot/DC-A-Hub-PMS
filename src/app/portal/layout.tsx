@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { listPortalProjects } from "@/lib/portal/queries";
+import { getNotificationFeed } from "@/lib/notifications/queries";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
 
 export default async function PortalLayout({
   children,
@@ -11,7 +13,14 @@ export default async function PortalLayout({
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
-  const projects = await listPortalProjects().catch(() => []);
+  const [projects, notifications] = await Promise.all([
+    listPortalProjects().catch(() => []),
+    getNotificationFeed("portal").catch(() => ({
+      entries: [],
+      unreadCount: 0,
+      lastReadAt: null,
+    })),
+  ]);
 
   const groups = [
     {
@@ -47,6 +56,13 @@ export default async function PortalLayout({
       projectBrands={projectBrands}
       projectPathPrefix="/portal/projects"
       user={{ name: profile.fullName, email: profile.email }}
+      topbarExtra={
+        <NotificationsBell
+          entries={notifications.entries}
+          unreadCount={notifications.unreadCount}
+          lastReadAt={notifications.lastReadAt}
+        />
+      }
     >
       {children}
     </AppShell>

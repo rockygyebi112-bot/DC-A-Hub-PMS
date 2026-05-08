@@ -13,6 +13,7 @@ export function AppShell({
   defaultLogoUrl,
   projectBrands,
   projectPathPrefix,
+  topbarExtra,
 }: {
   children: ReactNode;
   brand: string;
@@ -24,6 +25,7 @@ export function AppShell({
   defaultLogoUrl?: string;
   projectBrands?: Record<string, ProjectBrand>;
   projectPathPrefix?: string;
+  topbarExtra?: ReactNode;
 }) {
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -38,7 +40,7 @@ export function AppShell({
         projectPathPrefix={projectPathPrefix}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <AppTopbar name={user.name} email={user.email} />
+        <AppTopbar name={user.name} email={user.email} extra={topbarExtra} />
         <main className="flex-1">
           <div className="page-enter mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
             {children}

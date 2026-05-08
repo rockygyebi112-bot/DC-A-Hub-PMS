@@ -7,8 +7,9 @@ import {
   Columns3,
   FileSpreadsheet,
   ListChecks,
+  MoreVertical,
   Plus,
-  Rows3,
+  Trash2,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,13 +25,21 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { ProjectIcon } from "@/components/ui/project-icon";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { ActivityStatus } from "@/components/workspace/status-badge";
 import { ProjectProgress } from "@/components/workspace/project-progress";
 import { WorkplanImportForm } from "@/components/workspace/workplan-import-form";
-import { createActivity, createPhase } from "@/lib/workspace/actions";
+import { DeleteConfirm } from "@/components/workspace/delete-confirm";
+import {
+  createActivity,
+  createPhase,
+  deleteActivity,
+  deletePhase,
+  deleteWorkplan,
+} from "@/lib/workspace/actions";
 import {
   getWorkspaceProject,
   listProjectPhases,
@@ -81,10 +90,15 @@ export default async function WorkspaceProjectPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
+    <>
       <PageHeader
-        title={project.name}
-        subtitle={`${project.client?.name ?? "Client"} / ${project.code}`}
+        title={
+          <span className="flex items-center gap-3">
+            <ProjectIcon name={project.name} seed={project.id} />
+            <span>{project.name}</span>
+          </span>
+        }
+        subtitle={`${project.client?.name ?? "Client"} · ${project.code}`}
         backFallbackHref="/workspace"
         action={
           <div className="flex flex-wrap gap-2">
@@ -100,6 +114,29 @@ export default async function WorkspaceProjectPage({
               <Plus className="size-4" />
               Activity
             </Button>
+            {phases.length > 0 && (
+              <DeleteConfirm
+                trigger={
+                  <Button variant="destructive" size="default">
+                    <Trash2 className="size-4" />
+                    Delete workplan
+                  </Button>
+                }
+                title="Delete workplan"
+                description={
+                  <>
+                    This will permanently delete <strong>all {phases.length} phases</strong>,{" "}
+                    <strong>{activities.length} activities</strong>, and every uploaded proof for
+                    this project. The project itself will remain.
+                  </>
+                }
+                confirmWord="DELETE"
+                action={async () => {
+                  "use server";
+                  return deleteWorkplan(id);
+                }}
+              />
+            )}
           </div>
         }
       />
@@ -122,33 +159,54 @@ export default async function WorkspaceProjectPage({
         <MetricCard title="Timeline">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <CalendarDays className="size-4" />
-            {project.start_date ?? "TBD"} - {project.end_date ?? "TBD"}
+            {project.start_date ?? "TBD"} – {project.end_date ?? "TBD"}
           </div>
         </MetricCard>
       </div>
 
-      <section id="import-checklist" className="mb-6 scroll-mt-20">
-        <div className="mb-3 flex flex-col gap-1">
-          <h2 className="text-base font-semibold">Workplan tools</h2>
-          <p className="text-sm text-muted-foreground">
-            Import, create phases, or add a one-off activity without squeezing the board.
-          </p>
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-[1.05fr_1fr_1fr]">
-          <div className="min-w-0 rounded-[var(--admin-card-radius)] border bg-card p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-2">
-              <FileSpreadsheet className="size-4 text-muted-foreground" />
-              <p className="text-sm font-semibold">Import checklist</p>
-            </div>
-            <WorkplanImportForm projectId={id} />
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+        <Tabs defaultValue="board" className="min-w-0">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <TabsList>
+              <TabsTrigger value="board">
+                <Columns3 className="size-4" />
+                Board
+              </TabsTrigger>
+              <TabsTrigger value="list">
+                <ListChecks className="size-4" />
+                List
+              </TabsTrigger>
+              <TabsTrigger value="timeline">
+                <CalendarDays className="size-4" />
+                Timeline
+              </TabsTrigger>
+            </TabsList>
+            <span className="text-xs text-muted-foreground">
+              {phases.length} phases · {activities.length} activities
+            </span>
           </div>
 
-          <div className="min-w-0 rounded-[var(--admin-card-radius)] border bg-card p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-2">
-              <Rows3 className="size-4 text-muted-foreground" />
-              <p className="text-sm font-semibold">Add phase</p>
-            </div>
+          <TabsContent value="board">
+            <ProjectBoard projectId={id} phases={phases} activities={activities} />
+          </TabsContent>
+
+          <TabsContent value="list">
+            <ProjectList projectId={id} phases={phases} activities={activities} />
+          </TabsContent>
+
+          <TabsContent value="timeline">
+            <ProjectTimeline projectId={id} activities={activities} />
+          </TabsContent>
+        </Tabs>
+
+        <aside className="space-y-4">
+          <div id="import-checklist" className="scroll-mt-20">
+            <SectionCard title="Import checklist">
+              <WorkplanImportForm projectId={id} />
+            </SectionCard>
+          </div>
+
+          <SectionCard title="Add phase">
             <form action={addPhase} className="space-y-3">
               <Input name="name" placeholder="Inception" required />
               <div className="grid grid-cols-2 gap-2">
@@ -160,13 +218,9 @@ export default async function WorkspaceProjectPage({
                 Add phase
               </Button>
             </form>
-          </div>
+          </SectionCard>
 
-          <div className="min-w-0 rounded-[var(--admin-card-radius)] border bg-card p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-2">
-              <Plus className="size-4 text-muted-foreground" />
-              <p className="text-sm font-semibold">Quick activity</p>
-            </div>
+          <SectionCard title="Quick activity">
             <form action={addActivity} className="space-y-3">
               <select
                 name="phase_id"
@@ -181,60 +235,16 @@ export default async function WorkspaceProjectPage({
                 ))}
               </select>
               <Input name="name" placeholder="Activity name" required />
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-                <Input name="planned_date" type="date" />
-                <Input name="location" placeholder="Location" />
-              </div>
+              <Input name="planned_date" type="date" />
+              <Input name="location" placeholder="Location" />
               <Button type="submit" className="w-full" disabled={phases.length === 0}>
                 Add activity
               </Button>
             </form>
-          </div>
-        </div>
-      </section>
-
-      <Tabs defaultValue="phases" className="min-w-0">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <TabsList>
-            <TabsTrigger value="phases">
-              <Rows3 className="size-4" />
-              Phases
-            </TabsTrigger>
-            <TabsTrigger value="board">
-              <Columns3 className="size-4" />
-              Board
-            </TabsTrigger>
-            <TabsTrigger value="list">
-              <ListChecks className="size-4" />
-              List
-            </TabsTrigger>
-            <TabsTrigger value="timeline">
-              <CalendarDays className="size-4" />
-              Timeline
-            </TabsTrigger>
-          </TabsList>
-          <span className="text-xs text-muted-foreground">
-            {phases.length} phases / {activities.length} activities
-          </span>
-        </div>
-
-        <TabsContent value="phases">
-          <PhaseOverview projectId={id} phases={phases} />
-        </TabsContent>
-
-        <TabsContent value="board">
-          <ProjectBoard projectId={id} phases={phases} activities={activities} />
-        </TabsContent>
-
-        <TabsContent value="list">
-          <ProjectList projectId={id} activities={activities} />
-        </TabsContent>
-
-        <TabsContent value="timeline">
-          <ProjectTimeline projectId={id} activities={activities} />
-        </TabsContent>
-      </Tabs>
-    </main>
+          </SectionCard>
+        </aside>
+      </div>
+    </>
   );
 }
 
@@ -246,98 +256,11 @@ function MetricCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[var(--admin-card-radius)] border bg-card p-4 shadow-sm">
-      <p className="mb-2 text-xs font-medium uppercase text-muted-foreground">{title}</p>
+    <div className="rounded-xl border bg-card p-4 shadow-sm">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {title}
+      </p>
       {children}
-    </div>
-  );
-}
-
-function PhaseOverview({
-  projectId,
-  phases,
-}: {
-  projectId: string;
-  phases: WorkspacePhase[];
-}) {
-  if (phases.length === 0) {
-    return (
-      <SectionCard>
-        <EmptyState
-          variant="page"
-          icon={ClipboardList}
-          title="No phases"
-          description="Create the first phase to start building the workplan."
-        />
-      </SectionCard>
-    );
-  }
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-      {phases.map((phase) => {
-        const total = phase.activities.length;
-        const done = phase.activities.filter((activity) => activity.status === "done").length;
-        const inProgress = phase.activities.filter(
-          (activity) => activity.status === "in_progress",
-        ).length;
-        const percent = total === 0 ? 0 : Math.round((done / total) * 100);
-
-        return (
-          <section
-            key={phase.id}
-            className="flex min-h-[260px] flex-col rounded-[var(--admin-card-radius)] border bg-card shadow-sm"
-          >
-            <header className="border-b px-4 py-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="truncate text-sm font-semibold">{phase.name}</h2>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {total} item{total === 1 ? "" : "s"} / {inProgress} active
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  render={<Link href={`/workspace/projects/${projectId}/phases/${phase.id}`} />}
-                >
-                  Edit
-                </Button>
-              </div>
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium">{percent}%</span>
-                  <span className="text-muted-foreground">
-                    {done}/{total} done
-                  </span>
-                </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary"
-                    style={{ width: `${percent}%` }}
-                  />
-                </div>
-              </div>
-            </header>
-
-            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
-              {phase.activities.length === 0 ? (
-                <div className="rounded-lg border border-dashed bg-background/60 px-3 py-8 text-center text-xs text-muted-foreground">
-                  No activities in this phase
-                </div>
-              ) : (
-                phase.activities.map((activity) => (
-                  <CompactActivityRow
-                    key={activity.id}
-                    projectId={projectId}
-                    activity={{ ...activity, phaseName: phase.name }}
-                  />
-                ))
-              )}
-            </div>
-          </section>
-        );
-      })}
     </div>
   );
 }
@@ -365,16 +288,13 @@ function ProjectBoard({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
+    <div className="grid gap-3 xl:grid-cols-3">
       {BOARD_COLUMNS.map((column) => {
         const Icon = column.icon;
         const rows = activities.filter((activity) => activity.status === column.key);
         return (
-          <section
-            key={column.key}
-            className="flex max-h-[70vh] min-h-[420px] flex-col overflow-hidden rounded-[var(--admin-card-radius)] border bg-muted/30"
-          >
-            <header className="flex shrink-0 items-center justify-between gap-3 border-b px-3 py-2">
+          <section key={column.key} className="rounded-xl border bg-muted/30">
+            <header className="flex items-center justify-between gap-3 border-b px-3 py-2">
               <div className="flex items-center gap-2">
                 <Icon className="size-4 text-muted-foreground" />
                 <h2 className="text-sm font-semibold">{column.label}</h2>
@@ -383,7 +303,7 @@ function ProjectBoard({
                 {rows.length}
               </span>
             </header>
-            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
+            <div className="space-y-2 p-2">
               {rows.length === 0 ? (
                 <div className="rounded-lg border border-dashed bg-background/60 px-3 py-8 text-center text-xs text-muted-foreground">
                   Empty
@@ -401,29 +321,6 @@ function ProjectBoard({
   );
 }
 
-function CompactActivityRow({
-  projectId,
-  activity,
-}: {
-  projectId: string;
-  activity: WorkspaceActivity & { phaseName: string };
-}) {
-  return (
-    <Link
-      href={`/workspace/projects/${projectId}/activities/${activity.id}`}
-      className="grid min-h-11 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border bg-background px-3 py-2 transition-colors hover:bg-accent"
-    >
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{activity.name}</p>
-        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-          {activity.planned_date ?? "No date"} / {activity.location ?? "No location"}
-        </p>
-      </div>
-      <ActivityStatus status={activity.status} />
-    </Link>
-  );
-}
-
 function ActivityCard({
   projectId,
   activity,
@@ -432,37 +329,56 @@ function ActivityCard({
   activity: WorkspaceActivity & { phaseName: string };
 }) {
   return (
-    <Link
-      href={`/workspace/projects/${projectId}/activities/${activity.id}`}
-      className="block rounded-lg border bg-background p-2.5 shadow-sm transition-colors hover:bg-accent"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{activity.name}</p>
+    <div className="rounded-lg border bg-background p-3 shadow-sm transition-colors hover:bg-accent/50">
+      <div className="flex items-start justify-between gap-2">
+        <Link
+          href={`/workspace/projects/${projectId}/activities/${activity.id}`}
+          className="min-w-0 flex-1"
+        >
+          <p className="truncate text-sm font-medium hover:underline">{activity.name}</p>
           <p className="mt-1 truncate text-xs text-muted-foreground">{activity.phaseName}</p>
-        </div>
+        </Link>
         <ActivityStatus status={activity.status} />
       </div>
-      <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-        <span>{activity.planned_date ?? "No date"}</span>
-        <span>/</span>
-        <span>{activity.location ?? "No location"}</span>
-        {activity.proofCount > 0 && (
-          <>
-            <span>/</span>
-            <span>{activity.proofCount} proofs</span>
-          </>
-        )}
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <span>{activity.planned_date ?? "No date"}</span>
+          {activity.location && <span>· {activity.location}</span>}
+          {activity.proofCount > 0 && <span>· {activity.proofCount} proofs</span>}
+        </div>
+        <DeleteConfirm
+          trigger={
+            <button
+              type="button"
+              aria-label="Delete activity"
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          }
+          title={`Delete activity`}
+          description={
+            <>
+              Delete <strong>{activity.name}</strong>? This will remove all proofs uploaded to it.
+            </>
+          }
+          action={async () => {
+            "use server";
+            return deleteActivity(activity.id);
+          }}
+        />
       </div>
-    </Link>
+    </div>
   );
 }
 
 function ProjectList({
   projectId,
+  phases,
   activities,
 }: {
   projectId: string;
+  phases: WorkspacePhase[];
   activities: (WorkspaceActivity & { phaseName: string })[];
 }) {
   if (activities.length === 0) {
@@ -474,43 +390,104 @@ function ProjectList({
   }
 
   return (
-    <SectionCard>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Activity</TableHead>
-              <TableHead>Phase</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Planned</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Proofs</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {activities.map((activity) => (
-              <TableRow key={activity.id} style={{ height: "var(--admin-row-h)" }}>
-                <TableCell>
-                  <Link
-                    href={`/workspace/projects/${projectId}/activities/${activity.id}`}
-                    className="font-medium hover:underline"
-                  >
-                    {activity.name}
-                  </Link>
-                </TableCell>
-                <TableCell>{activity.phaseName}</TableCell>
-                <TableCell>
-                  <ActivityStatus status={activity.status} />
-                </TableCell>
-                <TableCell>{activity.planned_date ?? "-"}</TableCell>
-                <TableCell>{activity.location ?? "-"}</TableCell>
-                <TableCell>{activity.proofCount}</TableCell>
-              </TableRow>
+    <div className="space-y-4">
+      {phases.length > 0 && (
+        <SectionCard title="Phases" description={`${phases.length} phases in this workplan`}>
+          <ul className="divide-y">
+            {phases.map((phase) => (
+              <li key={phase.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{phase.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {phase.activities.length} activities
+                    {phase.start_date || phase.end_date
+                      ? ` · ${phase.start_date ?? "TBD"} – ${phase.end_date ?? "TBD"}`
+                      : ""}
+                  </p>
+                </div>
+                <DeleteConfirm
+                  trigger={
+                    <Button variant="ghost" size="icon-sm" aria-label="Delete phase">
+                      <MoreVertical className="size-4" />
+                    </Button>
+                  }
+                  title="Delete phase"
+                  description={
+                    <>
+                      Delete <strong>{phase.name}</strong> and its{" "}
+                      <strong>{phase.activities.length} activities</strong>? Proofs will be deleted too.
+                    </>
+                  }
+                  confirmWord={phase.activities.length > 0 ? "DELETE" : undefined}
+                  action={async () => {
+                    "use server";
+                    return deletePhase(phase.id);
+                  }}
+                />
+              </li>
             ))}
-          </TableBody>
-        </Table>
-      </div>
-    </SectionCard>
+          </ul>
+        </SectionCard>
+      )}
+
+      <SectionCard>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Activity</TableHead>
+                <TableHead>Phase</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Planned</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Proofs</TableHead>
+                <TableHead className="w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {activities.map((activity) => (
+                <TableRow key={activity.id} style={{ height: "var(--admin-row-h)" }}>
+                  <TableCell>
+                    <Link
+                      href={`/workspace/projects/${projectId}/activities/${activity.id}`}
+                      className="font-medium hover:underline"
+                    >
+                      {activity.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{activity.phaseName}</TableCell>
+                  <TableCell>
+                    <ActivityStatus status={activity.status} />
+                  </TableCell>
+                  <TableCell>{activity.planned_date ?? "—"}</TableCell>
+                  <TableCell>{activity.location ?? "—"}</TableCell>
+                  <TableCell>{activity.proofCount}</TableCell>
+                  <TableCell className="text-right">
+                    <DeleteConfirm
+                      trigger={
+                        <Button variant="ghost" size="icon-sm" aria-label="Delete activity">
+                          <Trash2 className="size-4" />
+                        </Button>
+                      }
+                      title="Delete activity"
+                      description={
+                        <>
+                          Delete <strong>{activity.name}</strong>? This will remove all proofs uploaded to it.
+                        </>
+                      }
+                      action={async () => {
+                        "use server";
+                        return deleteActivity(activity.id);
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+    </div>
   );
 }
 

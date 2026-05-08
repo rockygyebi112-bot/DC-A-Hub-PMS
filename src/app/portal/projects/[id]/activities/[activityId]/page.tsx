@@ -14,7 +14,7 @@ export default async function PortalActivityPage({
   const { activity, proofs } = await getPortalActivity(activityId);
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8">
+    <div className="mx-auto w-full max-w-5xl">
       <PageHeader
         title={activity.name}
         subtitle={`${activity.phase?.project?.name ?? "Project"} / ${activity.phase?.name ?? "Phase"}`}
@@ -78,6 +78,6 @@ export default async function PortalActivityPage({
           )}
         </SectionCard>
       </div>
-    </main>
+    </div>
   );
 }

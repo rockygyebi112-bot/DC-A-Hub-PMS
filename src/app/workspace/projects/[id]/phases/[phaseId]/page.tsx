@@ -1,10 +1,12 @@
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
-import { updatePhase } from "@/lib/workspace/actions";
-import { getPhase } from "@/lib/workspace/queries";
+import { DeleteConfirm } from "@/components/workspace/delete-confirm";
+import { deletePhase, updatePhase } from "@/lib/workspace/actions";
+import { getPhase, listProjectPhases } from "@/lib/workspace/queries";
 
 export default async function WorkspacePhasePage({
   params,
@@ -12,7 +14,8 @@ export default async function WorkspacePhasePage({
   params: Promise<{ id: string; phaseId: string }>;
 }) {
   const { id, phaseId } = await params;
-  const phase = await getPhase(phaseId);
+  const [phase, allPhases] = await Promise.all([getPhase(phaseId), listProjectPhases(id)]);
+  const activityCount = allPhases.find((p) => p.id === phaseId)?.activities.length ?? 0;
 
   async function save(formData: FormData) {
     "use server";
@@ -20,11 +23,34 @@ export default async function WorkspacePhasePage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6 md:px-8">
+    <div className="mx-auto w-full max-w-3xl">
       <PageHeader
         title={phase.name}
         subtitle="Edit phase details and dates."
         backFallbackHref={`/workspace/projects/${id}`}
+        action={
+          <DeleteConfirm
+            trigger={
+              <Button variant="destructive" size="sm">
+                <Trash2 className="size-4" />
+                Delete phase
+              </Button>
+            }
+            title="Delete phase"
+            description={
+              <>
+                Delete <strong>{phase.name}</strong> and its <strong>{activityCount} activities</strong>?
+                All proofs will be removed.
+              </>
+            }
+            confirmWord={activityCount > 0 ? "DELETE" : undefined}
+            redirectTo={`/workspace/projects/${id}`}
+            action={async () => {
+              "use server";
+              return deletePhase(phaseId);
+            }}
+          />
+        }
       />
 
       <SectionCard title="Phase details">
@@ -43,6 +69,6 @@ export default async function WorkspacePhasePage({
           <Button type="submit">Save phase</Button>
         </form>
       </SectionCard>
-    </main>
+    </div>
   );
 }

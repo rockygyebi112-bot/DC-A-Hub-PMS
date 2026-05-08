@@ -5,12 +5,19 @@ export async function listClients(opts: { includeArchived?: boolean } = {}) {
   const sb = await createClient();
   const q = sb
     .from("clients")
-    .select("id, name, contact_email, archived_at, created_at")
+    .select(
+      "id, name, contact_email, archived_at, created_at, projects(id, archived_at)",
+    )
     .order("name", { ascending: true });
   if (!opts.includeArchived) q.is("archived_at", null);
   const { data, error } = await q;
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((c) => {
+    const projects = (c.projects ?? []) as { id: string; archived_at: string | null }[];
+    const projectCount = projects.filter((p) => p.archived_at === null).length;
+    const { projects: _projects, ...rest } = c;
+    return { ...rest, project_count: projectCount };
+  });
 }
 
 export async function getClient(id: string) {
@@ -143,4 +150,45 @@ export async function listAssignableUsers(
     .eq("is_active", true);
   if (error) throw error;
   return (data ?? []).filter((p) => !taken.has(p.user_id));
+}
+
+export type AdminCounts = {
+  activeClients: number;
+  activeProjects: number;
+  totalUsers: number;
+  pendingInvites: number;
+};
+
+export async function getAdminCounts(): Promise<AdminCounts> {
+  const sb = await createClient();
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [clientsRes, projectsRes, usersRes, invitesRes] = await Promise.all([
+    sb.from("clients").select("*", { count: "exact", head: true }).is("archived_at", null),
+    sb.from("projects").select("*", { count: "exact", head: true }).is("archived_at", null),
+    sb.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
+    sb
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", sevenDaysAgo),
+  ]);
+
+  return {
+    activeClients: clientsRes.count ?? 0,
+    activeProjects: projectsRes.count ?? 0,
+    totalUsers: usersRes.count ?? 0,
+    pendingInvites: invitesRes.count ?? 0,
+  };
+}
+
+export async function listRecentProjects(limit = 5) {
+  const sb = await createClient();
+  const { data, error } = await sb
+    .from("projects")
+    .select("id, name, code, status, created_at")
+    .is("archived_at", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
 }

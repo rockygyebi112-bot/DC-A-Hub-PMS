@@ -63,10 +63,36 @@ export default async function WorkspaceProjectPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [project, phases] = await Promise.all([
-    getWorkspaceProject(id),
-    listProjectPhases(id),
-  ]);
+  let project: Awaited<ReturnType<typeof getWorkspaceProject>>;
+  let phases: Awaited<ReturnType<typeof listProjectPhases>>;
+  try {
+    [project, phases] = await Promise.all([
+      getWorkspaceProject(id),
+      listProjectPhases(id),
+    ]);
+  } catch (err) {
+    const e = err as Error & { code?: string; details?: string; hint?: string };
+    return (
+      <div className="mx-auto max-w-3xl">
+        <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6">
+          <h1 className="font-heading text-xl font-bold text-destructive">
+            Failed to load workspace project
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Project ID: <code className="font-mono">{id}</code>
+          </p>
+          <pre className="mt-4 overflow-auto rounded-lg bg-muted p-3 text-xs">
+{`Name:    ${e?.name ?? "(no name)"}
+Message: ${e?.message ?? "(no message)"}
+Code:    ${e?.code ?? "(none)"}
+Details: ${e?.details ?? "(none)"}
+Hint:    ${e?.hint ?? "(none)"}
+Stack:   ${e?.stack ?? "(no stack)"}`}
+          </pre>
+        </div>
+      </div>
+    );
+  }
   const activities = phases.flatMap((phase) =>
     phase.activities.map((activity) => ({ ...activity, phaseName: phase.name })),
   );

@@ -72,7 +72,11 @@ export default async function UserDetailPage({
             </label>
             <Select name="role" defaultValue={user.role}>
               <SelectTrigger className="w-full">
-                <SelectValue />
+                <SelectValue>
+                  {(value: string) =>
+                    ({ admin: "Admin", staff: "Staff", client: "Client" } as Record<string, string>)[value] ?? value
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>

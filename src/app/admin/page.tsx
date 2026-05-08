@@ -180,6 +180,7 @@ export default async function AdminOverview() {
           href="/admin/clients"
           hint="Client organizations"
           icon={Building2}
+          accent="green"
         />
         <StatCard
           label="Ongoing projects"
@@ -187,6 +188,7 @@ export default async function AdminOverview() {
           href="/admin/projects"
           hint="Open project shells"
           icon={FolderKanban}
+          accent="purple"
         />
         <StatCard
           label="Completed activities"
@@ -194,6 +196,7 @@ export default async function AdminOverview() {
           href="/workspace"
           hint={`${snapshot.completionRate}% completion rate`}
           icon={CheckCircle2}
+          accent="blue"
         />
         <StatCard
           label="Proof files"
@@ -201,6 +204,7 @@ export default async function AdminOverview() {
           href="/workspace"
           hint="Stored evidence"
           icon={FileText}
+          accent="amber"
         />
       </div>
 
@@ -235,7 +239,7 @@ export default async function AdminOverview() {
             <div>
               <div className="flex items-end justify-between gap-3">
                 <div>
-                  <p className="text-3xl font-semibold tracking-tight">
+                  <p className="stat-number text-3xl">
                     {snapshot.completionRate}%
                   </p>
                   <p className="text-xs text-muted-foreground">Activity completion</p>
@@ -245,9 +249,9 @@ export default async function AdminOverview() {
                   <p>{snapshot.activityCount} total</p>
                 </div>
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+              <div className="progress-bar-track mt-3">
                 <div
-                  className="h-full rounded-full bg-primary"
+                  className="progress-bar-fill"
                   style={{ width: `${snapshot.completionRate}%` }}
                 />
               </div>
@@ -384,11 +388,22 @@ function HealthMetric({
   value: number;
   status: "planning" | "active" | "paused" | "completed";
 }) {
+  const tone =
+    status === "active"
+      ? "bg-[var(--color-srsf-green-50)] dark:bg-[var(--color-srsf-green-900)]/20"
+      : status === "paused"
+        ? "bg-amber-50 dark:bg-amber-950/20"
+        : status === "completed"
+          ? "bg-blue-50 dark:bg-blue-950/20"
+          : "bg-muted/40";
   return (
-    <div className="rounded-lg border bg-background p-3">
+    <div className={`rounded-lg border p-3 ${tone}`}>
       <div className="flex items-center justify-between gap-2">
-        <StatusPill status={status} />
-        <span className="text-2xl font-semibold tracking-tight">{value}</span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className={`status-dot status-dot-${status}`} />
+          <StatusPill status={status} />
+        </span>
+        <span className="stat-number text-2xl">{value}</span>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">{label}</p>
     </div>

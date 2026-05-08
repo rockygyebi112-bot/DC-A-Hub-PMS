@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Search } from "lucide-react";
 import { ThemeToggle } from "@/components/admin/ui/theme-toggle";
 import { UserDropdown } from "@/components/admin/ui/user-dropdown";
@@ -7,10 +8,12 @@ export function AppTopbar({
   name,
   email,
   showSearch = true,
+  extra,
 }: {
   name: string;
   email: string;
   showSearch?: boolean;
+  extra?: ReactNode;
 }) {
   return (
     <header className="topbar-glass sticky top-0 z-20 flex h-[var(--topbar-height,58px)] items-center gap-3 border-b px-4 md:px-6">
@@ -33,6 +36,7 @@ export function AppTopbar({
         </div>
       )}
       <div className="flex items-center gap-1">
+        {extra}
         <ThemeToggle />
         <UserDropdown name={name} email={email} />
       </div>

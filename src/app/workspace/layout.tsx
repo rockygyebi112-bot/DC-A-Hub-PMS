@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { listWorkspaceProjects } from "@/lib/workspace/queries";
+import { getNotificationFeed } from "@/lib/notifications/queries";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
 
 export default async function WorkspaceLayout({
   children,
@@ -12,7 +14,14 @@ export default async function WorkspaceLayout({
   if (!profile) redirect("/login");
   if (profile.role !== "admin" && profile.role !== "staff") redirect("/portal");
 
-  const projects = await listWorkspaceProjects().catch(() => []);
+  const [projects, notifications] = await Promise.all([
+    listWorkspaceProjects().catch(() => []),
+    getNotificationFeed("workspace").catch(() => ({
+      entries: [],
+      unreadCount: 0,
+      lastReadAt: null,
+    })),
+  ]);
   const activeCount = projects.filter((p) => p.status === "active").length;
 
   const groups = [
@@ -66,6 +75,13 @@ export default async function WorkspaceLayout({
           <p className="font-medium text-foreground">Operations</p>
           <p className="mt-1">{activeCount} active / {projects.length} projects</p>
         </div>
+      }
+      topbarExtra={
+        <NotificationsBell
+          entries={notifications.entries}
+          unreadCount={notifications.unreadCount}
+          lastReadAt={notifications.lastReadAt}
+        />
       }
     >
       {children}

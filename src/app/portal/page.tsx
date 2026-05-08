@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FolderKanban } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ProjectIcon } from "@/components/ui/project-icon";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
@@ -18,10 +19,10 @@ export default async function PortalHome() {
   if (projects.length === 1) redirect(`/portal/projects/${projects[0].id}`);
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
+    <div>
       <PageHeader
-        title="Client portal"
-        subtitle={`${profile?.fullName ?? "Client"} / project progress`}
+        title="Your projects"
+        subtitle={`${profile?.fullName ?? "Welcome"} · live progress from DC&A Hub`}
       />
 
       {projects.length === 0 ? (
@@ -39,14 +40,17 @@ export default async function PortalHome() {
             <Link
               key={project.id}
               href={`/portal/projects/${project.id}`}
-              className="rounded-[var(--admin-card-radius)] border bg-card p-5 shadow-sm transition-colors hover:bg-accent/30"
+              className="group rounded-xl border bg-card p-5 shadow-sm transition-all hover-lift"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-lg font-semibold">{project.name}</p>
-                  <p className="text-sm text-muted-foreground">{project.code}</p>
+              <div className="flex items-start gap-3">
+                <ProjectIcon name={project.name} seed={project.id} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="truncate font-semibold group-hover:underline">{project.name}</p>
+                    <StatusPill status={project.status as "planning" | "active" | "paused" | "completed"} />
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">{project.code}</p>
                 </div>
-                <StatusPill status={project.status as "planning" | "active" | "paused" | "completed"} />
               </div>
               <div className="mt-5">
                 <ProjectProgress done={project.doneCount} total={project.totalCount} />
@@ -55,6 +59,6 @@ export default async function PortalHome() {
           ))}
         </div>
       )}
-    </main>
+    </div>
   );
 }

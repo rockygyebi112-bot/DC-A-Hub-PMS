@@ -323,6 +323,99 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
   return { ok: true };
 }
 
+async function collectProofPaths(sb: Awaited<ReturnType<typeof createClient>>, activityIds: string[]) {
+  if (activityIds.length === 0) return [] as string[];
+  const { data } = await sb
+    .from("activity_proofs")
+    .select("file_path")
+    .in("activity_id", activityIds);
+  return (data ?? []).map((p) => p.file_path).filter(Boolean);
+}
+
+async function removeStorageFiles(
+  sb: Awaited<ReturnType<typeof createClient>>,
+  paths: string[],
+) {
+  if (paths.length === 0) return;
+  // Storage SDK accepts up to ~1000 paths per call.
+  const chunkSize = 100;
+  for (let i = 0; i < paths.length; i += chunkSize) {
+    await sb.storage.from("proofs").remove(paths.slice(i, i + chunkSize));
+  }
+}
+
+export async function deleteActivity(activityId: string): Promise<ActionResult<{ projectId: string }>> {
+  const sb = await createClient();
+  const { data: activity, error: lookupError } = await sb
+    .from("activities")
+    .select("id, phase:phases(project_id)")
+    .eq("id", activityId)
+    .single();
+  if (lookupError || !activity) return { ok: false, error: lookupError?.message ?? "Activity not found" };
+  const phase = Array.isArray(activity.phase) ? activity.phase[0] : activity.phase;
+  const projectId = phase?.project_id;
+  if (!projectId) return { ok: false, error: "Project not found" };
+
+  const paths = await collectProofPaths(sb, [activityId]);
+  await removeStorageFiles(sb, paths);
+
+  const { error } = await sb.from("activities").delete().eq("id", activityId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/workspace/projects/${projectId}`);
+  revalidatePath(`/portal/projects/${projectId}`);
+  return { ok: true, data: { projectId } };
+}
+
+export async function deletePhase(phaseId: string): Promise<ActionResult<{ projectId: string }>> {
+  const sb = await createClient();
+  const { data: phase, error: lookupError } = await sb
+    .from("phases")
+    .select("id, project_id")
+    .eq("id", phaseId)
+    .single();
+  if (lookupError || !phase) return { ok: false, error: lookupError?.message ?? "Phase not found" };
+
+  const { data: activityRows } = await sb.from("activities").select("id").eq("phase_id", phaseId);
+  const activityIds = (activityRows ?? []).map((a) => a.id);
+  const paths = await collectProofPaths(sb, activityIds);
+  await removeStorageFiles(sb, paths);
+
+  const { error } = await sb.from("phases").delete().eq("id", phaseId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/workspace/projects/${phase.project_id}`);
+  revalidatePath(`/portal/projects/${phase.project_id}`);
+  return { ok: true, data: { projectId: phase.project_id } };
+}
+
+export async function deleteWorkplan(projectId: string): Promise<ActionResult> {
+  const sb = await createClient();
+  const { data: phases, error: phaseError } = await sb
+    .from("phases")
+    .select("id")
+    .eq("project_id", projectId);
+  if (phaseError) return { ok: false, error: phaseError.message };
+
+  const phaseIds = (phases ?? []).map((p) => p.id);
+  if (phaseIds.length === 0) {
+    revalidatePath(`/workspace/projects/${projectId}`);
+    return { ok: true };
+  }
+
+  const { data: activityRows } = await sb.from("activities").select("id").in("phase_id", phaseIds);
+  const activityIds = (activityRows ?? []).map((a) => a.id);
+  const paths = await collectProofPaths(sb, activityIds);
+  await removeStorageFiles(sb, paths);
+
+  const { error } = await sb.from("phases").delete().in("id", phaseIds);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/workspace/projects/${projectId}`);
+  revalidatePath(`/portal/projects/${projectId}`);
+  return { ok: true };
+}
+
 export async function uploadProofs(activityId: string, formData: FormData): Promise<ActionResult> {
   const files = formData
     .getAll("proofs")

@@ -20,7 +20,7 @@ export default async function PortalProjectPage({
   const lastCompleted = doneActivities[0]?.completed_date ?? null;
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
+    <div>
       <PageHeader
         title={project.name}
         subtitle="Live progress and completion evidence from DC&A Hub."
@@ -129,7 +129,7 @@ export default async function PortalProjectPage({
           )}
         </SectionCard>
       </div>
-    </main>
+    </div>
   );
 }
 

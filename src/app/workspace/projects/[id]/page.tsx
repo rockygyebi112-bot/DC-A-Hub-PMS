@@ -7,7 +7,9 @@ import {
   Columns3,
   FileSpreadsheet,
   ListChecks,
+  MoreVertical,
   Plus,
+  Trash2,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,13 +25,21 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { ProjectIcon } from "@/components/ui/project-icon";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { ActivityStatus } from "@/components/workspace/status-badge";
 import { ProjectProgress } from "@/components/workspace/project-progress";
 import { WorkplanImportForm } from "@/components/workspace/workplan-import-form";
-import { createActivity, createPhase } from "@/lib/workspace/actions";
+import { DeleteConfirm } from "@/components/workspace/delete-confirm";
+import {
+  createActivity,
+  createPhase,
+  deleteActivity,
+  deletePhase,
+  deleteWorkplan,
+} from "@/lib/workspace/actions";
 import {
   getWorkspaceProject,
   listProjectPhases,
@@ -80,10 +90,15 @@ export default async function WorkspaceProjectPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
+    <>
       <PageHeader
-        title={project.name}
-        subtitle={`${project.client?.name ?? "Client"} / ${project.code}`}
+        title={
+          <span className="flex items-center gap-3">
+            <ProjectIcon name={project.name} seed={project.id} />
+            <span>{project.name}</span>
+          </span>
+        }
+        subtitle={`${project.client?.name ?? "Client"} · ${project.code}`}
         action={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" render={<a href="#import-checklist" />}>
@@ -98,6 +113,29 @@ export default async function WorkspaceProjectPage({
               <Plus className="size-4" />
               Activity
             </Button>
+            {phases.length > 0 && (
+              <DeleteConfirm
+                trigger={
+                  <Button variant="destructive" size="default">
+                    <Trash2 className="size-4" />
+                    Delete workplan
+                  </Button>
+                }
+                title="Delete workplan"
+                description={
+                  <>
+                    This will permanently delete <strong>all {phases.length} phases</strong>,{" "}
+                    <strong>{activities.length} activities</strong>, and every uploaded proof for
+                    this project. The project itself will remain.
+                  </>
+                }
+                confirmWord="DELETE"
+                action={async () => {
+                  "use server";
+                  return deleteWorkplan(id);
+                }}
+              />
+            )}
           </div>
         }
       />
@@ -120,7 +158,7 @@ export default async function WorkspaceProjectPage({
         <MetricCard title="Timeline">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <CalendarDays className="size-4" />
-            {project.start_date ?? "TBD"} - {project.end_date ?? "TBD"}
+            {project.start_date ?? "TBD"} – {project.end_date ?? "TBD"}
           </div>
         </MetricCard>
       </div>
@@ -143,7 +181,7 @@ export default async function WorkspaceProjectPage({
               </TabsTrigger>
             </TabsList>
             <span className="text-xs text-muted-foreground">
-              {phases.length} phases / {activities.length} activities
+              {phases.length} phases · {activities.length} activities
             </span>
           </div>
 
@@ -152,7 +190,7 @@ export default async function WorkspaceProjectPage({
           </TabsContent>
 
           <TabsContent value="list">
-            <ProjectList projectId={id} activities={activities} />
+            <ProjectList projectId={id} phases={phases} activities={activities} />
           </TabsContent>
 
           <TabsContent value="timeline">
@@ -163,7 +201,7 @@ export default async function WorkspaceProjectPage({
         <aside className="space-y-4">
           <div id="import-checklist" className="scroll-mt-20">
             <SectionCard title="Import checklist">
-            <WorkplanImportForm projectId={id} />
+              <WorkplanImportForm projectId={id} />
             </SectionCard>
           </div>
 
@@ -205,7 +243,7 @@ export default async function WorkspaceProjectPage({
           </SectionCard>
         </aside>
       </div>
-    </main>
+    </>
   );
 }
 
@@ -217,8 +255,10 @@ function MetricCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[var(--admin-card-radius)] border bg-card p-4 shadow-sm">
-      <p className="mb-2 text-xs font-medium uppercase text-muted-foreground">{title}</p>
+    <div className="rounded-xl border bg-card p-4 shadow-sm">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {title}
+      </p>
       {children}
     </div>
   );
@@ -252,7 +292,7 @@ function ProjectBoard({
         const Icon = column.icon;
         const rows = activities.filter((activity) => activity.status === column.key);
         return (
-          <section key={column.key} className="rounded-[var(--admin-card-radius)] border bg-muted/30">
+          <section key={column.key} className="rounded-xl border bg-muted/30">
             <header className="flex items-center justify-between gap-3 border-b px-3 py-2">
               <div className="flex items-center gap-2">
                 <Icon className="size-4 text-muted-foreground" />
@@ -288,37 +328,56 @@ function ActivityCard({
   activity: WorkspaceActivity & { phaseName: string };
 }) {
   return (
-    <Link
-      href={`/workspace/projects/${projectId}/activities/${activity.id}`}
-      className="block rounded-lg border bg-background p-3 shadow-sm transition-colors hover:bg-accent"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{activity.name}</p>
+    <div className="rounded-lg border bg-background p-3 shadow-sm transition-colors hover:bg-accent/50">
+      <div className="flex items-start justify-between gap-2">
+        <Link
+          href={`/workspace/projects/${projectId}/activities/${activity.id}`}
+          className="min-w-0 flex-1"
+        >
+          <p className="truncate text-sm font-medium hover:underline">{activity.name}</p>
           <p className="mt-1 truncate text-xs text-muted-foreground">{activity.phaseName}</p>
-        </div>
+        </Link>
         <ActivityStatus status={activity.status} />
       </div>
-      <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-        <span>{activity.planned_date ?? "No date"}</span>
-        <span>/</span>
-        <span>{activity.location ?? "No location"}</span>
-        {activity.proofCount > 0 && (
-          <>
-            <span>/</span>
-            <span>{activity.proofCount} proofs</span>
-          </>
-        )}
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <span>{activity.planned_date ?? "No date"}</span>
+          {activity.location && <span>· {activity.location}</span>}
+          {activity.proofCount > 0 && <span>· {activity.proofCount} proofs</span>}
+        </div>
+        <DeleteConfirm
+          trigger={
+            <button
+              type="button"
+              aria-label="Delete activity"
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          }
+          title={`Delete activity`}
+          description={
+            <>
+              Delete <strong>{activity.name}</strong>? This will remove all proofs uploaded to it.
+            </>
+          }
+          action={async () => {
+            "use server";
+            return deleteActivity(activity.id);
+          }}
+        />
       </div>
-    </Link>
+    </div>
   );
 }
 
 function ProjectList({
   projectId,
+  phases,
   activities,
 }: {
   projectId: string;
+  phases: WorkspacePhase[];
   activities: (WorkspaceActivity & { phaseName: string })[];
 }) {
   if (activities.length === 0) {
@@ -330,43 +389,104 @@ function ProjectList({
   }
 
   return (
-    <SectionCard>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Activity</TableHead>
-              <TableHead>Phase</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Planned</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Proofs</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {activities.map((activity) => (
-              <TableRow key={activity.id} style={{ height: "var(--admin-row-h)" }}>
-                <TableCell>
-                  <Link
-                    href={`/workspace/projects/${projectId}/activities/${activity.id}`}
-                    className="font-medium hover:underline"
-                  >
-                    {activity.name}
-                  </Link>
-                </TableCell>
-                <TableCell>{activity.phaseName}</TableCell>
-                <TableCell>
-                  <ActivityStatus status={activity.status} />
-                </TableCell>
-                <TableCell>{activity.planned_date ?? "-"}</TableCell>
-                <TableCell>{activity.location ?? "-"}</TableCell>
-                <TableCell>{activity.proofCount}</TableCell>
-              </TableRow>
+    <div className="space-y-4">
+      {phases.length > 0 && (
+        <SectionCard title="Phases" description={`${phases.length} phases in this workplan`}>
+          <ul className="divide-y">
+            {phases.map((phase) => (
+              <li key={phase.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{phase.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {phase.activities.length} activities
+                    {phase.start_date || phase.end_date
+                      ? ` · ${phase.start_date ?? "TBD"} – ${phase.end_date ?? "TBD"}`
+                      : ""}
+                  </p>
+                </div>
+                <DeleteConfirm
+                  trigger={
+                    <Button variant="ghost" size="icon-sm" aria-label="Delete phase">
+                      <MoreVertical className="size-4" />
+                    </Button>
+                  }
+                  title="Delete phase"
+                  description={
+                    <>
+                      Delete <strong>{phase.name}</strong> and its{" "}
+                      <strong>{phase.activities.length} activities</strong>? Proofs will be deleted too.
+                    </>
+                  }
+                  confirmWord={phase.activities.length > 0 ? "DELETE" : undefined}
+                  action={async () => {
+                    "use server";
+                    return deletePhase(phase.id);
+                  }}
+                />
+              </li>
             ))}
-          </TableBody>
-        </Table>
-      </div>
-    </SectionCard>
+          </ul>
+        </SectionCard>
+      )}
+
+      <SectionCard>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Activity</TableHead>
+                <TableHead>Phase</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Planned</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Proofs</TableHead>
+                <TableHead className="w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {activities.map((activity) => (
+                <TableRow key={activity.id} style={{ height: "var(--admin-row-h)" }}>
+                  <TableCell>
+                    <Link
+                      href={`/workspace/projects/${projectId}/activities/${activity.id}`}
+                      className="font-medium hover:underline"
+                    >
+                      {activity.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{activity.phaseName}</TableCell>
+                  <TableCell>
+                    <ActivityStatus status={activity.status} />
+                  </TableCell>
+                  <TableCell>{activity.planned_date ?? "—"}</TableCell>
+                  <TableCell>{activity.location ?? "—"}</TableCell>
+                  <TableCell>{activity.proofCount}</TableCell>
+                  <TableCell className="text-right">
+                    <DeleteConfirm
+                      trigger={
+                        <Button variant="ghost" size="icon-sm" aria-label="Delete activity">
+                          <Trash2 className="size-4" />
+                        </Button>
+                      }
+                      title="Delete activity"
+                      description={
+                        <>
+                          Delete <strong>{activity.name}</strong>? This will remove all proofs uploaded to it.
+                        </>
+                      }
+                      action={async () => {
+                        "use server";
+                        return deleteActivity(activity.id);
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+    </div>
   );
 }
 

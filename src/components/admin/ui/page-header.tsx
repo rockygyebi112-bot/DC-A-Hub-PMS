@@ -16,14 +16,14 @@ export function PageHeader({
 }) {
   return (
     <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0 space-y-3">
+      <div className="min-w-0 space-y-2">
         {showBack && <BackButton fallbackHref={backFallbackHref} />}
         <div className="min-w-0 space-y-1">
-          <h1 className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="font-heading text-balance text-2xl font-bold tracking-tight sm:text-3xl">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-pretty text-sm text-muted-foreground">{subtitle}</p>
+            <p className="text-sm text-muted-foreground">{subtitle}</p>
           )}
         </div>
       </div>

@@ -22,12 +22,12 @@ export function SectionCard({
       )}
     >
       {(title || description || action) && (
-        <header className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 space-y-1">
+        <header className="flex flex-col gap-3 border-b px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-0.5">
             {title && (
               <h2
                 className={cn(
-                  "text-base font-semibold",
+                  "font-heading text-sm font-semibold tracking-tight",
                   tone === "destructive" && "text-destructive",
                 )}
               >
@@ -35,7 +35,7 @@ export function SectionCard({
               </h2>
             )}
             {description && (
-              <p className="text-sm text-muted-foreground">{description}</p>
+              <p className="text-xs text-muted-foreground">{description}</p>
             )}
           </div>
           {action && <div className="shrink-0">{action}</div>}

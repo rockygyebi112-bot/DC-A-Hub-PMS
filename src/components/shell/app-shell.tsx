@@ -23,7 +23,7 @@ export function AppShell({
   subtitle?: string;
   groups: NavGroup[];
   storageKey: string;
-  user: { name: string; email: string };
+  user: { name: string; email: string; avatarUrl?: string | null };
   sidebarFooter?: ReactNode;
   defaultLogoUrl?: string;
   projectBrands?: Record<string, ProjectBrand>;
@@ -49,6 +49,7 @@ export function AppShell({
         <AppTopbar
           name={user.name}
           email={user.email}
+          avatarUrl={user.avatarUrl}
           extra={topbarExtra}
           greeting={greeting}
           greetingSubtitle={greetingSubtitle}

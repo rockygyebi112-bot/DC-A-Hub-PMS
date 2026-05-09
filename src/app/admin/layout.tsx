@@ -77,7 +77,7 @@ export default async function AdminLayout({
       groups={groups}
       storageKey="admin-sidebar-collapsed"
       defaultLogoUrl="/logo.png"
-      user={{ name: profile.fullName, email: profile.email }}
+      user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
       sidebarFooter={<SidebarBrandCard />}
       greeting={greeting}
       greetingSubtitle="Here's what's happening with your projects today."

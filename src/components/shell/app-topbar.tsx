@@ -10,6 +10,7 @@ import { Breadcrumbs } from "@/components/admin/ui/breadcrumbs";
 export function AppTopbar({
   name,
   email,
+  avatarUrl,
   showSearch = true,
   extra,
   greeting,
@@ -18,6 +19,7 @@ export function AppTopbar({
 }: {
   name: string;
   email: string;
+  avatarUrl?: string | null;
   showSearch?: boolean;
   extra?: ReactNode;
   /** When set AND current pathname === greetingPath, a personalised greeting replaces the breadcrumbs. */
@@ -52,7 +54,7 @@ export function AppTopbar({
         </div>
       )}
       <div className="flex items-center gap-2">
-        {extra}
+        {extra}avatarUrl={avatarUrl} 
         <ThemeToggle />
         <UserDropdown name={name} email={email} />
       </div>

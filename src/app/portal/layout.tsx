@@ -55,7 +55,7 @@ export default async function PortalLayout({
       defaultLogoUrl="/logo.png"
       projectBrands={projectBrands}
       projectPathPrefix="/portal/projects"
-      user={{ name: profile.fullName, email: profile.email }}
+      user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
       topbarExtra={
         <NotificationsBell
           entries={notifications.entries}

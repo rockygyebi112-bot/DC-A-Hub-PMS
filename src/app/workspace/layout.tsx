@@ -69,7 +69,7 @@ export default async function WorkspaceLayout({
       defaultLogoUrl="/logo.png"
       projectBrands={projectBrands}
       projectPathPrefix="/workspace/projects"
-      user={{ name: profile.fullName, email: profile.email }}
+      user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
       sidebarFooter={
         <div className="rounded-lg border bg-background/70 p-3 text-xs text-muted-foreground">
           <p className="font-medium text-foreground">Operations</p>

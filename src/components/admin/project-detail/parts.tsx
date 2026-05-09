@@ -4,7 +4,6 @@ import {
   Briefcase,
   Building2,
   Calendar,
-  ChevronDown,
   ChevronRight,
   Clock,
   DollarSign,
@@ -26,22 +25,12 @@ import { cn } from "@/lib/utils";
 export type DetailTabKey =
   | "overview"
   | "workplan"
-  | "team"
-  | "timeline"
-  | "documents"
-  | "budget"
-  | "risks"
-  | "activity";
+  | "team";
 
 const TABS: { key: DetailTabKey; label: string; href: (id: string) => string }[] = [
   { key: "overview", label: "Overview", href: (id) => `/admin/projects/${id}` },
   { key: "workplan", label: "Workplan", href: (id) => `/workspace/projects/${id}` },
   { key: "team", label: "Team", href: (id) => `/admin/projects/${id}/team` },
-  { key: "timeline", label: "Timeline", href: (id) => `/admin/projects/${id}` },
-  { key: "documents", label: "Documents", href: (id) => `/admin/projects/${id}` },
-  { key: "budget", label: "Budget", href: (id) => `/admin/projects/${id}` },
-  { key: "risks", label: "Risks", href: (id) => `/admin/projects/${id}` },
-  { key: "activity", label: "Activity", href: (id) => `/admin/projects/${id}` },
 ];
 
 export function ProjectTabs({
@@ -176,13 +165,23 @@ export function SummaryProgressCard({
   return (
     <SummaryCard icon={Activity} label="Project Progress">
       <div className="flex items-center gap-3">
-        <ProgressDonut percent={percent} health={health} />
-        <div className="min-w-0 space-y-1">
-          <p className="text-xs text-muted-foreground">
-            {done} / {total} activities
+        <ProgressDonut percent={percent} health={health} size={64} stroke={7} />
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <p className="text-[11px] text-muted-foreground leading-tight">
+            {done} / {total}
+            <br />
+            activities
           </p>
-          <span className={cn("delivery-pill", `delivery-pill-${health}`)}>
-            <span className={cn("size-[6px] rounded-full", `status-dot-${health}`)} />
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
+              health === "on-track" && "border-emerald-200 bg-emerald-50 text-emerald-700",
+              health === "at-risk" && "border-amber-200 bg-amber-50 text-amber-800",
+              health === "delayed" && "border-red-200 bg-red-50 text-red-700",
+              health === "not-started" && "border-border bg-muted text-muted-foreground",
+            )}
+          >
+            <span className={cn("size-1.5 rounded-full", `status-dot-${health}`)} />
             {healthLabel[health]}
           </span>
         </div>
@@ -628,7 +627,7 @@ export function WorkplanOverviewCard({
                 <div className="col-span-6 text-xs text-muted-foreground sm:col-span-2">
                   {phase.done} / {phase.total} activities
                 </div>
-                <div className="col-span-6 sm:col-span-2">
+                <div className="col-span-6 sm:col-span-3">
                   <div className="flex items-center gap-2">
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                       <div
@@ -641,11 +640,8 @@ export function WorkplanOverviewCard({
                     </span>
                   </div>
                 </div>
-                <div className="col-span-10 sm:col-span-2">
+                <div className="col-span-12 sm:col-span-2 sm:text-right">
                   <span className={status.pillClass}>{status.label}</span>
-                </div>
-                <div className="col-span-2 flex justify-end sm:col-span-1">
-                  <ChevronDown className="size-4 text-muted-foreground" />
                 </div>
               </li>
             );

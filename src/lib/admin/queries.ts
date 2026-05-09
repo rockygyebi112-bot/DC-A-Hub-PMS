@@ -113,7 +113,7 @@ export async function getProject(id: string) {
       "id, name, code, status, description, start_date, end_date, archived_at, client_id, created_at, updated_at, client:clients(id, name)",
     )
     .eq("id", id)
-    .single();
+    .maybeSingle();
   throwIfError(error);
   return data;
 }

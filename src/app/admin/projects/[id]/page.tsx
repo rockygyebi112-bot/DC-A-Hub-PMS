@@ -36,20 +36,9 @@ export default async function ProjectOverviewPage({
 }) {
   const { id } = await params;
 
-  let project: Awaited<ReturnType<typeof getProject>>;
-  try {
-    project = await getProject(id);
-  } catch (error) {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "PGRST116"
-    ) {
-      notFound();
-    }
-    throw error;
-  }
+  const projectMaybe = await getProject(id);
+  if (!projectMaybe) notFound();
+  const project = projectMaybe;
 
   const [phases, team, budgetSummary] = await Promise.all([
     listProjectPhases(id),

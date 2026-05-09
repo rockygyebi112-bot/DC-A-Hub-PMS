@@ -20,7 +20,7 @@ export type SupabaseLikeError = {
 export function throwIfError(
   error: SupabaseLikeError | null | undefined,
   context?: string,
-): void {
+): asserts error is null | undefined {
   if (!error) return;
   const parts: string[] = [];
   if (context) parts.push(`[${context}]`);

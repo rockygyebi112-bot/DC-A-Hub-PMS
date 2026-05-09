@@ -53,7 +53,11 @@ export function InviteUserForm() {
         toast.error(result.error);
         return;
       }
-      toast.success(`Invite sent to ${values.email}`);
+      toast.success(
+        result.data?.delivery === "password_setup_sent"
+          ? `Password setup email sent to ${values.email}`
+          : `Invite sent to ${values.email}`,
+      );
       setOpen(false);
       form.reset();
       router.refresh();

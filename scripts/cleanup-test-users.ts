@@ -1,9 +1,9 @@
 /**
- * Delete leftover test-fixture users from Supabase auth (and cascade profiles).
+ * Delete leftover test-fixture data from Supabase:
+ *   - auth users whose email ends in @example.com (cascades profiles + memberships)
+ *   - test client orgs by exact name and known patterns (cascades projects + memberships)
  *
- * Tests in tests/integration and tests/rls create auth users with @example.com
- * emails and never clean up. This script removes any auth user whose email
- * ends in @example.com.
+ * Tests in tests/integration and tests/rls create these and never cleaned up.
  *
  * Usage:
  *   npx tsx scripts/cleanup-test-users.ts            # dry-run, lists matches
@@ -33,8 +33,15 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
 });
 
 const TEST_EMAIL_SUFFIX = "@example.com";
+const TEST_CLIENT_NAMES = [
+  "Org A (rlstest)",
+  "Org B (rlstest)",
+  "ArchiveRLSClient",
+  "Action Test Client",
+];
+const TEST_CLIENT_NAME_PATTERNS = ["PM-Test %", "ProjActions Client %"];
 
-async function main() {
+async function findUsers(): Promise<{ id: string; email: string }[]> {
   const matches: { id: string; email: string }[] = [];
   let page = 1;
   for (;;) {
@@ -56,35 +63,79 @@ async function main() {
     page += 1;
     if (page > 50) break;
   }
+  return matches;
+}
 
-  if (matches.length === 0) {
-    console.log(`No users matching *${TEST_EMAIL_SUFFIX} found.`);
+async function findClients(): Promise<{ id: string; name: string }[]> {
+  const out: { id: string; name: string }[] = [];
+
+  if (TEST_CLIENT_NAMES.length) {
+    const { data } = await admin
+      .from("clients")
+      .select("id, name")
+      .in("name", TEST_CLIENT_NAMES);
+    for (const c of data ?? []) out.push({ id: c.id, name: c.name });
+  }
+  for (const pattern of TEST_CLIENT_NAME_PATTERNS) {
+    const { data } = await admin
+      .from("clients")
+      .select("id, name")
+      .like("name", pattern);
+    for (const c of data ?? []) out.push({ id: c.id, name: c.name });
+  }
+
+  // de-dupe by id
+  const seen = new Set<string>();
+  return out.filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)));
+}
+
+async function main() {
+  const users = await findUsers();
+  const clients = await findClients();
+
+  if (users.length === 0 && clients.length === 0) {
+    console.log("No test users or clients found.");
     return;
+  }
+
+  if (users.length) {
+    console.log(`Test users (${users.length}):`);
+    for (const m of users) console.log(`  - ${m.email}  (${m.id})`);
+  }
+  if (clients.length) {
+    console.log(`Test clients (${clients.length}):`);
+    for (const c of clients) console.log(`  - ${c.name}  (${c.id})`);
+  }
+
+  if (!APPLY) {
+    console.log("\nDry-run. Re-run with --apply to delete the above.");
+    return;
+  }
+
+  // Clients first (cascades to projects + project_members).
+  let clientsDeleted = 0;
+  for (const c of clients) {
+    const { error } = await admin.from("clients").delete().eq("id", c.id);
+    if (error) console.error(`  x client ${c.name}: ${error.message}`);
+    else clientsDeleted += 1;
+  }
+
+  let usersDeleted = 0;
+  let usersFailed = 0;
+  for (const m of users) {
+    const { error } = await admin.auth.admin.deleteUser(m.id);
+    if (error) {
+      usersFailed += 1;
+      console.error(`  x user ${m.email}: ${error.message}`);
+    } else {
+      usersDeleted += 1;
+    }
   }
 
   console.log(
-    `Found ${matches.length} test user${matches.length === 1 ? "" : "s"}:`,
+    `\nDeleted ${clientsDeleted} client${clientsDeleted === 1 ? "" : "s"} and ${usersDeleted} user${usersDeleted === 1 ? "" : "s"}.`,
   );
-  for (const m of matches) console.log(`  - ${m.email}  (${m.id})`);
-
-  if (!APPLY) {
-    console.log("\nDry-run. Re-run with --apply to delete these users.");
-    return;
-  }
-
-  let deleted = 0;
-  let failed = 0;
-  for (const m of matches) {
-    const { error } = await admin.auth.admin.deleteUser(m.id);
-    if (error) {
-      failed += 1;
-      console.error(`  x ${m.email}: ${error.message}`);
-    } else {
-      deleted += 1;
-    }
-  }
-  console.log(`\nDeleted ${deleted} user${deleted === 1 ? "" : "s"}.`);
-  if (failed > 0) console.log(`Failed: ${failed}.`);
+  if (usersFailed > 0) console.log(`User failures: ${usersFailed}.`);
 }
 
 main();

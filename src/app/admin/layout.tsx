@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
-import { AdminShell } from "@/components/admin/admin-shell";
+import { AppShell } from "@/components/shell/app-shell";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
+import { SidebarBrandCard } from "@/components/admin/ui/sidebar-brand-card";
 import { getAdminCounts } from "@/lib/admin/queries";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { getNotificationFeed } from "@/lib/notifications/queries";
@@ -31,15 +33,74 @@ export default async function AdminLayout({
   const firstName = profile.fullName.trim().split(/\s+/)[0] || "Admin";
   const greeting = `${timeBasedGreeting()}, ${firstName}! 👋`;
 
+  const groups = [
+    {
+      group: "Command",
+      items: [
+        {
+          href: "/admin",
+          label: "Dashboard",
+          icon: "layout-dashboard" as const,
+          exact: true,
+        },
+      ],
+    },
+    {
+      group: "Manage",
+      items: [
+        {
+          href: "/admin/clients",
+          label: "Clients",
+          icon: "building-2" as const,
+          badge: counts.activeClients,
+        },
+        {
+          href: "/admin/projects",
+          label: "Projects",
+          icon: "folder-kanban" as const,
+          badge: counts.activeProjects,
+        },
+        {
+          href: "/admin/users",
+          label: "Users",
+          icon: "users" as const,
+          badge: counts.totalUsers,
+        },
+      ],
+    },
+    {
+      group: "Workspace",
+      items: [
+        {
+          href: "/workspace",
+          label: "Open workspace",
+          icon: "list-checks" as const,
+        },
+      ],
+    },
+  ];
+
   return (
-    <AdminShell
-      counts={counts}
+    <AppShell
+      brand="DC&A Hub"
+      subtitle="Admin console"
+      groups={groups}
+      storageKey="admin-sidebar-collapsed"
+      defaultLogoUrl="/logo.png"
       user={{ name: profile.fullName, email: profile.email }}
+      sidebarFooter={<SidebarBrandCard />}
       greeting={greeting}
       greetingSubtitle="Here's what's happening with your projects today."
-      notifications={notifications}
+      greetingPath="/admin"
+      topbarExtra={
+        <NotificationsBell
+          entries={notifications.entries}
+          unreadCount={notifications.unreadCount}
+          lastReadAt={notifications.lastReadAt}
+        />
+      }
     >
       {children}
-    </AdminShell>
+    </AppShell>
   );
 }

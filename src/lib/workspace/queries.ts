@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { throwIfError } from "@/lib/supabase/errors";
 
 export type WorkspaceProject = {
   id: string;
@@ -63,7 +64,7 @@ export async function listWorkspaceProjects(): Promise<WorkspaceProject[]> {
     .select("id, name, code, status, start_date, end_date, description, client:clients(id, name, logo_url)")
     .is("archived_at", null)
     .order("name", { ascending: true });
-  if (error) throw error;
+  throwIfError(error);
   if (!projects?.length) return [];
 
   const projectIds = projects.map((project) => project.id);
@@ -112,7 +113,7 @@ export async function listProjectPhases(projectId: string): Promise<WorkspacePha
     .select("id, project_id, name, description, start_date, end_date, order_index")
     .eq("project_id", projectId)
     .order("order_index", { ascending: true });
-  if (error) throw error;
+  throwIfError(error);
   if (!phases?.length) return [];
 
   const phaseIds = phases.map((phase) => phase.id);
@@ -121,7 +122,7 @@ export async function listProjectPhases(projectId: string): Promise<WorkspacePha
     .select("id, phase_id, name, description, planned_date, completed_date, status, location, participants_count, narrative_note, responsible, order_index")
     .in("phase_id", phaseIds)
     .order("order_index", { ascending: true });
-  if (activityError) throw activityError;
+  throwIfError(activityError);
 
   const activityIds = (activities ?? []).map((activity) => activity.id);
   const { data: proofs } = activityIds.length
@@ -156,7 +157,7 @@ export async function getPhase(phaseId: string) {
     .select("id, project_id, name, description, start_date, end_date, order_index")
     .eq("id", phaseId)
     .single();
-  if (error) throw error;
+  throwIfError(error);
   return data;
 }
 
@@ -167,7 +168,7 @@ export async function getActivity(activityId: string) {
     .select("id, phase_id, name, description, planned_date, completed_date, status, location, participants_count, narrative_note, responsible, order_index, phase:phases(id, name, project_id, project:projects(id, name, code))")
     .eq("id", activityId)
     .single();
-  if (error) throw error;
+  throwIfError(error);
   return {
     ...data,
     status: data.status as WorkspaceActivity["status"],
@@ -182,7 +183,7 @@ export async function listActivityProofs(activityId: string): Promise<WorkspaceP
     .select("id, activity_id, kind, file_path, file_name, mime_type, size_bytes, caption, url, created_at")
     .eq("activity_id", activityId)
     .order("created_at", { ascending: false });
-  if (error) throw error;
+  throwIfError(error);
 
   return Promise.all(
     (data ?? []).map(async (proof): Promise<WorkspaceProof> => {
@@ -205,7 +206,7 @@ export async function listProjectTeam(projectId: string) {
     .from("project_members")
     .select("id, user_id, project_role")
     .eq("project_id", projectId);
-  if (error) throw error;
+  throwIfError(error);
   if (!members?.length) return [];
 
   const { data: profiles } = await sb

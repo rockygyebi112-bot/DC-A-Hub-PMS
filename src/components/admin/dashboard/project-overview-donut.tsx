@@ -1,5 +1,3 @@
-import { ChevronDown } from "lucide-react";
-
 export type DonutSegment = {
   key: "on_track" | "at_risk" | "delayed" | "not_started";
   label: string;
@@ -94,13 +92,6 @@ export function ProjectOverviewDonut({
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Project Overview
         </h2>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
-        >
-          {filterLabel}
-          <ChevronDown className="size-3.5" />
-        </button>
       </header>
       <div className="grid gap-6 px-5 pb-5 sm:grid-cols-[200px_1fr] sm:items-center">
         <div className="relative mx-auto flex size-[200px] items-center justify-center">

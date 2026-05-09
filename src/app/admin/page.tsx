@@ -19,6 +19,7 @@ import {
 import {
   TasksOverview,
   type TaskRow,
+  type TasksByFilter,
 } from "@/components/admin/dashboard/tasks-overview";
 import {
   ProjectHealthSummary,
@@ -77,7 +78,7 @@ type DashboardData = {
     not_started: number;
   };
   tasks: {
-    rows: TaskRow[];
+    byFilter: TasksByFilter;
     counts: { all: number; overdue: number; due_week: number; completed: number };
   };
   recentProjects: RecentProjectRow[];
@@ -237,14 +238,13 @@ async function getDashboardData(): Promise<DashboardData> {
   const completedRows = taskCandidates.filter((r) => r.activity.status === "done");
   const allOpenRows = taskCandidates.filter((r) => r.activity.status !== "done");
 
-  // Display: blend a few overdue + due-this-week + recently completed for the
-  // "All" tab so the panel always feels alive.
-  const displayPicks: TaskRow[] = [];
-  const seen = new Set<string>();
-  function pushTask(row: { activity: ActivityRow; project: ProjectRow }, isCompleted: boolean) {
-    if (seen.has(row.activity.id)) return;
-    seen.add(row.activity.id);
-    displayPicks.push({
+  // Build per-filter task lists so the filter pills actually swap between
+  // disjoint row sets rather than all showing the same pre-picked handful.
+  function toTaskRow(
+    row: { activity: ActivityRow; project: ProjectRow },
+    isCompleted: boolean,
+  ): TaskRow {
+    return {
       id: row.activity.id,
       title: row.activity.name,
       projectName: row.project.name,
@@ -254,15 +254,40 @@ async function getDashboardData(): Promise<DashboardData> {
       isCompleted,
       isOverdue:
         !isCompleted && !!row.activity.planned_date && row.activity.planned_date < today,
-    });
+    };
   }
-  for (const r of overdueRows.slice(0, 2)) pushTask(r, false);
-  for (const r of dueWeekRows.slice(0, 2)) pushTask(r, false);
-  for (const r of completedRows.slice(0, 1)) pushTask(r, true);
-  for (const r of allOpenRows) {
-    if (displayPicks.length >= 4) break;
-    pushTask(r, false);
+
+  const DISPLAY_LIMIT = 10;
+  const overdueSorted = [...overdueRows].sort((a, b) =>
+    (a.activity.planned_date ?? "").localeCompare(b.activity.planned_date ?? ""),
+  );
+  const dueWeekSorted = [...dueWeekRows].sort((a, b) =>
+    (a.activity.planned_date ?? "").localeCompare(b.activity.planned_date ?? ""),
+  );
+  const completedSorted = [...completedRows].sort((a, b) =>
+    (b.activity.completed_date ?? "").localeCompare(a.activity.completed_date ?? ""),
+  );
+
+  // "All" mixes overdue + due-this-week + other open + recently completed.
+  const allSeen = new Set<string>();
+  const allList: TaskRow[] = [];
+  function pushAll(row: { activity: ActivityRow; project: ProjectRow }, done: boolean) {
+    if (allSeen.has(row.activity.id)) return;
+    if (allList.length >= DISPLAY_LIMIT) return;
+    allSeen.add(row.activity.id);
+    allList.push(toTaskRow(row, done));
   }
+  for (const r of overdueSorted) pushAll(r, false);
+  for (const r of dueWeekSorted) pushAll(r, false);
+  for (const r of allOpenRows) pushAll(r, false);
+  for (const r of completedSorted) pushAll(r, true);
+
+  const tasksByFilter: TasksByFilter = {
+    all: allList,
+    overdue: overdueSorted.slice(0, DISPLAY_LIMIT).map((r) => toTaskRow(r, false)),
+    due_week: dueWeekSorted.slice(0, DISPLAY_LIMIT).map((r) => toTaskRow(r, false)),
+    completed: completedSorted.slice(0, DISPLAY_LIMIT).map((r) => toTaskRow(r, true)),
+  };
 
   const taskCounts = {
     all: allOpenRows.length + completedRows.length,
@@ -354,7 +379,7 @@ async function getDashboardData(): Promise<DashboardData> {
   return {
     totals,
     health,
-    tasks: { rows: displayPicks, counts: taskCounts },
+    tasks: { byFilter: tasksByFilter, counts: taskCounts },
     recentProjects,
     milestones,
     activity: activityFeed,
@@ -429,7 +454,7 @@ export default async function AdminOverview() {
         <div className="space-y-5">
           <ProjectOverviewDonut total={data.totals.total} segments={donutSegments} />
           <TasksOverview
-            tasks={data.tasks.rows}
+            tasksByFilter={data.tasks.byFilter}
             counts={data.tasks.counts}
             viewAllHref="/admin/projects"
           />

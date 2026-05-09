@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
-import { DM_Sans, DM_Mono, Syne } from "next/font/google";
+import { Inter, DM_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "./providers";
 import "./globals.css";
 
-const dmSans = DM_Sans({
-  variable: "--font-sans",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["400", "500", "600", "700"],
-});
-
-const syne = Syne({
-  variable: "--font-heading",
+// Inter — the de-facto enterprise SaaS UI font (Linear, Stripe, Notion).
+// We use the same family for body and headings to unify the visual system.
+const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-sans",
+});
+
+const interHeading = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["600", "700", "800"],
+  variable: "--font-heading",
 });
 
 const dmMono = DM_Mono({
@@ -39,7 +41,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${dmSans.variable} ${syne.variable} ${dmMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${interHeading.variable} ${dmMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
         <Providers>

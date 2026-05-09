@@ -68,16 +68,6 @@ export default async function AdminLayout({
         },
       ],
     },
-    {
-      group: "Workspace",
-      items: [
-        {
-          href: "/workspace",
-          label: "Open workspace",
-          icon: "list-checks" as const,
-        },
-      ],
-    },
   ];
 
   return (

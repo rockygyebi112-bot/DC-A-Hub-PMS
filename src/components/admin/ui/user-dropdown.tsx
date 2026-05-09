@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
@@ -16,9 +17,11 @@ import { createClient } from "@/lib/supabase/client";
 export function UserDropdown({
   name,
   email,
+  avatarUrl,
 }: {
   name: string;
   email: string;
+  avatarUrl?: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -37,7 +40,7 @@ export function UserDropdown({
       <DropdownMenuTrigger
         render={
           <Button variant="ghost" size="sm" className="gap-2 px-2">
-            <UserAvatar email={email} name={name} size="sm" />
+            <UserAvatar email={email} name={name} size="sm" avatarUrl={avatarUrl} />
             <span className="hidden md:inline text-sm">{name}</span>
           </Button>
         }
@@ -47,8 +50,8 @@ export function UserDropdown({
           <span className="text-sm font-medium">{name}</span>
           <span className="text-xs text-muted-foreground">{email}</span>
         </div>
-        <DropdownMenuItem disabled>
-          <User className="mr-2 size-4" /> Account (coming soon)
+        <DropdownMenuItem render={<Link href="/account" />}>
+          <User className="mr-2 size-4" /> Account
         </DropdownMenuItem>
         <div className="my-1 border-t" />
         <DropdownMenuItem onClick={signOut} disabled={pending}>

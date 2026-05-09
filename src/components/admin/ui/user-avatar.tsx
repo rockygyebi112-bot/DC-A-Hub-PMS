@@ -31,12 +31,31 @@ export function UserAvatar({
   name,
   size = "md",
   className,
+  avatarUrl,
 }: {
   email: string;
   name: string;
   size?: "sm" | "md" | "lg";
   className?: string;
+  avatarUrl?: string | null;
 }) {
+  if (avatarUrl) {
+    return (
+      // Render uploaded photo. Plain <img> avoids a Next/Image domain config
+      // requirement for the Supabase storage host.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={avatarUrl}
+        alt={name}
+        title={name}
+        className={cn(
+          "inline-block rounded-full object-cover shrink-0 bg-muted",
+          SIZES[size],
+          className,
+        )}
+      />
+    );
+  }
   const color = hashToColor(email);
   return (
     <span

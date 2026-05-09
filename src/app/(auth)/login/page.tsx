@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
+import Link from "next/link";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -27,6 +28,8 @@ function LoginForm() {
     auth: "Authentication failed. Please try again.",
     invite_expired:
       "Your invite link has expired or was already used. Please ask an admin to send a new invite.",
+    link_expired:
+      "That password reset link has expired or was already used. Request a new one below.",
   };
 
   async function handleLogin(e: React.FormEvent) {
@@ -99,13 +102,21 @@ function LoginForm() {
               className="h-10"
             />
           </div>
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <Checkbox
-              checked={remember}
-              onCheckedChange={(v) => setRemember(v === true)}
-            />
-            <span className="text-xs text-muted-foreground">Remember me</span>
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <Checkbox
+                checked={remember}
+                onCheckedChange={(v) => setRemember(v === true)}
+              />
+              <span className="text-xs text-muted-foreground">Remember me</span>
+            </label>
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
         </div>
         <div className="flex flex-col gap-4 px-6 sm:px-8 pt-5 pb-8">
           <Button

@@ -42,3 +42,51 @@ export async function clientAs(email: string): Promise<SupabaseClient<Database>>
   if (error) throw error;
   return sb;
 }
+
+/**
+ * Delete every test fixture this suite (and siblings) might create:
+ *   - auth users whose email ends in @example.com (cascades profiles + memberships)
+ *   - the named test clients (cascades their projects + memberships)
+ *
+ * Safe to call multiple times. Intended for `afterAll` in integration tests so
+ * the production-ish admin Users page doesn't accumulate fake users.
+ */
+const TEST_EMAIL_SUFFIX = '@example.com';
+const TEST_CLIENT_NAMES = [
+  'Org A (rlstest)',
+  'Org B (rlstest)',
+  'ArchiveRLSClient',
+  'Action Test Client',
+];
+const TEST_CLIENT_NAME_PATTERNS = [
+  'PM-Test %',
+  'ProjActions Client %',
+];
+
+export async function cleanupTestData(): Promise<void> {
+  const admin = adminClient();
+
+  // Delete clients first (cascades to projects + project_members).
+  if (TEST_CLIENT_NAMES.length) {
+    await admin.from('clients').delete().in('name', TEST_CLIENT_NAMES);
+  }
+  for (const pattern of TEST_CLIENT_NAME_PATTERNS) {
+    await admin.from('clients').delete().like('name', pattern);
+  }
+
+  // Delete auth users with test emails (cascades profiles + memberships).
+  let page = 1;
+  for (;;) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw error;
+    const targets = data.users.filter((u) =>
+      (u.email ?? '').toLowerCase().endsWith(TEST_EMAIL_SUFFIX),
+    );
+    for (const u of targets) {
+      await admin.auth.admin.deleteUser(u.id);
+    }
+    if (data.users.length < 200) break;
+    page += 1;
+    if (page > 50) break;
+  }
+}

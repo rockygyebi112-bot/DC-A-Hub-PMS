@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { adminClient, createTestUser, clientAs } from './setup';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { adminClient, cleanupTestData, createTestUser, clientAs } from './setup';
 
 const STAFF_A = 'rlstest-staff-a@example.com';
 const CLIENT_A = 'rlstest-client-a@example.com';
@@ -49,6 +49,10 @@ beforeAll(async () => {
     { project_id: projectA, user_id: clientA,  project_role: 'viewer' },
     { project_id: projectB, user_id: clientB,  project_role: 'viewer' },
   ], { onConflict: 'project_id,user_id' });
+}, 60_000);
+
+afterAll(async () => {
+  await cleanupTestData();
 }, 60_000);
 
 describe('RLS — projects', () => {

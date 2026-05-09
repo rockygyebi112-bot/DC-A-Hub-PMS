@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll } from "vitest";
-import { adminClient, createTestUser, clientAs } from "../rls/setup";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { adminClient, cleanupTestData, createTestUser, clientAs } from "../rls/setup";
 
 const STAFF = "archive-rls-staff@example.com";
 let activeProjectId: string;
@@ -67,6 +67,10 @@ beforeAll(async () => {
     ],
     { onConflict: "project_id,user_id" },
   );
+}, 60_000);
+
+afterAll(async () => {
+  await cleanupTestData();
 }, 60_000);
 
 describe("archive RLS", () => {

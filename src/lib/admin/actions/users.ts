@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getAppUrl } from "@/lib/app-url";
 import {
   inviteUserSchema,
   setUserRoleSchema,
@@ -11,8 +12,6 @@ import {
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 async function assertCallerIsAdmin(): Promise<string | null> {
   const sb = await createClient();
@@ -40,7 +39,7 @@ export async function inviteUser(
   const admin = createAdminClient();
   const { data: invite, error: inviteErr } =
     await admin.auth.admin.inviteUserByEmail(parsed.data.email, {
-      redirectTo: `${APP_URL}/reset-password`,
+      redirectTo: `${getAppUrl()}/reset-password`,
     });
 
   if (inviteErr) {

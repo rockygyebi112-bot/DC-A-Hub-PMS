@@ -25,12 +25,14 @@ import { cn } from "@/lib/utils";
 export type DetailTabKey =
   | "overview"
   | "workplan"
-  | "team";
+  | "team"
+  | "budget";
 
 const TABS: { key: DetailTabKey; label: string; href: (id: string) => string }[] = [
   { key: "overview", label: "Overview", href: (id) => `/admin/projects/${id}` },
   { key: "workplan", label: "Workplan", href: (id) => `/workspace/projects/${id}` },
   { key: "team", label: "Team", href: (id) => `/admin/projects/${id}/team` },
+  { key: "budget", label: "Budget", href: (id) => `/admin/projects/${id}/budget` },
 ];
 
 export function ProjectTabs({
@@ -255,40 +257,74 @@ export function SummaryWorkplanCard({
 export function SummaryBudgetCard({
   total,
   spent,
+  currency = "GHS",
+  projectId,
 }: {
   total: number | null;
   spent: number | null;
+  currency?: string;
+  projectId: string;
 }) {
   const hasBudget = total !== null && total > 0;
-  const percent = hasBudget ? Math.min(100, Math.round(((spent ?? 0) / (total as number)) * 100)) : 0;
+  const safeSpent = spent ?? 0;
+  const percent = hasBudget
+    ? Math.min(999, Math.round((safeSpent / (total as number)) * 100))
+    : 0;
+  const barWidth = Math.min(100, percent);
+  const tone =
+    !hasBudget
+      ? "muted"
+      : percent >= 100
+        ? "bad"
+        : percent >= 80
+          ? "warn"
+          : "good";
+  const barClass =
+    tone === "bad"
+      ? "bg-red-500"
+      : tone === "warn"
+        ? "bg-amber-500"
+        : "bg-primary";
+
   return (
-    <SummaryCard icon={DollarSign} label="Budget">
-      {hasBudget ? (
-        <div className="space-y-2">
-          <div>
-            <p className="font-heading text-base font-bold tracking-tight">
-              {formatCurrency(total)}
+    <Link
+      href={`/admin/projects/${projectId}/budget`}
+      className="group block rounded-[14px] focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <SummaryCard icon={DollarSign} label="Budget">
+        {hasBudget ? (
+          <div className="space-y-2">
+            <div>
+              <p className="font-heading text-base font-bold tracking-tight">
+                {formatCurrency(total, currency)}
+              </p>
+              <p className="text-[11px] text-muted-foreground">Total budget</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold">
+                {formatCurrency(safeSpent, currency)}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Spent ({percent}%)
+              </p>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className={cn("h-full rounded-full transition-all", barClass)}
+                style={{ width: `${barWidth}%` }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-muted-foreground">Not set</p>
+            <p className="inline-flex items-center gap-1 text-[11px] font-medium text-primary group-hover:underline">
+              Add a budget plan <ChevronRight className="size-3" />
             </p>
-            <p className="text-[11px] text-muted-foreground">Total budget</p>
           </div>
-          <div>
-            <p className="text-sm font-semibold">{formatCurrency(spent ?? 0)}</p>
-            <p className="text-[11px] text-muted-foreground">Spent ({percent}%)</p>
-          </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary"
-              style={{ width: `${percent}%` }}
-            />
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-muted-foreground">Not set</p>
-          <p className="text-[11px] text-muted-foreground">Add a budget plan</p>
-        </div>
-      )}
-    </SummaryCard>
+        )}
+      </SummaryCard>
+    </Link>
   );
 }
 

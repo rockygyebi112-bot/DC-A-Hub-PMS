@@ -25,6 +25,7 @@ import {
   type RecentActivityItem,
 } from "@/components/admin/project-detail/parts";
 import { getProject } from "@/lib/admin/queries";
+import { getBudgetSummary } from "@/lib/admin/queries/budget";
 import { listProjectPhases, listProjectTeam } from "@/lib/workspace/queries";
 
 export default async function ProjectOverviewPage({
@@ -33,10 +34,11 @@ export default async function ProjectOverviewPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [project, phases, team] = await Promise.all([
+  const [project, phases, team, budgetSummary] = await Promise.all([
     getProject(id),
     listProjectPhases(id),
     listProjectTeam(id),
+    getBudgetSummary(id),
   ]);
 
   // Aggregate counts
@@ -225,7 +227,12 @@ export default async function ProjectOverviewPage({
           phases={phases.length}
           activities={totalActivities}
         />
-        <SummaryBudgetCard total={null} spent={null} />
+        <SummaryBudgetCard
+          total={budgetSummary.hasBudget ? budgetSummary.total : null}
+          spent={budgetSummary.spent}
+          currency={budgetSummary.currency}
+          projectId={id}
+        />
         <SummaryTeamCard members={teamUsers} projectId={id} />
         <SummaryClientCard
           clientName={project.client?.name ?? null}

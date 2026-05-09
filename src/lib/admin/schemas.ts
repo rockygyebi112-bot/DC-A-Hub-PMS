@@ -74,3 +74,84 @@ export const setUserRoleSchema = z.object({
   role: z.enum(["admin", "staff", "client"]),
 });
 export type SetUserRoleInput = z.infer<typeof setUserRoleSchema>;
+
+/* ---------------------------------------------------------------- */
+/* Finance / Budget                                                  */
+/* ---------------------------------------------------------------- */
+
+const moneyString = z
+  .string()
+  .trim()
+  .refine((v) => v === "" || /^\d+(\.\d{1,2})?$/.test(v), "Use a valid amount")
+  .transform((v) => (v === "" ? 0 : Number(v)));
+
+const moneyNumber = z.coerce
+  .number()
+  .nonnegative("Amount must be 0 or greater")
+  .max(1_000_000_000_000, "Amount is too large");
+
+export const currencySchema = z
+  .string()
+  .trim()
+  .min(1, "Currency required")
+  .max(8)
+  .toUpperCase();
+
+export const budgetSetupSchema = z.object({
+  total_amount: moneyNumber,
+  currency: currencySchema.default("GHS"),
+  notes: z
+    .string()
+    .max(2000)
+    .optional()
+    .or(z.literal(""))
+    .transform((v) => (v === "" ? undefined : v)),
+});
+export type BudgetSetupInput = z.input<typeof budgetSetupSchema>;
+export type BudgetSetupParsed = z.output<typeof budgetSetupSchema>;
+
+export const budgetCategorySchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(120),
+  allocated_amount: moneyNumber,
+});
+export type BudgetCategoryInput = z.input<typeof budgetCategorySchema>;
+
+export const expenseStatusSchema = z.enum([
+  "planned",
+  "incurred",
+  "reimbursed",
+  "cancelled",
+]);
+
+export const expenseSchema = z.object({
+  category_id: z
+    .string()
+    .uuid()
+    .or(z.literal(""))
+    .optional()
+    .transform((v) => (v === "" || v === undefined ? null : v)),
+  amount: moneyNumber.refine((v) => v > 0, "Amount must be greater than 0"),
+  currency: currencySchema.default("GHS"),
+  expense_date: z
+    .string()
+    .min(1, "Date is required")
+    .refine((v) => !Number.isNaN(new Date(v).getTime()), "Invalid date"),
+  vendor: z
+    .string()
+    .max(200)
+    .optional()
+    .or(z.literal(""))
+    .transform((v) => (v === "" ? undefined : v)),
+  description: z
+    .string()
+    .max(2000)
+    .optional()
+    .or(z.literal(""))
+    .transform((v) => (v === "" ? undefined : v)),
+  status: expenseStatusSchema.default("incurred"),
+});
+export type ExpenseInput = z.input<typeof expenseSchema>;
+export type ExpenseParsed = z.output<typeof expenseSchema>;
+
+// kept as utility (unused for now, exposed for future text inputs)
+export const moneyTextSchema = moneyString;

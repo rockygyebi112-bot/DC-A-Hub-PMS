@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireProjectWriter } from "@/lib/auth/guards";
+import { validateUpload, sanitizeFileName } from "@/lib/uploads";
 import {
   budgetCategorySchema,
   budgetSetupSchema,
@@ -20,6 +22,8 @@ export async function upsertProjectBudget(
   projectId: string,
   raw: unknown,
 ): Promise<ActionResult> {
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
   const parsed = budgetSetupSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
@@ -46,6 +50,8 @@ export async function createBudgetCategory(
   projectId: string,
   raw: unknown,
 ): Promise<ActionResult<{ id: string }>> {
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
   const parsed = budgetCategorySchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
@@ -81,6 +87,8 @@ export async function updateBudgetCategory(
   categoryId: string,
   raw: unknown,
 ): Promise<ActionResult> {
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
   const parsed = budgetCategorySchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
@@ -102,6 +110,8 @@ export async function deleteBudgetCategory(
   projectId: string,
   categoryId: string,
 ): Promise<ActionResult> {
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
   const sb = await createClient();
   const { error } = await sb
     .from("budget_categories")
@@ -124,9 +134,18 @@ async function uploadReceipt(
   projectId: string,
   file: { fileName: string; mimeType: string; bytes: ArrayBuffer },
 ) {
+  const validation = validateUpload("receipt", {
+    size: file.bytes.byteLength,
+    mimeType: file.mimeType,
+    fileName: file.fileName,
+  });
+  if (!validation.ok) throw new Error(validation.error);
+
   const sb = await createClient();
-  const safeName = file.fileName.replace(/[^a-zA-Z0-9._-]+/g, "_");
-  const path = `projects/${projectId}/expenses/${Date.now()}_${safeName}`;
+  const safeName = sanitizeFileName(file.fileName);
+  // Use a uuid prefix rather than Date.now() to eliminate collisions and make
+  // paths unguessable.
+  const path = `projects/${projectId}/expenses/${crypto.randomUUID()}_${safeName}`;
   const { error } = await sb.storage
     .from("receipts")
     .upload(path, file.bytes, {
@@ -147,6 +166,8 @@ export async function createExpense(
   projectId: string,
   payload: ExpensePayload,
 ): Promise<ActionResult<{ id: string }>> {
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
   const parsed = expenseSchema.safeParse(payload.fields);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
@@ -196,6 +217,8 @@ export async function updateExpense(
   expenseId: string,
   payload: ExpensePayload & { replaceReceipt?: boolean; clearReceipt?: boolean },
 ): Promise<ActionResult> {
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
   const parsed = expenseSchema.safeParse(payload.fields);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
@@ -256,6 +279,8 @@ export async function deleteExpense(
   projectId: string,
   expenseId: string,
 ): Promise<ActionResult> {
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
   const sb = await createClient();
 
   const { data: existing } = await sb

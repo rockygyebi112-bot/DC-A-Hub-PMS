@@ -29,7 +29,14 @@ export const proofLinkSchema = z.object({
     .string()
     .trim()
     .min(1, "Link URL is required")
-    .url("Enter a valid URL (https://…)"),
+    .url("Enter a valid URL (https://…)")
+    // Reject javascript:, data:, file:, vbscript:, etc. which would otherwise
+    // execute in the viewer's browser when rendered as an <a href>.
+    .refine(
+      (value) => /^https?:\/\//i.test(value),
+      "Only http(s) links are allowed",
+    )
+    .refine((value) => value.length <= 2048, "URL is too long"),
   file_name: z.string().trim().max(200).optional(),
   caption: z.string().trim().max(500).optional(),
 });

@@ -80,10 +80,29 @@ export async function setUserRole(
   profileId: string,
   raw: unknown,
 ): Promise<ActionResult> {
+  // CRIT-1: admin-only, otherwise any user could set role='admin' on their own
+  // profile via the RLS-permissive self-update path.
+  const callerId = await assertCallerIsAdmin();
+  if (!callerId) return { ok: false, error: "Not authorized" };
+
   const parsed = setUserRoleSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
-  const sb = await createClient();
-  const { error } = await sb
+
+  const admin = createAdminClient();
+
+  // Prevent admins from accidentally demoting themselves, which can brick
+  // the tenant (last-admin scenario is also enforced by a DB trigger).
+  const { data: target } = await admin
+    .from("profiles")
+    .select("user_id, role")
+    .eq("id", profileId)
+    .single();
+  if (!target) return { ok: false, error: "User not found" };
+  if (target.user_id === callerId && parsed.data.role !== "admin") {
+    return { ok: false, error: "You cannot demote yourself" };
+  }
+
+  const { error } = await admin
     .from("profiles")
     .update({ role: parsed.data.role })
     .eq("id", profileId);

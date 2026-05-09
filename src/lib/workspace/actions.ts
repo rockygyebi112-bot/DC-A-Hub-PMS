@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 import * as XLSX from "xlsx";
 import { createClient } from "@/lib/supabase/server";
+import { requireProjectWriter } from "@/lib/auth/guards";
+import {
+  validateUpload,
+  sanitizeFileName,
+  MAX_XLSX_BYTES,
+} from "@/lib/uploads";
 import {
   activitySchema,
   activityUpdateSchema,
@@ -30,6 +36,12 @@ function formValue(formData: FormData, key: string) {
 
 function normalizeKey(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+// Escape Postgres LIKE/ILIKE wildcards so attacker-supplied strings cannot
+// pattern-match unintended rows.
+function escapeLike(value: string): string {
+  return value.replace(/([\\%_])/g, "\\$1");
 }
 
 function normalizeStatus(value: unknown): "not_started" | "in_progress" | "done" {
@@ -64,6 +76,9 @@ function buildActivityDescription({
 }
 
 export async function createPhase(projectId: string, formData: FormData): Promise<ActionResult> {
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
+
   const parsed = phaseSchema.safeParse({
     name: formValue(formData, "name"),
     description: formValue(formData, "description"),
@@ -93,9 +108,15 @@ export async function importWorkplanSheet(
   projectId: string,
   formData: FormData,
 ): Promise<ActionResult<{ phasesCreated: number; activitiesCreated: number; activitiesUpdated: number }>> {
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
+
   const file = formData.get("workplan");
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, error: "Choose an Excel checklist to import" };
+  }
+  if (file.size > MAX_XLSX_BYTES) {
+    return { ok: false, error: `Workplan file must be ${MAX_XLSX_BYTES / (1024 * 1024)} MB or smaller` };
   }
 
   const bytes = await file.arrayBuffer();
@@ -164,7 +185,9 @@ export async function importWorkplanSheet(
       .from("activities")
       .select("id")
       .eq("phase_id", phase.id)
-      .ilike("name", activityName)
+      // Escape ILIKE wildcards to prevent attacker-controlled sheet cells
+      // from matching unintended activities (e.g. '%').
+      .ilike("name", escapeLike(activityName))
       .maybeSingle();
     if (existingError) return { ok: false, error: existingError.message };
 
@@ -227,6 +250,10 @@ export async function updatePhase(phaseId: string, formData: FormData): Promise<
 
   const sb = await createClient();
   const { data: phase } = await sb.from("phases").select("project_id").eq("id", phaseId).single();
+  if (!phase?.project_id) return { ok: false, error: "Phase not found" };
+  const auth = await requireProjectWriter(phase.project_id);
+  if (!auth.ok) return auth;
+
   const { error } = await sb.from("phases").update(parsed.data).eq("id", phaseId);
   if (error) return { ok: false, error: error.message };
 
@@ -237,6 +264,9 @@ export async function updatePhase(phaseId: string, formData: FormData): Promise<
 }
 
 export async function createActivity(projectId: string, formData: FormData): Promise<ActionResult<{ id: string }>> {
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
+
   const parsed = activitySchema.safeParse({
     phase_id: formValue(formData, "phase_id"),
     name: formValue(formData, "name"),
@@ -300,6 +330,10 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
     .single();
   const phase = Array.isArray(before?.phase) ? before?.phase[0] : before?.phase;
   const projectId = phase?.project_id;
+  if (!projectId) return { ok: false, error: "Activity not found" };
+
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
 
   const { error } = await sb.from("activities").update(parsed.data).eq("id", activityId);
   if (error) return { ok: false, error: error.message };
@@ -371,6 +405,9 @@ export async function deleteActivity(activityId: string): Promise<ActionResult<{
   const projectId = phase?.project_id;
   if (!projectId) return { ok: false, error: "Project not found" };
 
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
+
   const paths = await collectProofPaths(sb, [activityId]);
   await removeStorageFiles(sb, paths);
 
@@ -391,6 +428,9 @@ export async function deletePhase(phaseId: string): Promise<ActionResult<{ proje
     .single();
   if (lookupError || !phase) return { ok: false, error: lookupError?.message ?? "Phase not found" };
 
+  const auth = await requireProjectWriter(phase.project_id);
+  if (!auth.ok) return auth;
+
   const { data: activityRows } = await sb.from("activities").select("id").eq("phase_id", phaseId);
   const activityIds = (activityRows ?? []).map((a) => a.id);
   const paths = await collectProofPaths(sb, activityIds);
@@ -405,6 +445,9 @@ export async function deletePhase(phaseId: string): Promise<ActionResult<{ proje
 }
 
 export async function deleteWorkplan(projectId: string): Promise<ActionResult> {
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
+
   const sb = await createClient();
   const { data: phases, error: phaseError } = await sb
     .from("phases")
@@ -448,8 +491,21 @@ export async function uploadProofs(activityId: string, formData: FormData): Prom
   const projectId = phase?.project_id;
   if (!projectId) return { ok: false, error: "Project not found" };
 
+  const auth = await requireProjectWriter(projectId);
+  if (!auth.ok) return auth;
+
+  // Validate every file up-front so we never upload partial batches.
   for (const file of files) {
-    const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, "-");
+    const validation = validateUpload("proof", {
+      size: file.size,
+      mimeType: file.type,
+      fileName: file.name,
+    });
+    if (!validation.ok) return { ok: false, error: validation.error };
+  }
+
+  for (const file of files) {
+    const safeName = sanitizeFileName(file.name);
     const path = `projects/${projectId}/activities/${activityId}/${crypto.randomUUID()}-${safeName}`;
     const { error: uploadError } = await sb.storage.from("proofs").upload(path, file, {
       contentType: file.type || "application/octet-stream",
@@ -504,6 +560,9 @@ export async function addProofLink(
   const phase = Array.isArray(activity?.phase) ? activity?.phase[0] : activity?.phase;
   const projectId = phase?.project_id;
   if (!projectId) return { ok: false, error: "Project not found" };
+
+  const authz = await requireProjectWriter(projectId);
+  if (!authz.ok) return authz;
 
   // Default the displayed name to the URL hostname when none is provided.
   let displayName = parsed.data.file_name?.trim() || "";

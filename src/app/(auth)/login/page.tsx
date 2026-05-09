@@ -10,14 +10,12 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
 import Link from "next/link";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -102,14 +100,7 @@ function LoginForm() {
               className="h-10"
             />
           </div>
-          <div className="flex items-center justify-between gap-2">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <Checkbox
-                checked={remember}
-                onCheckedChange={(v) => setRemember(v === true)}
-              />
-              <span className="text-xs text-muted-foreground">Remember me</span>
-            </label>
+          <div className="flex items-center justify-end gap-2">
             <Link
               href="/forgot-password"
               className="text-xs font-medium text-primary hover:underline"

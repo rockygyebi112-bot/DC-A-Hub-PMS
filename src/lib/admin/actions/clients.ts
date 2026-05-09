@@ -1,21 +1,27 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/auth/guards";
 import { clientFormSchema } from "@/lib/admin/schemas";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
 
+const GENERIC_DB_ERROR = "Operation failed";
+
 export async function createClientOrg(
   raw: unknown,
 ): Promise<ActionResult<{ id: string }>> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
+
   const parsed = clientFormSchema.safeParse(raw);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
   }
-  const sb = await createClient();
+  const sb = createAdminClient();
   const { data, error } = await sb
     .from("clients")
     .insert({
@@ -25,7 +31,7 @@ export async function createClientOrg(
     })
     .select("id")
     .single();
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: GENERIC_DB_ERROR };
   revalidatePath("/admin/clients");
   return { ok: true, data: { id: data.id } };
 }
@@ -34,11 +40,14 @@ export async function updateClientOrg(
   id: string,
   raw: unknown,
 ): Promise<ActionResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
+
   const parsed = clientFormSchema.safeParse(raw);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
   }
-  const sb = await createClient();
+  const sb = createAdminClient();
   const { error } = await sb
     .from("clients")
     .update({
@@ -47,30 +56,34 @@ export async function updateClientOrg(
       logo_url: parsed.data.logo_url ?? null,
     })
     .eq("id", id);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: GENERIC_DB_ERROR };
   revalidatePath("/admin/clients");
   revalidatePath(`/admin/clients/${id}`);
   return { ok: true };
 }
 
 export async function archiveClient(id: string): Promise<ActionResult> {
-  const sb = await createClient();
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
+  const sb = createAdminClient();
   const { error } = await sb
     .from("clients")
     .update({ archived_at: new Date().toISOString() })
     .eq("id", id);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: GENERIC_DB_ERROR };
   revalidatePath("/admin/clients");
   return { ok: true };
 }
 
 export async function restoreClient(id: string): Promise<ActionResult> {
-  const sb = await createClient();
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
+  const sb = createAdminClient();
   const { error } = await sb
     .from("clients")
     .update({ archived_at: null })
     .eq("id", id);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: GENERIC_DB_ERROR };
   revalidatePath("/admin/clients");
   return { ok: true };
 }

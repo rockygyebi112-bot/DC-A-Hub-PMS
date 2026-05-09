@@ -40,6 +40,9 @@ export function InviteUserForm() {
   const [pending, startTransition] = useTransition();
   const form = useForm<InviteUserInput>({
     resolver: zodResolver(inviteUserSchema),
+    // Only staff/admin are invited globally. Clients are invited per-project
+    // from a project's Team page so their portal access is correctly scoped
+    // through `project_members.project_role = 'viewer'`.
     defaultValues: { email: "", full_name: "", role: "staff" },
   });
 
@@ -62,9 +65,11 @@ export function InviteUserForm() {
       <DialogTrigger render={<Button>Invite user</Button>} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Invite user</DialogTitle>
+          <DialogTitle>Invite staff user</DialogTitle>
           <DialogDescription>
-            They will receive an email to set their password.
+            Use this for staff and admins. To invite a client, open a project&apos;s
+            Team page and use <strong>Invite client viewer</strong> — that scopes
+            their portal access to that one project.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -106,14 +111,13 @@ export function InviteUserForm() {
                       <SelectTrigger>
                         <SelectValue>
                           {(value: string) =>
-                            ({ staff: "Staff", client: "Client" } as Record<string, string>)[value] ?? value
+                            ({ staff: "Staff" } as Record<string, string>)[value] ?? value
                           }
                         </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="staff">Staff</SelectItem>
-                      <SelectItem value="client">Client</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -1,8 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+import { getAppUrl } from "@/lib/app-url";
 
 export async function notifyClientViewersActivityDone({
   projectId,
@@ -38,7 +37,7 @@ export async function notifyClientViewersActivityDone({
   const recipients = (profiles ?? []).map((profile) => profile.email).filter(Boolean);
   if (recipients.length === 0) return { ok: true };
 
-  const portalUrl = `${APP_URL}/portal/projects/${projectId}/activities/${activityId}`;
+  const portalUrl = `${getAppUrl()}/portal/projects/${projectId}/activities/${activityId}`;
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {

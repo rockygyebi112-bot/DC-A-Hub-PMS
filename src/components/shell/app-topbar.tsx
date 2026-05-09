@@ -1,4 +1,7 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 import { ThemeToggle } from "@/components/admin/ui/theme-toggle";
 import { UserDropdown } from "@/components/admin/ui/user-dropdown";
@@ -9,16 +12,32 @@ export function AppTopbar({
   email,
   showSearch = true,
   extra,
+  greeting,
+  greetingSubtitle,
+  greetingPath,
 }: {
   name: string;
   email: string;
   showSearch?: boolean;
   extra?: ReactNode;
+  /** When set AND current pathname === greetingPath, a personalised greeting replaces the breadcrumbs. */
+  greeting?: string;
+  greetingSubtitle?: string;
+  greetingPath?: string;
 }) {
+  const pathname = usePathname();
+  const showGreeting = !!greeting && (!greetingPath || pathname === greetingPath);
   return (
     <header className="topbar-glass sticky top-0 z-20 flex h-[68px] items-center gap-3 border-b px-4 md:px-6">
-      <div className="min-w-0 flex-1">
-        <Breadcrumbs />
+      <div className="min-w-0 flex-1 overflow-hidden">
+        {showGreeting ? (
+          <div className="topbar-greeting">
+            <h1>{greeting}</h1>
+            {greetingSubtitle && <p>{greetingSubtitle}</p>}
+          </div>
+        ) : (
+          <Breadcrumbs />
+        )}
       </div>
       {showSearch && (
         <div className="hidden md:block">

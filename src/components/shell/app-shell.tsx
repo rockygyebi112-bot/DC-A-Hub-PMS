@@ -14,6 +14,9 @@ export function AppShell({
   projectBrands,
   projectPathPrefix,
   topbarExtra,
+  greeting,
+  greetingSubtitle,
+  greetingPath,
 }: {
   children: ReactNode;
   brand: string;
@@ -26,6 +29,9 @@ export function AppShell({
   projectBrands?: Record<string, ProjectBrand>;
   projectPathPrefix?: string;
   topbarExtra?: ReactNode;
+  greeting?: string;
+  greetingSubtitle?: string;
+  greetingPath?: string;
 }) {
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -40,7 +46,14 @@ export function AppShell({
         projectPathPrefix={projectPathPrefix}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <AppTopbar name={user.name} email={user.email} extra={topbarExtra} />
+        <AppTopbar
+          name={user.name}
+          email={user.email}
+          extra={topbarExtra}
+          greeting={greeting}
+          greetingSubtitle={greetingSubtitle}
+          greetingPath={greetingPath}
+        />
         <main className="flex-1">
           <div className="page-enter mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
             {children}

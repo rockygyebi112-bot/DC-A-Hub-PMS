@@ -109,7 +109,7 @@ export async function getProject(id: string) {
   const { data, error } = await sb
     .from("projects")
     .select(
-      "id, name, code, status, description, start_date, end_date, archived_at, client_id, client:clients(id, name)",
+      "id, name, code, status, description, start_date, end_date, archived_at, client_id, created_at, updated_at, client:clients(id, name)",
     )
     .eq("id", id)
     .single();

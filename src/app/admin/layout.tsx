@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { SidebarBrandCard } from "@/components/admin/ui/sidebar-brand-card";
-import { getAdminCounts } from "@/lib/admin/queries";
+import { getAdminCounts, listClients } from "@/lib/admin/queries";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { getNotificationFeed } from "@/lib/notifications/queries";
 
@@ -22,14 +22,20 @@ export default async function AdminLayout({
   if (!profile) redirect("/login");
   if (profile.role !== "admin") redirect("/");
 
-  const [counts, notifications] = await Promise.all([
+  const [counts, notifications, clients] = await Promise.all([
     getAdminCounts(),
     getNotificationFeed("workspace").catch(() => ({
       entries: [],
       unreadCount: 0,
       lastReadAt: null,
     })),
+    listClients().catch(() => []),
   ]);
+  const sidebarClients = clients.map((c) => ({
+    id: c.id,
+    name: c.name,
+    logo_url: c.logo_url ?? null,
+  }));
   const firstName = profile.fullName.trim().split(/\s+/)[0] || "Admin";
   const greeting = `${timeBasedGreeting()}, ${firstName}! 👋`;
 
@@ -78,7 +84,7 @@ export default async function AdminLayout({
       storageKey="admin-sidebar-collapsed"
       defaultLogoUrl="/logo.png"
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
-      sidebarFooter={<SidebarBrandCard />}
+      sidebarFooter={<SidebarBrandCard clients={sidebarClients} />}
       greeting={greeting}
       greetingSubtitle="Here's what's happening with your projects today."
       greetingPath="/admin"

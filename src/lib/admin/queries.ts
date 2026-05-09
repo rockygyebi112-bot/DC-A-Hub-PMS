@@ -7,7 +7,7 @@ export async function listClients(opts: { includeArchived?: boolean } = {}) {
   const q = sb
     .from("clients")
     .select(
-      "id, name, contact_email, archived_at, created_at, projects(id, archived_at)",
+      "id, name, contact_email, logo_url, archived_at, created_at, projects(id, archived_at)",
     )
     .order("name", { ascending: true });
   if (!opts.includeArchived) q.is("archived_at", null);
@@ -20,6 +20,7 @@ export async function listClients(opts: { includeArchived?: boolean } = {}) {
       id: c.id,
       name: c.name,
       contact_email: c.contact_email,
+      logo_url: c.logo_url,
       archived_at: c.archived_at,
       created_at: c.created_at,
     };

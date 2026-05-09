@@ -8,6 +8,7 @@ import {
 import {
   daysBetween,
   formatRelative,
+  ProjectTabs,
 } from "@/components/admin/project-detail/parts";
 import { getProject } from "@/lib/admin/queries";
 import { getBudgetSummary } from "@/lib/admin/queries/budget";
@@ -148,7 +149,9 @@ export default async function ProjectOverviewPage({
     }));
 
   return (
-    <WorkspaceView
+    <div className="space-y-6">
+      <ProjectTabs projectId={id} active="overview" />
+      <WorkspaceView
       projectId={id}
       projectName={project.name}
       projectCode={project.code}
@@ -186,5 +189,6 @@ export default async function ProjectOverviewPage({
       overdueCount={overdueCount}
       dueThisWeek={dueThisWeek}
     />
+    </div>
   );
 }

@@ -112,20 +112,20 @@ function StatusBadge({
 }) {
   if (status === "done") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
         Completed
       </span>
     );
   }
   if (status === "in_progress") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
         In Progress
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-muted/60 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
       Not Started
     </span>
   );
@@ -140,27 +140,27 @@ function PhaseBadge({
 }) {
   if (total === 0) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-muted/60 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
         Not Started
       </span>
     );
   }
   if (done === total) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
         Completed
       </span>
     );
   }
   if (done === 0) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-muted/60 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
         Not Started
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
       In Progress
     </span>
   );
@@ -605,7 +605,7 @@ function ActivityRow({ activity }: { activity: WVActivity }) {
           <span className="truncate text-xs font-medium">{assigneeName}</span>
         </div>
       </td>
-      <td className="px-3 py-3 align-middle text-xs">
+      <td className="px-3 py-3 align-middle text-xs whitespace-nowrap">
         {activity.planned_date ? (
           <span className="inline-flex items-center gap-1.5 text-foreground/80">
             <CalendarDays className="size-3.5 text-muted-foreground" />
@@ -635,7 +635,7 @@ function ActivityRow({ activity }: { activity: WVActivity }) {
       <td className="px-3 py-3 align-middle">
         <PriorityDot p={activity.priority ?? "medium"} />
       </td>
-      <td className="px-3 py-3 align-middle text-xs text-muted-foreground">
+      <td className="px-3 py-3 align-middle text-xs text-muted-foreground whitespace-nowrap">
         {formatRelative(
           activity.updatedAt ?? activity.completed_date ?? activity.planned_date,
         )}
@@ -750,18 +750,18 @@ function WorkplanCard({
                 />
                 {isExpanded && filtered.length > 0 && (
                   <div className="overflow-x-auto border-t border-border bg-muted/10">
-                    <table className="w-full min-w-[920px] table-fixed">
+                    <table className="w-full min-w-[1040px] table-fixed">
                       <thead>
                         <tr className="border-b border-border bg-muted/30">
                           <th
                             className="px-5 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
-                            style={{ width: "30%" }}
+                            style={{ width: "26%" }}
                           >
                             Activity
                           </th>
                           <th
                             className="px-3 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
-                            style={{ width: "13%" }}
+                            style={{ width: "14%" }}
                           >
                             Assignee
                           </th>
@@ -773,7 +773,7 @@ function WorkplanCard({
                           </th>
                           <th
                             className="px-3 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
-                            style={{ width: "11%" }}
+                            style={{ width: "13%" }}
                           >
                             Status
                           </th>
@@ -797,7 +797,7 @@ function WorkplanCard({
                           </th>
                           <th
                             className="px-3 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
-                            style={{ width: "8%" }}
+                            style={{ width: "9%" }}
                           >
                             Updated
                           </th>

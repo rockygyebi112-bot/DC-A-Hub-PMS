@@ -1,7 +1,16 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+
 /**
  * Branded informational footer stack displayed at the bottom of the
- * navy sidebar. Renders one tile per active client, using the
- * client's uploaded logo (falling back to initials).
+ * navy sidebar. Renders client tiles using the client's uploaded
+ * logo (falling back to initials).
+ *
+ * Behavior:
+ * - On a specific project route (`/admin/projects/{id}` or any nested
+ *   route), only the project's owning client is rendered.
+ * - On all other admin routes, every active client is rendered (max 4).
  */
 export type SidebarClient = {
   id: string;
@@ -17,12 +26,31 @@ function initialsOf(name: string) {
   return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
-export function SidebarBrandCard({ clients }: { clients: SidebarClient[] }) {
+export function SidebarBrandCard({
+  clients,
+  projectClientMap,
+}: {
+  clients: SidebarClient[];
+  projectClientMap?: Record<string, string>;
+}) {
+  const pathname = usePathname() ?? "";
   if (!clients || clients.length === 0) return null;
+
+  // Detect /admin/projects/{id} (exclude /admin/projects and /admin/projects/new)
+  let visible = clients;
+  const m = pathname.match(/^\/admin\/projects\/([^/]+)(?:\/.*)?$/);
+  const projectId = m?.[1];
+  if (projectId && projectId !== "new" && projectClientMap) {
+    const clientId = projectClientMap[projectId];
+    if (clientId) {
+      const only = clients.find((c) => c.id === clientId);
+      if (only) visible = [only];
+    }
+  }
 
   return (
     <div className="space-y-3">
-      {clients.slice(0, 4).map((c) => (
+      {visible.slice(0, 4).map((c) => (
         <div
           key={c.id}
           className="relative overflow-hidden rounded-[14px] border border-white/10 bg-[hsl(225_60%_12%)]/85 px-4 py-4 shadow-inner"

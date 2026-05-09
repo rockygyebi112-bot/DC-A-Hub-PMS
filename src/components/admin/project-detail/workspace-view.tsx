@@ -9,7 +9,6 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
-  Download,
   Eye,
   FileText,
   Filter,
@@ -18,7 +17,6 @@ import {
   MoreHorizontal,
   Paperclip,
   Search,
-  Share2,
   Shield,
   ShieldCheck,
   SlidersHorizontal,
@@ -309,20 +307,6 @@ function ProjectHero(props: WorkspaceViewProps) {
           <Eye className="size-4" />
           Client view
         </Link>
-        <button
-          type="button"
-          className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted"
-        >
-          <Share2 className="size-4" />
-          Share
-        </button>
-        <button
-          type="button"
-          className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted"
-        >
-          <Download className="size-4" />
-          Export
-        </button>
         <Link
           href={`/admin/projects/${props.projectId}/edit`}
           className="inline-flex size-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-muted"
@@ -584,7 +568,7 @@ function ActivityRow({ activity }: { activity: WVActivity }) {
   return (
     <tr className="group border-t border-border transition-colors hover:bg-muted/30">
       <td className="px-5 py-3 align-top">
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2.5">
           {activity.status === "done" ? (
             <CheckCircle2 className="mt-0.5 size-4 shrink-0 fill-emerald-500 text-white" />
           ) : activity.status === "in_progress" ? (
@@ -594,18 +578,20 @@ function ActivityRow({ activity }: { activity: WVActivity }) {
           ) : (
             <span className="mt-0.5 size-4 shrink-0 rounded-full border-2 border-muted-foreground/30" />
           )}
-          <span className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
+          <span className="text-[12.5px] font-medium leading-snug text-foreground break-words">
             {activity.name}
           </span>
         </div>
       </td>
-      <td className="px-3 py-3 align-middle">
-        <div className="flex items-center gap-2">
+      <td className="px-3 py-3 align-top">
+        <div className="flex items-start gap-2">
           <UserAvatar name={assigneeName} email={assigneeEmail} size="sm" />
-          <span className="truncate text-xs font-medium">{assigneeName}</span>
+          <span className="text-[12px] font-medium leading-snug break-words">
+            {assigneeName}
+          </span>
         </div>
       </td>
-      <td className="px-3 py-3 align-middle text-xs whitespace-nowrap">
+      <td className="px-3 py-3 align-top text-[12px] whitespace-nowrap">
         {activity.planned_date ? (
           <span className="inline-flex items-center gap-1.5 text-foreground/80">
             <CalendarDays className="size-3.5 text-muted-foreground" />
@@ -615,32 +601,32 @@ function ActivityRow({ activity }: { activity: WVActivity }) {
           <span className="text-muted-foreground">—</span>
         )}
       </td>
-      <td className="px-3 py-3 align-middle">
+      <td className="px-3 py-3 align-top">
         <StatusBadge status={activity.status} />
       </td>
-      <td className="px-3 py-3 align-middle">
-        <span className="inline-flex items-center gap-1 text-xs text-foreground/80">
+      <td className="px-3 py-3 align-top">
+        <span className="inline-flex items-center gap-1 text-[12px] text-foreground/80">
           <FileText className="size-3.5 text-rose-500" />
           <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold tabular-nums">
             +{activity.proofCount}
           </span>
         </span>
       </td>
-      <td className="px-3 py-3 align-middle">
-        <span className="inline-flex items-center gap-1 text-xs text-foreground/80">
+      <td className="px-3 py-3 align-top">
+        <span className="inline-flex items-center gap-1 text-[12px] text-foreground/80">
           <MessageSquare className="size-3.5 text-muted-foreground" />
           <span className="tabular-nums">{activity.commentCount ?? 0}</span>
         </span>
       </td>
-      <td className="px-3 py-3 align-middle">
+      <td className="px-3 py-3 align-top">
         <PriorityDot p={activity.priority ?? "medium"} />
       </td>
-      <td className="px-3 py-3 align-middle text-xs text-muted-foreground whitespace-nowrap">
+      <td className="px-3 py-3 align-top text-[12px] text-muted-foreground whitespace-nowrap">
         {formatRelative(
           activity.updatedAt ?? activity.completed_date ?? activity.planned_date,
         )}
       </td>
-      <td className="px-3 py-3 align-middle">
+      <td className="px-3 py-3 align-top">
         <button
           type="button"
           className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100"

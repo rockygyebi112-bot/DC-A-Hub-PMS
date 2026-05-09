@@ -1,12 +1,6 @@
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { UserRoleSelect } from "@/components/admin/forms/user-role-select";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
@@ -73,16 +67,10 @@ export default async function UserDetailPage({
             <label className="text-xs font-medium text-muted-foreground">
               Global role
             </label>
-            <Select name="role" defaultValue={user.role}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="staff">Staff</SelectItem>
-                <SelectItem value="client">Client</SelectItem>
-              </SelectContent>
-            </Select>
+            <UserRoleSelect
+              key={user.role}
+              role={user.role as "admin" | "staff" | "client"}
+            />
           </div>
           <Button type="submit" variant="secondary">
             Save

@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,10 +13,12 @@ export default async function NewWorkspaceActivityPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [project, phases] = await Promise.all([
+  const [projectMaybe, phases] = await Promise.all([
     getWorkspaceProject(id),
     listProjectPhases(id),
   ]);
+  if (!projectMaybe) notFound();
+  const project = projectMaybe;
 
   async function save(formData: FormData) {
     "use server";

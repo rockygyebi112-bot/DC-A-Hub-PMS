@@ -2,7 +2,7 @@
 
 import { ErrorFallback } from "@/components/errors/error-fallback";
 
-export default function WorkspaceError({
+export default function AdminError({
   error,
   reset,
 }: {
@@ -14,8 +14,8 @@ export default function WorkspaceError({
       error={error}
       reset={reset}
       title="Couldn't load this page"
-      homeHref="/workspace"
-      homeLabel="Back to workspace"
+      homeHref="/admin"
+      homeLabel="Back to admin"
     />
   );
 }

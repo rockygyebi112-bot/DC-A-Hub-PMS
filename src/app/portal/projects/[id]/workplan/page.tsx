@@ -27,12 +27,8 @@ export default async function PortalProjectWorkplanPage({
 }) {
   const { id } = await params;
 
-  let detail;
-  try {
-    detail = await getPortalProjectDetail(id);
-  } catch {
-    notFound();
-  }
+  const detail = await getPortalProjectDetail(id);
+  if (!detail) notFound();
 
   const { project, phases } = detail;
   const totalActivities = phases.reduce((sum, p) => sum + p.activities.length, 0);

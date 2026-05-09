@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   CalendarDays,
   CheckCircle2,
@@ -65,10 +65,12 @@ export default async function WorkspaceProjectPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [project, phases] = await Promise.all([
+  const [projectMaybe, phases] = await Promise.all([
     getWorkspaceProject(id),
     listProjectPhases(id),
   ]);
+  if (!projectMaybe) notFound();
+  const project = projectMaybe;
   const activities = phases.flatMap((phase) =>
     phase.activities.map((activity) => ({ ...activity, phaseName: phase.name })),
   );

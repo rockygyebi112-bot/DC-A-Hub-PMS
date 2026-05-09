@@ -46,9 +46,7 @@ export async function listPortalProjects() {
 
 export async function getPortalProject(projectId: string) {
   const projects = await listWorkspaceProjects();
-  const project = projects.find((item) => item.id === projectId);
-  if (!project) throw new Error("Project not found");
-  return project;
+  return projects.find((item) => item.id === projectId) ?? null;
 }
 
 export async function getPortalProjectDetail(projectId: string) {
@@ -62,6 +60,8 @@ export async function getPortalProjectDetail(projectId: string) {
       getProjectRecentActivity(projectId, 6),
       getProjectDocuments(projectId, 5),
     ]);
+
+  if (!project) return null;
 
   const allActivities = phases.flatMap((phase) =>
     phase.activities.map((activity) => ({ ...activity, phaseName: phase.name })),

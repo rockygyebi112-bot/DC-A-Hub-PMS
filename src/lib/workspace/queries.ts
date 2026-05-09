@@ -99,11 +99,11 @@ export async function listWorkspaceProjects(): Promise<WorkspaceProject[]> {
   });
 }
 
-export async function getWorkspaceProject(projectId: string): Promise<WorkspaceProject> {
+export async function getWorkspaceProject(
+  projectId: string,
+): Promise<WorkspaceProject | null> {
   const projects = await listWorkspaceProjects();
-  const project = projects.find((item) => item.id === projectId);
-  if (!project) throw new Error("Project not found");
-  return project;
+  return projects.find((item) => item.id === projectId) ?? null;
 }
 
 export async function listProjectPhases(projectId: string): Promise<WorkspacePhase[]> {

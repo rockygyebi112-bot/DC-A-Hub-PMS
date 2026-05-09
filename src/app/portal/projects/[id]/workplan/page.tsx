@@ -1,0 +1,177 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { CalendarDays, ChevronDown, FileCheck2 } from "lucide-react";
+import { PageHeader } from "@/components/admin/ui/page-header";
+import { SectionCard } from "@/components/admin/ui/section-card";
+import { StatusPill } from "@/components/admin/ui/status-pill";
+import { ActivityStatus } from "@/components/workspace/status-badge";
+import { WorkplanProgressTable } from "@/components/portal/workplan-progress-table";
+import { getPortalProjectDetail } from "@/lib/portal/queries";
+import { cn } from "@/lib/utils";
+
+function formatDate(value: string | null) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
+export default async function PortalProjectWorkplanPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  let detail;
+  try {
+    detail = await getPortalProjectDetail(id);
+  } catch {
+    notFound();
+  }
+
+  const { project, phases } = detail;
+  const totalActivities = phases.reduce((sum, p) => sum + p.activities.length, 0);
+  const doneActivities = phases.reduce(
+    (sum, p) => sum + p.activities.filter((a) => a.status === "done").length,
+    0,
+  );
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        backFallbackHref={`/portal/projects/${project.id}`}
+        title={`${project.name} · Workplan`}
+        subtitle={`${doneActivities} of ${totalActivities} activities completed across ${phases.length} phase${phases.length === 1 ? "" : "s"}.`}
+      />
+
+      <WorkplanProgressTable phases={phases} />
+
+      <div className="space-y-4">
+        {phases.length === 0 ? (
+          <SectionCard>
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No phases yet.
+            </p>
+          </SectionCard>
+        ) : (
+          phases.map((phase, index) => {
+            const total = phase.activities.length;
+            const done = phase.activities.filter((a) => a.status === "done").length;
+            const inProgress = phase.activities.filter(
+              (a) => a.status === "in_progress",
+            ).length;
+            const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+            const phaseStatus: "planning" | "active" | "completed" =
+              total === 0
+                ? "planning"
+                : done === total
+                  ? "completed"
+                  : "active";
+
+            return (
+              <details
+                key={phase.id}
+                open
+                className="group rounded-[14px] border bg-card shadow-card transition-smooth"
+              >
+                <summary className="flex cursor-pointer list-none items-start gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden">
+                  <ChevronDown className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-0 -rotate-90" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-heading text-sm font-semibold tracking-tight">
+                        <span className="text-muted-foreground">{index + 1}.</span>{" "}
+                        {phase.name}
+                      </h3>
+                      <StatusPill status={phaseStatus} />
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        {done}/{total} done
+                        {inProgress > 0 ? ` · ${inProgress} in progress` : ""}
+                      </span>
+                    </div>
+                    {(phase.start_date || phase.end_date || phase.description) && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {phase.start_date || phase.end_date
+                          ? `${formatDate(phase.start_date) ?? "TBD"} – ${formatDate(phase.end_date) ?? "TBD"}`
+                          : ""}
+                        {phase.description ? ` · ${phase.description}` : ""}
+                      </p>
+                    )}
+                    <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          phaseStatus === "completed"
+                            ? "bg-emerald-500"
+                            : phaseStatus === "active"
+                              ? "bg-blue-500"
+                              : "bg-muted-foreground/30",
+                        )}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-heading text-2xl font-bold leading-none tracking-tight">
+                      {pct}%
+                    </div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      complete
+                    </p>
+                  </div>
+                </summary>
+
+                <div className="border-t px-5 py-3">
+                  {phase.activities.length === 0 ? (
+                    <p className="rounded-lg border border-dashed bg-muted/40 px-3 py-6 text-center text-xs text-muted-foreground">
+                      No activities in this phase yet.
+                    </p>
+                  ) : (
+                    <ul className="divide-y">
+                      {phase.activities.map((activity) => (
+                        <li
+                          key={activity.id}
+                          className="flex flex-wrap items-center gap-3 py-2.5"
+                        >
+                          <Link
+                            href={`/portal/projects/${project.id}/activities/${activity.id}`}
+                            className="min-w-0 flex-1"
+                          >
+                            <p className="truncate text-sm font-medium hover:underline">
+                              {activity.name}
+                            </p>
+                            <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              {activity.planned_date && (
+                                <span className="inline-flex items-center gap-1">
+                                  <CalendarDays className="size-3" />
+                                  {formatDate(activity.planned_date)}
+                                </span>
+                              )}
+                              {activity.location && <span>· {activity.location}</span>}
+                              {activity.proofCount > 0 && (
+                                <span className="inline-flex items-center gap-1">
+                                  · <FileCheck2 className="size-3" />
+                                  {activity.proofCount} proof
+                                  {activity.proofCount === 1 ? "" : "s"}
+                                </span>
+                              )}
+                            </p>
+                          </Link>
+                          <ActivityStatus status={activity.status} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </details>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}

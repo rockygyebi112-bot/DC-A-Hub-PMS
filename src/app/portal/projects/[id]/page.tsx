@@ -96,7 +96,7 @@ export default async function PortalProjectPage({
             <WorkplanProgressTable phases={phases} />
             <div className="mt-3">
               <Link
-                href="#workplan"
+                href={`/portal/projects/${project.id}/workplan`}
                 className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
               >
                 View full workplan

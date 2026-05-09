@@ -56,7 +56,7 @@ export async function removeProjectMember(
 export async function inviteClientViewer(
   projectId: string,
   raw: unknown,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ delivery: "invite_sent" | "password_setup_sent" }>> {
   const auth = await requireAdmin();
   if (!auth.ok) return auth;
 
@@ -84,5 +84,5 @@ export async function inviteClientViewer(
   }
 
   revalidatePath(`/admin/projects/${projectId}/team`);
-  return { ok: true };
+  return { ok: true, data: { delivery: inviteResult.data!.delivery } };
 }

@@ -13,6 +13,8 @@ export type ActionResult<T = undefined> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
 
+type InviteDelivery = "invite_sent" | "password_setup_sent";
+
 async function assertCallerIsAdmin(): Promise<string | null> {
   const sb = await createClient();
   const {
@@ -29,7 +31,13 @@ async function assertCallerIsAdmin(): Promise<string | null> {
 
 export async function inviteUser(
   raw: unknown,
-): Promise<ActionResult<{ user_id: string; profile_id: string }>> {
+): Promise<
+  ActionResult<{
+    user_id: string;
+    profile_id: string;
+    delivery: InviteDelivery;
+  }>
+> {
   const parsed = inviteUserSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
@@ -37,23 +45,27 @@ export async function inviteUser(
   if (!callerId) return { ok: false, error: "Not authorized" };
 
   const admin = createAdminClient();
+  const redirectTo = `${getAppUrl()}/auth/callback?next=/accept-invite`;
   const { data: invite, error: inviteErr } =
     await admin.auth.admin.inviteUserByEmail(parsed.data.email, {
-      redirectTo: `${getAppUrl()}/auth/callback?next=/accept-invite`,
+      redirectTo,
     });
 
+  let delivery: InviteDelivery = "invite_sent";
   if (inviteErr) {
     if (!inviteErr.message.toLowerCase().includes("already")) {
       return { ok: false, error: inviteErr.message };
     }
+    delivery = "password_setup_sent";
   }
 
   let userId = invite?.user?.id;
   if (!userId) {
     const { data: list } = await admin.auth.admin.listUsers();
-    userId = list.users.find((u) => u.email === parsed.data.email)?.id;
+    const email = parsed.data.email.toLowerCase();
+    userId = list.users.find((u) => u.email?.toLowerCase() === email)?.id;
     if (!userId) {
-      return { ok: false, error: "Invite sent but could not resolve user id" };
+      return { ok: false, error: "Could not resolve the invited user id" };
     }
   }
 
@@ -72,8 +84,22 @@ export async function inviteUser(
     .single();
   if (profileErr) return { ok: false, error: profileErr.message };
 
+  if (delivery === "password_setup_sent") {
+    const sb = await createClient();
+    const { error: resetErr } = await sb.auth.resetPasswordForEmail(
+      parsed.data.email,
+      {
+        redirectTo: `${getAppUrl()}/auth/callback?next=/reset-password`,
+      },
+    );
+    if (resetErr) return { ok: false, error: resetErr.message };
+  }
+
   revalidatePath("/admin/users");
-  return { ok: true, data: { user_id: userId, profile_id: profile.id } };
+  return {
+    ok: true,
+    data: { user_id: userId, profile_id: profile.id, delivery },
+  };
 }
 
 export async function setUserRole(

@@ -25,6 +25,8 @@ function LoginForm() {
   const errorParam = searchParams.get("error");
   const errorMessages: Record<string, string> = {
     auth: "Authentication failed. Please try again.",
+    invite_expired:
+      "Your invite link has expired or was already used. Please ask an admin to send a new invite.",
   };
 
   async function handleLogin(e: React.FormEvent) {

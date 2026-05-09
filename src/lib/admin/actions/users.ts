@@ -39,7 +39,7 @@ export async function inviteUser(
   const admin = createAdminClient();
   const { data: invite, error: inviteErr } =
     await admin.auth.admin.inviteUserByEmail(parsed.data.email, {
-      redirectTo: `${getAppUrl()}/reset-password`,
+      redirectTo: `${getAppUrl()}/auth/callback?next=/accept-invite`,
     });
 
   if (inviteErr) {

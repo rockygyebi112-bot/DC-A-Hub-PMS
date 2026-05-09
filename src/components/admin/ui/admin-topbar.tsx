@@ -1,24 +1,26 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell, Menu, Search } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { Breadcrumbs } from "./breadcrumbs";
 import { ThemeToggle } from "./theme-toggle";
 import { UserDropdown } from "./user-dropdown";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
+import type { NotificationFeed } from "@/lib/notifications/queries";
 
 export function AdminTopbar({
   name,
   email,
   greeting,
   greetingSubtitle,
-  notificationCount = 0,
+  notifications,
 }: {
   name: string;
   email: string;
   /** When provided AND path is /admin, renders a personalised greeting instead of breadcrumbs. */
   greeting?: string;
   greetingSubtitle?: string;
-  notificationCount?: number;
+  notifications?: NotificationFeed;
 }) {
   const pathname = usePathname();
   const showGreeting = !!greeting && pathname === "/admin";
@@ -55,16 +57,11 @@ export function AdminTopbar({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative inline-flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
-        >
-          <Bell className="size-4" />
-          {notificationCount > 0 && (
-            <span className="notif-dot">{notificationCount > 99 ? "99+" : notificationCount}</span>
-          )}
-        </button>
+        <NotificationsBell
+          entries={notifications?.entries ?? []}
+          unreadCount={notifications?.unreadCount ?? 0}
+          lastReadAt={notifications?.lastReadAt ?? null}
+        />
         <ThemeToggle />
         <UserDropdown name={name} email={email} />
       </div>

@@ -123,7 +123,14 @@ export function AppSidebar({
         collapsed ? "w-16" : "w-[var(--sidebar-width,240px)]",
       )}
     >
-      <div className="flex items-center gap-3 px-4 pt-5 pb-4">
+      <div
+        className={cn(
+          "px-3 pt-4 pb-3",
+          collapsed
+            ? "flex flex-col items-center gap-2"
+            : "flex items-center gap-3 px-4",
+        )}
+      >
         <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/95 shadow-sm">
           {displayLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -151,7 +158,10 @@ export function AppSidebar({
         <Button
           variant="ghost"
           size="icon-sm"
-          className="ml-auto h-7 w-7 text-white/70 hover:bg-white/5 hover:text-white"
+          className={cn(
+            "h-7 w-7 text-white/70 hover:bg-white/5 hover:text-white",
+            !collapsed && "ml-auto",
+          )}
           onClick={toggle}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >

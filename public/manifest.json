@@ -1,8 +1,8 @@
 {
-  "name": "SRSF MIS",
-  "short_name": "SRSF MIS",
-  "description": "Springboard Road Show Foundation Management Information System",
-  "start_url": "/dashboard",
+  "name": "DC&A Hub PMS",
+  "short_name": "DC&A Hub",
+  "description": "DC&A Hub Project Management System",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#5BBF3A",

@@ -1,5 +1,3 @@
-import { ChevronDown } from "lucide-react";
-
 export type HealthBucket = {
   key: "on_track" | "at_risk" | "delayed" | "not_started";
   label: string;
@@ -22,10 +20,8 @@ const DOT: Record<HealthBucket["key"], string> = {
 
 export function ProjectHealthSummary({
   buckets,
-  filterLabel = "This Month",
 }: {
   buckets: HealthBucket[];
-  filterLabel?: string;
 }) {
   const total = buckets.reduce((acc, b) => acc + b.value, 0) || 1;
 
@@ -35,13 +31,6 @@ export function ProjectHealthSummary({
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Project Health Summary
         </h2>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
-        >
-          {filterLabel}
-          <ChevronDown className="size-3.5" />
-        </button>
       </header>
       <div className="px-5 pb-5">
         <div className="status-bar">

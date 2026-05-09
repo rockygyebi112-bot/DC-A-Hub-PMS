@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,6 +17,8 @@ export type TaskRow = {
 };
 
 type Filter = "all" | "overdue" | "due_week" | "completed";
+
+export type TasksByFilter = Record<Filter, TaskRow[]>;
 
 const PRIORITY_COLOR: Record<TaskRow["priority"], { dot: string; label: string }> = {
   high: { dot: "bg-[hsl(0_78%_56%)]", label: "High Priority" },
@@ -35,16 +40,19 @@ function formatDue(date: string | null) {
 }
 
 export function TasksOverview({
-  tasks,
+  tasksByFilter,
   counts,
-  activeFilter = "all",
+  defaultFilter = "all",
   viewAllHref,
 }: {
-  tasks: TaskRow[];
+  tasksByFilter: TasksByFilter;
   counts: { all: number; overdue: number; due_week: number; completed: number };
-  activeFilter?: Filter;
+  defaultFilter?: Filter;
   viewAllHref?: string;
 }) {
+  const [activeFilter, setActiveFilter] = useState<Filter>(defaultFilter);
+  const tasks = tasksByFilter[activeFilter] ?? [];
+
   const pills: { key: Filter; label: string; count: number }[] = [
     { key: "all", label: "All", count: counts.all },
     { key: "overdue", label: "Overdue", count: counts.overdue },
@@ -75,6 +83,8 @@ export function TasksOverview({
               <button
                 key={pill.key}
                 type="button"
+                onClick={() => setActiveFilter(pill.key)}
+                aria-pressed={active}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                   active

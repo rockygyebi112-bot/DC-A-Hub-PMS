@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -28,12 +29,14 @@ export default async function ProjectTeamPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [project, members, staffCandidates, clientCandidates] = await Promise.all([
+  const [projectMaybe, members, staffCandidates, clientCandidates] = await Promise.all([
     getProject(id),
     listProjectMembers(id),
     listAssignableUsers(id, "staff"),
     listAssignableUsers(id, "client"),
   ]);
+  if (!projectMaybe) notFound();
+  const project = projectMaybe;
 
   return (
     <div className="max-w-5xl space-y-6">

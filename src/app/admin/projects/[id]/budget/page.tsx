@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { SectionCard } from "@/components/admin/ui/section-card";
@@ -26,13 +27,15 @@ export default async function ProjectBudgetPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [project, budget, summary, categories, expenses] = await Promise.all([
+  const [projectMaybe, budget, summary, categories, expenses] = await Promise.all([
     getProject(id),
     getProjectBudget(id),
     getBudgetSummary(id),
     listBudgetCategories(id),
     listExpenses(id, { signReceipts: true }),
   ]);
+  if (!projectMaybe) notFound();
+  const project = projectMaybe;
 
   const defaultCurrency = budget?.currency ?? "GHS";
 

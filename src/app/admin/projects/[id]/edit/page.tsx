@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Eye, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProjectForm } from "@/components/admin/forms/project-form";
@@ -21,11 +22,13 @@ export default async function EditProjectPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [project, clients, phases] = await Promise.all([
+  const [projectMaybe, clients, phases] = await Promise.all([
     getProject(id),
     listClients({ includeArchived: true }),
     listProjectPhases(id),
   ]);
+  if (!projectMaybe) notFound();
+  const project = projectMaybe;
 
   async function archive() {
     "use server";

@@ -114,8 +114,8 @@ function ResetPasswordForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={8}
-                placeholder="At least 8 characters"
+                minLength={12}
+                placeholder="At least 12 characters"
                 autoComplete="new-password"
                 className="h-10"
               />
@@ -133,7 +133,7 @@ function ResetPasswordForm() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 required
-                minLength={8}
+                minLength={12}
                 placeholder="Re-enter password"
                 autoComplete="new-password"
                 className="h-10"

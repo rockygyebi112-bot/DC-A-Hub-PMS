@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/auth/guards";
 import {
   assignMemberSchema,
   inviteClientViewerSchema,
@@ -12,19 +13,24 @@ export type ActionResult<T = undefined> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
 
+const GENERIC_DB_ERROR = "Operation failed";
+
 export async function addProjectMember(
   projectId: string,
   raw: unknown,
 ): Promise<ActionResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
+
   const parsed = assignMemberSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
-  const sb = await createClient();
+  const sb = createAdminClient();
   const { error } = await sb.from("project_members").insert({
     project_id: projectId,
     user_id: parsed.data.user_id,
     project_role: parsed.data.project_role,
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: GENERIC_DB_ERROR };
   revalidatePath(`/admin/projects/${projectId}/team`);
   return { ok: true };
 }
@@ -33,13 +39,16 @@ export async function removeProjectMember(
   projectId: string,
   memberRowId: string,
 ): Promise<ActionResult> {
-  const sb = await createClient();
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
+
+  const sb = createAdminClient();
   const { error } = await sb
     .from("project_members")
     .delete()
     .eq("id", memberRowId)
     .eq("project_id", projectId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: GENERIC_DB_ERROR };
   revalidatePath(`/admin/projects/${projectId}/team`);
   return { ok: true };
 }
@@ -48,6 +57,9 @@ export async function inviteClientViewer(
   projectId: string,
   raw: unknown,
 ): Promise<ActionResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
+
   const parsed = inviteClientViewerSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
@@ -58,7 +70,7 @@ export async function inviteClientViewer(
   });
   if (!inviteResult.ok) return inviteResult;
 
-  const sb = await createClient();
+  const sb = createAdminClient();
   const { error } = await sb.from("project_members").upsert(
     {
       project_id: projectId,
@@ -68,10 +80,7 @@ export async function inviteClientViewer(
     { onConflict: "project_id,user_id" },
   );
   if (error) {
-    return {
-      ok: false,
-      error: `Invited but membership failed: ${error.message}`,
-    };
+    return { ok: false, error: GENERIC_DB_ERROR };
   }
 
   revalidatePath(`/admin/projects/${projectId}/team`);

@@ -12,6 +12,10 @@ export const clientFormSchema = z.object({
   logo_url: z
     .string()
     .url()
+    .refine(
+      (v) => /^https?:\/\//i.test(v),
+      "Only http(s) URLs are allowed",
+    )
     .or(z.literal(""))
     .optional()
     .transform((v) => (v === "" ? undefined : v)),

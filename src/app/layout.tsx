@@ -33,13 +33,9 @@ export const metadata: Metadata = {
   // Point the browser tab icon at our DC&A Hub assets. Without this explicit
   // configuration Next.js falls back to its default favicon.
   icons: {
-    icon: [
-      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
-      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
-    ],
-    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
-    shortcut: ["/icons/favicon-32.png"],
+    icon: [{ url: "/logo.png", type: "image/png" }],
+    apple: [{ url: "/logo.png" }],
+    shortcut: ["/logo.png"],
   },
   manifest: "/manifest.json",
 };

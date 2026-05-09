@@ -53,19 +53,16 @@ function LoginForm() {
   return (
     <div className="relative bg-card border rounded-2xl shadow-card-elevated overflow-hidden">
       <div className="h-[3px] bg-gradient-to-r from-primary via-primary/70 to-secondary" />
-      <div className="flex items-center gap-3 px-6 sm:px-8 pt-6">
+      <div className="flex flex-col items-center gap-2 px-6 sm:px-8 pt-6 text-center">
         <Image
           src="/logo.png"
           alt="DC&A Hub"
-          width={44}
-          height={44}
-          className="rounded-lg"
+          width={220}
+          height={64}
+          className="h-16 w-auto"
           priority
         />
-        <div>
-          <h1 className="font-heading text-lg font-bold tracking-tight text-foreground">DC&A Hub PMS</h1>
-          <p className="text-[11px] text-muted-foreground">Sign in to continue</p>
-        </div>
+        <p className="text-[11px] text-muted-foreground">Sign in to continue</p>
       </div>
       <form onSubmit={handleLogin}>
         <div className="space-y-4 px-6 sm:px-8 pt-6">

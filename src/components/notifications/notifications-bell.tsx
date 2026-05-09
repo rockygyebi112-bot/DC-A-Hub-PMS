@@ -153,12 +153,33 @@ export function NotificationsBell({
                       <Link
                         href={entry.href}
                         className="block"
-                        onClick={() => setOpen(false)}
+                        onClick={() => {
+                          setOpen(false);
+                          if (isUnread) {
+                            startTransition(async () => {
+                              await markNotificationsRead();
+                              router.refresh();
+                            });
+                          }
+                        }}
                       >
                         {inner}
                       </Link>
                     ) : (
-                      inner
+                      <button
+                        type="button"
+                        className="block w-full text-left"
+                        onClick={() => {
+                          if (isUnread) {
+                            startTransition(async () => {
+                              await markNotificationsRead();
+                              router.refresh();
+                            });
+                          }
+                        }}
+                      >
+                        {inner}
+                      </button>
                     )}
                   </li>
                 );

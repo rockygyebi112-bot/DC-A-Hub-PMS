@@ -131,13 +131,13 @@ export function AppSidebar({
             : "flex items-center gap-3 px-4",
         )}
       >
-        <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/95 shadow-sm">
+        <div className="flex size-10 shrink-0 items-center justify-center">
           {displayLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={displayLogo}
               alt={`${displayBrand} logo`}
-              className="h-8 w-8 object-contain"
+              className="h-10 w-10 object-contain"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">

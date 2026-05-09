@@ -89,3 +89,16 @@ export async function restoreProject(id: string): Promise<ActionResult> {
   revalidatePath("/admin/projects");
   return { ok: true };
 }
+
+// Hard-delete a project. Removes the row (and cascades to phases, activities,
+// proofs, members, budgets, etc. via FK ON DELETE CASCADE). Irreversible.
+export async function deleteProject(id: string): Promise<ActionResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
+  const sb = createAdminClient();
+  const { error } = await sb.from("projects").delete().eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/projects");
+  revalidatePath("/admin");
+  return { ok: true };
+}

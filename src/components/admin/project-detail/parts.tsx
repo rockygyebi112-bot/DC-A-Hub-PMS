@@ -318,9 +318,7 @@ export function SummaryBudgetCard({
         ) : (
           <div className="space-y-1">
             <p className="text-sm font-semibold text-muted-foreground">Not set</p>
-            <p className="inline-flex items-center gap-1 text-[11px] font-medium text-primary group-hover:underline">
-              Add a budget plan <ChevronRight className="size-3" />
-            </p>
+            <p className="text-[11px] text-muted-foreground">No budget configured</p>
           </div>
         )}
       </SummaryCard>

@@ -92,6 +92,9 @@ export function ProjectOverviewDonut({
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Project Overview
         </h2>
+        <span className="rounded-full border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+          {filterLabel}
+        </span>
       </header>
       <div className="grid gap-6 px-5 pb-5 sm:grid-cols-[200px_1fr] sm:items-center">
         <div className="relative mx-auto flex size-[200px] items-center justify-center">

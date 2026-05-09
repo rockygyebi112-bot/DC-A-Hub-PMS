@@ -160,19 +160,23 @@ function formatDate(value: string | null) {
   });
 }
 
+function getDaysUntil(date: string | null, referenceDate: string) {
+  if (!date) return null;
+  const ms = new Date(date).getTime() - new Date(referenceDate).getTime();
+  if (Number.isNaN(ms)) return null;
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+}
+
 export function TimelineCard({
   startDate,
   endDate,
+  referenceDate,
 }: {
   startDate: string | null;
   endDate: string | null;
+  referenceDate: string;
 }) {
-  const remainingDays = (() => {
-    if (!endDate) return null;
-    const ms = new Date(endDate).getTime() - Date.now();
-    if (Number.isNaN(ms)) return null;
-    return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
-  })();
+  const remainingDays = getDaysUntil(endDate, referenceDate);
   return (
     <PortalCard icon={CalendarDays} label="Project timeline">
       <div className="grid grid-cols-2 gap-2">
@@ -189,7 +193,7 @@ export function TimelineCard({
           </p>
         </div>
       </div>
-      {remainingDays !== null && (
+      {remainingDays !== null && remainingDays >= 0 && (
         <div className="mt-3">
           <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
             <CalendarDays className="size-3" />
@@ -231,16 +235,13 @@ export function WorkplanCard({
 export function MilestoneCard({
   title,
   date,
+  referenceDate,
 }: {
   title: string | null;
   date: string | null;
+  referenceDate: string;
 }) {
-  const inDays = (() => {
-    if (!date) return null;
-    const ms = new Date(date).getTime() - Date.now();
-    if (Number.isNaN(ms)) return null;
-    return Math.ceil(ms / (1000 * 60 * 60 * 24));
-  })();
+  const inDays = getDaysUntil(date, referenceDate);
   return (
     <PortalCard icon={Flag} label="Upcoming milestone">
       {title ? (

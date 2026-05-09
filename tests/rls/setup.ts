@@ -66,12 +66,27 @@ const TEST_CLIENT_NAME_PATTERNS = [
 export async function cleanupTestData(): Promise<void> {
   const admin = adminClient();
 
-  // Delete clients first (cascades to projects + project_members).
+  // projects.client_id is ON DELETE RESTRICT, so collect target client ids,
+  // wipe their projects first (cascades phases/activities/proofs/memberships),
+  // then delete the clients.
+  const targetClientIds: string[] = [];
   if (TEST_CLIENT_NAMES.length) {
-    await admin.from('clients').delete().in('name', TEST_CLIENT_NAMES);
+    const { data } = await admin
+      .from('clients')
+      .select('id')
+      .in('name', TEST_CLIENT_NAMES);
+    for (const c of data ?? []) targetClientIds.push(c.id);
   }
   for (const pattern of TEST_CLIENT_NAME_PATTERNS) {
-    await admin.from('clients').delete().like('name', pattern);
+    const { data } = await admin
+      .from('clients')
+      .select('id')
+      .like('name', pattern);
+    for (const c of data ?? []) targetClientIds.push(c.id);
+  }
+  if (targetClientIds.length) {
+    await admin.from('projects').delete().in('client_id', targetClientIds);
+    await admin.from('clients').delete().in('id', targetClientIds);
   }
 
   // Delete auth users with test emails (cascades profiles + memberships).

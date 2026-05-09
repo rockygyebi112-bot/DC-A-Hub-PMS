@@ -112,7 +112,20 @@ async function main() {
     return;
   }
 
-  // Clients first (cascades to projects + project_members).
+  // projects.client_id is ON DELETE RESTRICT, so wipe projects of test
+  // clients first (cascades phases/activities/proofs/memberships), then the
+  // clients themselves.
+  if (clients.length) {
+    const clientIds = clients.map((c) => c.id);
+    const { error: projDelErr } = await admin
+      .from("projects")
+      .delete()
+      .in("client_id", clientIds);
+    if (projDelErr) {
+      console.error(`  x deleting projects: ${projDelErr.message}`);
+    }
+  }
+
   let clientsDeleted = 0;
   for (const c of clients) {
     const { error } = await admin.from("clients").delete().eq("id", c.id);

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   Download,
@@ -34,8 +35,23 @@ export default async function ProjectOverviewPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [project, phases, team, budgetSummary] = await Promise.all([
-    getProject(id),
+
+  let project: Awaited<ReturnType<typeof getProject>>;
+  try {
+    project = await getProject(id);
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "PGRST116"
+    ) {
+      notFound();
+    }
+    throw error;
+  }
+
+  const [phases, team, budgetSummary] = await Promise.all([
     listProjectPhases(id),
     listProjectTeam(id),
     getBudgetSummary(id),
@@ -273,4 +289,3 @@ export default async function ProjectOverviewPage({
     </div>
   );
 }
-

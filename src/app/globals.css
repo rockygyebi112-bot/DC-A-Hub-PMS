@@ -72,41 +72,73 @@
   --color-srsf-purple-800: #4b265e;
   --color-srsf-purple-900: #3f224e;
   --color-srsf-purple-950: #250e32;
+
+  /* DC&A Hub Brand Colors */
+  --color-dca-navy-50:  #eef2fb;
+  --color-dca-navy-100: #d3dcef;
+  --color-dca-navy-200: #a4b3d6;
+  --color-dca-navy-300: #6f81b5;
+  --color-dca-navy-400: #3d5290;
+  --color-dca-navy-500: #122a6a;
+  --color-dca-navy-600: #0a2059;
+  --color-dca-navy-700: #061a4d;
+  --color-dca-navy-800: #041640;
+  --color-dca-navy-900: #031B4E;
+  --color-dca-navy-950: #020e2a;
+
+  --color-dca-blue-50:  #eff5ff;
+  --color-dca-blue-100: #dbe8fe;
+  --color-dca-blue-200: #bcd3fd;
+  --color-dca-blue-300: #8db5fb;
+  --color-dca-blue-400: #5a8df6;
+  --color-dca-blue-500: #2563EB;
+  --color-dca-blue-600: #1d4fd0;
+  --color-dca-blue-700: #1a3fa8;
+  --color-dca-blue-800: #1a3886;
+  --color-dca-blue-900: #1b316b;
+
+  --color-dca-cyan-50:  #ecfaff;
+  --color-dca-cyan-100: #d0f2fc;
+  --color-dca-cyan-200: #a6e7fa;
+  --color-dca-cyan-300: #6dd6f5;
+  --color-dca-cyan-400: #22C7F2;
+  --color-dca-cyan-500: #0aa9d6;
+  --color-dca-cyan-600: #0a87ad;
 }
 
 :root {
-  --background: hsl(210 20% 97%);
-  --foreground: hsl(220 20% 14%);
+  --background: hsl(214 30% 97%);
+  --foreground: hsl(220 25% 14%);
   --card: hsl(0 0% 100%);
-  --card-foreground: hsl(220 20% 14%);
+  --card-foreground: hsl(220 25% 14%);
   --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(220 20% 14%);
-  --primary: hsl(104 53% 49%);
+  --popover-foreground: hsl(220 25% 14%);
+  --primary: hsl(221 83% 53%); /* corporate blue #2563EB */
   --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(284 46% 33%);
+  --secondary: hsl(225 80% 16%); /* deep navy #031B4E */
   --secondary-foreground: hsl(0 0% 100%);
-  --muted: hsl(210 15% 93%);
-  --muted-foreground: hsl(220 10% 48%);
-  --accent: hsl(104 53% 93%);
-  --accent-foreground: hsl(104 53% 25%);
-  --destructive: hsl(0 84% 60%);
-  --border: hsl(220 13% 90%);
-  --input: hsl(220 13% 90%);
-  --ring: hsl(104 53% 49%);
-  --chart-1: hsl(104 53% 49%);
-  --chart-2: hsl(284 46% 33%);
-  --chart-3: hsl(104 53% 35%);
-  --chart-4: hsl(284 46% 45%);
-  --chart-5: hsl(104 30% 60%);
-  --radius: 0.625rem;
-  --sidebar: hsl(0 0% 100%);
-  --sidebar-foreground: hsl(220 20% 14%);
-  --sidebar-primary: hsl(104 53% 49%);
+  --muted: hsl(214 25% 94%);
+  --muted-foreground: hsl(220 12% 48%);
+  --accent: hsl(221 83% 96%);
+  --accent-foreground: hsl(221 83% 38%);
+  --destructive: hsl(0 78% 56%);
+  --border: hsl(220 15% 91%);
+  --input: hsl(220 15% 91%);
+  --ring: hsl(221 83% 53%);
+  --chart-1: hsl(221 83% 53%);
+  --chart-2: hsl(192 88% 54%);
+  --chart-3: hsl(225 80% 16%);
+  --chart-4: hsl(38 92% 55%);
+  --chart-5: hsl(160 60% 42%);
+  --radius: 0.875rem;
+  --sidebar: hsl(225 80% 16%); /* deep navy */
+  --sidebar-foreground: hsl(0 0% 100%);
+  --sidebar-primary: hsl(221 83% 53%);
   --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(104 53% 93%);
-  --sidebar-accent-foreground: hsl(104 53% 25%);
-  --sidebar-border: hsl(220 13% 90%);
-  --sidebar-ring: hsl(104 53% 49%);
+  --sidebar-accent: hsl(221 83% 53%);
+  --sidebar-accent-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(225 35% 26%);
+  --sidebar-ring: hsl(221 83% 53%);
   --activity-sub-indent: 38px;
   --milestone-header-h: 44px;
   --progress-bar-h: 6px;
@@ -126,12 +158,18 @@
   --card-shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.10), 0 4px 8px rgba(0, 0, 0, 0.06);
   --topbar-blur: saturate(180%) blur(16px);
 
-  /* status colors (light) */
+  /* legacy status tokens (kept for back-compat) */
   --status-planning: hsl(220 13% 70%);
-  --status-active:   hsl(104 53% 49%);
+  --status-active:   hsl(160 64% 42%);
   --status-paused:   hsl(38 92% 50%);
-  --status-completed: hsl(210 60% 50%);
+  --status-completed: hsl(221 83% 53%);
   --status-archived: hsl(220 13% 80%);
+
+  /* DC&A delivery status colors (semantic) */
+  --status-on-track:   hsl(160 64% 42%);  /* green */
+  --status-at-risk:    hsl(38 92% 50%);   /* amber */
+  --status-delayed:    hsl(0 78% 56%);    /* red */
+  --status-not-started: hsl(220 13% 72%); /* gray */
 }
 
 .dark {
@@ -141,35 +179,35 @@
   --card-foreground: hsl(215 20% 90%);
   --popover: hsl(224 13% 16%);
   --popover-foreground: hsl(215 20% 90%);
-  --primary: hsl(104 55% 52%);
+  --primary: hsl(217 91% 60%);
   --primary-foreground: hsl(224 14% 10%);
-  --secondary: hsl(284 46% 55%);
+  --secondary: hsl(225 80% 16%);
   --secondary-foreground: hsl(0 0% 100%);
   --muted: hsl(224 11% 20%);
   --muted-foreground: hsl(215 10% 56%);
-  --accent: hsl(104 30% 22%);
-  --accent-foreground: hsl(104 53% 85%);
+  --accent: hsl(221 70% 22%);
+  --accent-foreground: hsl(217 91% 78%);
   --destructive: hsl(0 72% 60%);
   --border: hsl(224 10% 22%);
   --input: hsl(224 10% 22%);
-  --ring: hsl(104 55% 52%);
-  --chart-1: hsl(104 55% 52%);
-  --chart-2: hsl(284 46% 60%);
-  --chart-3: hsl(104 53% 70%);
-  --chart-4: hsl(284 46% 75%);
-  --chart-5: hsl(104 30% 50%);
+  --ring: hsl(217 91% 60%);
+  --chart-1: hsl(217 91% 60%);
+  --chart-2: hsl(192 85% 60%);
+  --chart-3: hsl(225 60% 75%);
+  --chart-4: hsl(38 92% 60%);
+  --chart-5: hsl(160 60% 50%);
   --chart-bg: hsl(240 11% 13%);
   --chart-text: hsl(220 15% 75%);
   --chart-axis: hsl(220 10% 45%);
   --chart-grid: hsl(240 10% 22%);
-  --sidebar: hsl(240 12% 9%);
-  --sidebar-foreground: hsl(220 15% 92%);
-  --sidebar-primary: hsl(104 55% 52%);
-  --sidebar-primary-foreground: hsl(240 12% 9%);
-  --sidebar-accent: hsl(104 30% 22%);
-  --sidebar-accent-foreground: hsl(104 53% 85%);
-  --sidebar-border: hsl(224 10% 22%);
-  --sidebar-ring: hsl(104 55% 52%);
+  --sidebar: hsl(225 80% 12%);
+  --sidebar-foreground: hsl(0 0% 100%);
+  --sidebar-primary: hsl(217 91% 60%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(217 91% 60%);
+  --sidebar-accent-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(225 35% 22%);
+  --sidebar-ring: hsl(217 91% 60%);
 
   /* elevation (dark) */
   --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
@@ -178,10 +216,14 @@
 
   /* status colors (dark) */
   --status-planning: hsl(220 13% 45%);
-  --status-active:   hsl(104 55% 52%);
+  --status-active:   hsl(160 64% 48%);
   --status-paused:   hsl(38 92% 55%);
-  --status-completed: hsl(210 70% 60%);
+  --status-completed: hsl(217 91% 60%);
   --status-archived: hsl(220 13% 35%);
+  --status-on-track:    hsl(160 64% 48%);
+  --status-at-risk:     hsl(38 92% 55%);
+  --status-delayed:     hsl(0 78% 60%);
+  --status-not-started: hsl(220 13% 50%);
 }
 
 @layer base {
@@ -387,7 +429,7 @@
   }
   .progress-bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--primary) 0%, hsl(104 53% 62%) 100%);
+    background: linear-gradient(90deg, var(--primary) 0%, var(--color-dca-cyan-400) 100%);
     border-radius: 9999px;
     transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -429,5 +471,148 @@
     font-weight: 700;
     font-size: 0.65rem;
     letter-spacing: 0.02em;
+  }
+
+  /* ----------------------------------------------------------------
+     DC&A Hub — Dashboard utilities
+     ---------------------------------------------------------------- */
+
+  /* Sidebar dark navy scope: locally remap tokens so existing utility
+     classes (text-muted-foreground, bg-muted, bg-accent, etc.) render
+     correctly on the deep-navy background. */
+  .sidebar-navy {
+    background: var(--color-dca-navy-900);
+    color: hsl(0 0% 100%);
+    --foreground: hsl(0 0% 100%);
+    --card: hsl(225 60% 14%);
+    --card-foreground: hsl(0 0% 100%);
+    --muted: hsl(225 40% 22%);
+    --muted-foreground: hsl(220 25% 72%);
+    --accent: var(--color-dca-blue-500);
+    --accent-foreground: hsl(0 0% 100%);
+    --primary: var(--color-dca-blue-500);
+    --primary-foreground: hsl(0 0% 100%);
+    --border: hsl(225 35% 24%);
+    --input: hsl(225 35% 24%);
+  }
+  .sidebar-navy a,
+  .sidebar-navy button {
+    color: inherit;
+  }
+  .sidebar-navy .sidebar-item-active::before {
+    display: none; /* the design uses solid pill, not left bar */
+  }
+  .sidebar-navy .nav-group-label {
+    color: hsl(220 25% 65%);
+    opacity: 0.85;
+  }
+
+  /* Branded dot pattern (logo-inspired) */
+  .brand-dot-pattern {
+    background-image: radial-gradient(
+      circle,
+      var(--color-dca-cyan-400) 1px,
+      transparent 1.4px
+    );
+    background-size: 10px 10px;
+    opacity: 0.55;
+  }
+
+  /* KPI tile accent surfaces */
+  .kpi-tile {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .kpi-tile-blue   { background: var(--color-dca-blue-50);  color: var(--color-dca-blue-600); }
+  .kpi-tile-green  { background: hsl(160 65% 94%);          color: hsl(160 64% 32%); }
+  .kpi-tile-purple { background: hsl(265 80% 96%);          color: hsl(265 60% 48%); }
+  .kpi-tile-amber  { background: hsl(38 92% 94%);           color: hsl(38 92% 38%); }
+  .kpi-tile-cyan   { background: var(--color-dca-cyan-50);  color: var(--color-dca-cyan-600); }
+
+  /* Status pills (delivery semantics) */
+  .delivery-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .delivery-pill-on-track    { background: hsl(160 65% 94%); color: hsl(160 64% 28%); border-color: hsl(160 65% 82%); }
+  .delivery-pill-at-risk     { background: hsl(38 92% 94%);  color: hsl(38 92% 32%);  border-color: hsl(38 92% 80%); }
+  .delivery-pill-delayed     { background: hsl(0 78% 95%);   color: hsl(0 78% 38%);   border-color: hsl(0 78% 84%); }
+  .delivery-pill-not-started { background: hsl(220 14% 94%); color: hsl(220 12% 38%); border-color: hsl(220 14% 86%); }
+
+  .status-dot-on-track    { background: var(--status-on-track); box-shadow: 0 0 0 3px hsl(160 64% 42% / 0.18); }
+  .status-dot-at-risk     { background: var(--status-at-risk);  box-shadow: 0 0 0 3px hsl(38 92% 50% / 0.18); }
+  .status-dot-delayed     { background: var(--status-delayed);  box-shadow: 0 0 0 3px hsl(0 78% 56% / 0.18); }
+  .status-dot-not-started { background: var(--status-not-started); }
+
+  /* Segmented horizontal status bar */
+  .status-bar {
+    display: flex;
+    height: 8px;
+    width: 100%;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--muted);
+  }
+  .status-bar > span { display: block; height: 100%; }
+
+  /* Linear progress bar variants by health */
+  .progress-bar-fill-on-track    { background: var(--status-on-track); }
+  .progress-bar-fill-at-risk     { background: var(--status-at-risk); }
+  .progress-bar-fill-delayed     { background: var(--status-delayed); }
+  .progress-bar-fill-not-started { background: var(--status-not-started); }
+
+  /* Topbar greeting */
+  .topbar-greeting h1 {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  .topbar-greeting p {
+    font-size: 0.78rem;
+    color: var(--muted-foreground);
+    margin-top: 1px;
+  }
+
+  /* Donut center number */
+  .donut-center-value {
+    font-family: var(--font-heading), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 1.75rem;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  /* Notification badge */
+  .notif-dot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--color-dca-blue-500);
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    border: 2px solid var(--card, white);
   }
 }

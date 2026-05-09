@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { SidebarToggle } from "./ui/sidebar-toggle";
+import { SidebarBrandCard } from "./ui/sidebar-brand-card";
 import { cn } from "@/lib/utils";
 import type { AdminCounts } from "@/lib/admin/queries";
 
@@ -24,7 +25,7 @@ type NavItem = {
 const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "Command",
-    items: [{ href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true }],
+    items: [{ href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true }],
   },
   {
     group: "Manage",
@@ -79,19 +80,23 @@ export function AdminSidebar({ counts }: { counts: AdminCounts }) {
     <>
       <aside
         className={cn(
-          "sticky top-0 hidden h-screen shrink-0 border-r bg-sidebar transition-[width] duration-200 md:flex md:flex-col",
+          "sidebar-navy sticky top-0 hidden h-screen shrink-0 border-r border-[hsl(225_35%_24%)] transition-[width] duration-200 md:flex md:flex-col",
           collapsed ? "w-16" : "w-[var(--sidebar-width,240px)]",
         )}
       >
-        <div className="flex h-[var(--topbar-height,58px)] items-center gap-2.5 border-b px-3">
-          <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 shadow-sm">
+        <div className="flex items-center gap-3 px-4 pt-5 pb-4">
+          <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/95 shadow-sm">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="DC&A Hub logo" className="h-7 w-7 object-contain" />
+            <img src="/logo.png" alt="DC&A Hub logo" className="h-8 w-8 object-contain" />
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="font-heading truncate text-sm font-bold tracking-tight">DC&amp;A Hub PMS</p>
-              <p className="truncate text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Admin Console</p>
+              <p className="font-heading truncate text-base font-bold tracking-tight text-white">
+                DCA <span className="text-[var(--color-dca-cyan-400)]">&amp;</span> HUB
+              </p>
+              <p className="truncate text-[10px] font-medium tracking-wide text-white/60">
+                Project Management System
+              </p>
             </div>
           )}
         </div>
@@ -120,22 +125,17 @@ export function AdminSidebar({ counts }: { counts: AdminCounts }) {
                     href={item.href}
                     title={collapsed ? item.label : undefined}
                     className={cn(
-                      "flex h-9 items-center gap-2.5 rounded-[10px] px-2.5 text-sm transition-colors-smooth",
+                      "flex h-10 items-center gap-3 rounded-[10px] px-3 text-sm transition-colors-smooth",
                       collapsed && "justify-center px-0",
                       active
-                        ? "sidebar-item-active bg-accent font-medium text-foreground"
-                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                        ? "bg-[var(--color-dca-blue-500)] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                        : "text-white/70 hover:bg-white/5 hover:text-white",
                     )}
                   >
                     <span
-                      className={cn(
-                        "flex size-[26px] shrink-0 items-center justify-center rounded-[7px] transition-smooth",
-                        active
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "bg-muted/60 text-muted-foreground",
-                      )}
+                      className="flex size-5 shrink-0 items-center justify-center"
                     >
-                      <Icon className="size-3.5" />
+                      <Icon className="size-[18px]" strokeWidth={active ? 2.25 : 1.75} />
                     </span>
                     {!collapsed && (
                       <>
@@ -143,10 +143,10 @@ export function AdminSidebar({ counts }: { counts: AdminCounts }) {
                         {typeof count === "number" && (
                           <span
                             className={cn(
-                              "rounded-full px-2 py-0.5 font-mono text-[10px]",
+                              "rounded-full px-2 py-0.5 font-mono text-[10px] tabular-nums",
                               active
-                                ? "bg-primary/15 text-primary"
-                                : "bg-muted text-muted-foreground",
+                                ? "bg-white/20 text-white"
+                                : "bg-white/10 text-white/70",
                             )}
                           >
                             {count}
@@ -162,16 +162,14 @@ export function AdminSidebar({ counts }: { counts: AdminCounts }) {
         </nav>
 
         {!collapsed && (
-          <div className="mt-auto mx-3 mb-3 rounded-[10px] bg-muted/50 p-3 text-xs text-muted-foreground">
-            <p className="text-xs font-semibold text-foreground">Operations snapshot</p>
-            <p className="mt-1">
-              {counts.activeProjects} ongoing projects across {counts.activeClients} clients.
-            </p>
+          <div className="mt-auto px-3 pb-4">
+            <SidebarBrandCard />
           </div>
         )}
       </aside>
 
       <nav className="mobile-nav fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-2xl border border-border/60 p-1 shadow-card-elevated md:hidden">
+        {/* mobile bottom nav stays on light theme for clarity */}
         {NAV.flatMap((group) => group.items).map((item) => {
           const Icon = item.icon;
           const active = isActive(item);

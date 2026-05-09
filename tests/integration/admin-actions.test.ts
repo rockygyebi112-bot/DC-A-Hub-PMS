@@ -1,11 +1,15 @@
-import { describe, it, expect, beforeAll } from "vitest";
-import { adminClient, createTestUser } from "../rls/setup";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { adminClient, cleanupTestData, createTestUser } from "../rls/setup";
 
 describe("admin actions (DB layer)", () => {
   const admin = adminClient();
 
   beforeAll(async () => {
     await createTestUser("admin", "admin-actions-test@example.com");
+  }, 60_000);
+
+  afterAll(async () => {
+    await cleanupTestData();
   }, 60_000);
 
   it("create + archive + restore client", async () => {

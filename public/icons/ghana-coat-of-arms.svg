@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80" fill="none" aria-hidden="true">
+  <!-- Stylized Ghana coat-of-arms inspired emblem -->
+  <defs>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a3886"/>
+      <stop offset="100%" stop-color="#031B4E"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield body -->
+  <path d="M32 4 L60 12 L60 36 C60 54 48 70 32 76 C16 70 4 54 4 36 L4 12 Z" fill="url(#shield)" stroke="#E5B53C" stroke-width="1.5"/>
+  <!-- Cross divider -->
+  <path d="M4 36 L60 36 M32 4 L32 76" stroke="#E5B53C" stroke-width="1" opacity="0.55"/>
+  <!-- Star center -->
+  <path d="M32 30 L34.4 36.6 L41.4 36.8 L35.8 41 L37.8 47.7 L32 43.6 L26.2 47.7 L28.2 41 L22.6 36.8 L29.6 36.6 Z" fill="#E5B53C"/>
+  <!-- Top crown bar -->
+  <rect x="22" y="9" width="20" height="3" rx="1" fill="#E5B53C"/>
+  <circle cx="32" cy="7" r="1.5" fill="#E5B53C"/>
+</svg>

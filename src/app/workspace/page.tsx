@@ -1,6 +1,16 @@
 import Link from "next/link";
-import { FolderKanban, MoreHorizontal, Plus, UserPlus } from "lucide-react";
+import type { ComponentType } from "react";
+import {
+  CalendarClock,
+  CheckCircle2,
+  FolderKanban,
+  MoreHorizontal,
+  PauseCircle,
+  Plus,
+  UserPlus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProjectIcon } from "@/components/ui/project-icon";
 import { StatusPill } from "@/components/admin/ui/status-pill";
@@ -15,6 +25,17 @@ function inferPriority(status: string, totalCount: number): Priority {
   if (status === "paused") return "medium";
   if (totalCount === 0) return "low";
   return "medium";
+}
+
+function formatProjectDate(value: string | null) {
+  if (!value) return "No date";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
 }
 
 export default async function WorkspaceHome({
@@ -40,6 +61,14 @@ export default async function WorkspaceHome({
   else if (sort === "status") projects = [...projects].sort((a, b) => a.status.localeCompare(b.status));
 
   const isAdmin = profile?.role === "admin";
+  const activeCount = allProjects.filter((p) => p.status === "active").length;
+  const completedCount = allProjects.filter((p) => p.status === "completed").length;
+  const waitingCount = allProjects.filter((p) =>
+    ["planning", "paused"].includes(p.status),
+  ).length;
+  const nextDeadline = allProjects
+    .filter((p) => p.end_date && p.status !== "completed")
+    .sort((a, b) => (a.end_date ?? "").localeCompare(b.end_date ?? ""))[0];
 
   return (
     <div className="space-y-6">
@@ -64,6 +93,41 @@ export default async function WorkspaceHome({
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <WorkspaceMetric
+          icon={FolderKanban}
+          label="Assigned"
+          value={allProjects.length}
+          hint={`${projects.length} visible with current filters`}
+          tone="blue"
+        />
+        <WorkspaceMetric
+          icon={CalendarClock}
+          label="Active"
+          value={activeCount}
+          hint="Projects currently moving"
+          tone="green"
+        />
+        <WorkspaceMetric
+          icon={PauseCircle}
+          label="Planning / paused"
+          value={waitingCount}
+          hint="Waiting on kickoff or restart"
+          tone="amber"
+        />
+        <WorkspaceMetric
+          icon={CheckCircle2}
+          label="Completed"
+          value={completedCount}
+          hint={
+            nextDeadline
+              ? `Next due: ${formatProjectDate(nextDeadline.end_date)}`
+              : "No upcoming deadlines"
+          }
+          tone="cyan"
+        />
       </div>
 
       <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
@@ -118,7 +182,7 @@ function ListView({ projects }: { projects: Awaited<ReturnType<typeof listWorksp
         <thead>
           <tr className="border-b bg-muted/40 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             <th className="w-10 px-4 py-2.5">
-              <input type="checkbox" className="size-4 rounded border-input" disabled />
+              <Checkbox disabled aria-label="Select all projects" />
             </th>
             <th className="px-2 py-2.5">Project Name</th>
             <th className="px-2 py-2.5">Start Date</th>
@@ -133,7 +197,7 @@ function ListView({ projects }: { projects: Awaited<ReturnType<typeof listWorksp
           {projects.map((p) => (
             <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
               <td className="px-4 py-2.5">
-                <input type="checkbox" className="size-4 rounded border-input" />
+                <Checkbox aria-label={`Select ${p.name}`} />
               </td>
               <td className="px-2 py-2.5">
                 <Link href={`/workspace/projects/${p.id}`} className="flex items-center gap-2.5 group">
@@ -146,8 +210,12 @@ function ListView({ projects }: { projects: Awaited<ReturnType<typeof listWorksp
                   </div>
                 </Link>
               </td>
-              <td className="px-2 py-2.5 text-muted-foreground">{p.start_date ?? "—"}</td>
-              <td className="px-2 py-2.5 text-muted-foreground">{p.end_date ?? "—"}</td>
+              <td className="px-2 py-2.5 text-muted-foreground">
+                {formatProjectDate(p.start_date)}
+              </td>
+              <td className="px-2 py-2.5 text-muted-foreground">
+                {formatProjectDate(p.end_date)}
+              </td>
               <td className="px-2 py-2.5">
                 <StatusPill status={p.status as "planning" | "active" | "paused" | "completed"} />
               </td>
@@ -198,11 +266,47 @@ function CardsView({ projects }: { projects: Awaited<ReturnType<typeof listWorks
             <ProjectProgress done={p.doneCount} total={p.totalCount} />
           </div>
           <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-            <span>{p.end_date ? `Due ${p.end_date}` : "No deadline"}</span>
+            <span>{p.end_date ? `Due ${formatProjectDate(p.end_date)}` : "No deadline"}</span>
             <PriorityPill priority={inferPriority(p.status, p.totalCount)} />
           </div>
         </Link>
       ))}
+    </div>
+  );
+}
+
+function WorkspaceMetric({
+  icon: Icon,
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  hint: string;
+  tone: "blue" | "green" | "amber" | "cyan";
+}) {
+  const toneClass = {
+    blue: "kpi-tile-blue",
+    green: "kpi-tile-green",
+    amber: "kpi-tile-amber",
+    cyan: "kpi-tile-cyan",
+  }[tone];
+
+  return (
+    <div className="rounded-xl border bg-card p-4 shadow-card">
+      <div className="flex items-start gap-3">
+        <span className={`kpi-tile ${toneClass}`}>
+          <Icon className="size-5" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-muted-foreground">{label}</p>
+          <p className="stat-number mt-1 text-2xl">{value}</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">{hint}</p>
+        </div>
+      </div>
     </div>
   );
 }

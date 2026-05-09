@@ -53,6 +53,7 @@ export default async function PortalProjectPage({
   const subtitle = [project.code, project.client?.name]
     .filter(Boolean)
     .join(" / ");
+  const referenceDate = new Date().toISOString();
 
   return (
     <div className="space-y-6">
@@ -77,6 +78,7 @@ export default async function PortalProjectPage({
         <TimelineCard
           startDate={project.start_date}
           endDate={project.end_date}
+          referenceDate={referenceDate}
         />
         <WorkplanCard
           phases={phases.length}
@@ -85,6 +87,7 @@ export default async function PortalProjectPage({
         <MilestoneCard
           title={nextMilestone?.name ?? null}
           date={nextMilestone?.planned_date ?? null}
+          referenceDate={referenceDate}
         />
         <ManagerCard manager={manager} />
       </div>

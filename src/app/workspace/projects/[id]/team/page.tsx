@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { Users } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -20,10 +21,12 @@ export default async function WorkspaceTeamPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [project, team] = await Promise.all([
+  const [projectMaybe, team] = await Promise.all([
     getWorkspaceProject(id),
     listProjectTeam(id),
   ]);
+  if (!projectMaybe) notFound();
+  const project = projectMaybe;
 
   return (
     <div className="mx-auto w-full max-w-5xl">

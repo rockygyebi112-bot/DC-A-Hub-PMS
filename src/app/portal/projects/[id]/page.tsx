@@ -26,12 +26,8 @@ export default async function PortalProjectPage({
 }) {
   const { id } = await params;
 
-  let detail;
-  try {
-    detail = await getPortalProjectDetail(id);
-  } catch {
-    notFound();
-  }
+  const detail = await getPortalProjectDetail(id);
+  if (!detail) notFound();
 
   const {
     project,

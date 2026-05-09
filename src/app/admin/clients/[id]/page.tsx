@@ -17,20 +17,9 @@ export default async function EditClientPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  let client: Awaited<ReturnType<typeof getClient>>;
-  try {
-    client = await getClient(id);
-  } catch (error) {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "PGRST116"
-    ) {
-      notFound();
-    }
-    throw error;
-  }
+  const clientMaybe = await getClient(id);
+  if (!clientMaybe) notFound();
+  const client = clientMaybe;
   const projects = await listClientProjects(id);
 
   return (

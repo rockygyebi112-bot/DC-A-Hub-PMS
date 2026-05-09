@@ -33,7 +33,7 @@ export async function getClient(id: string) {
     .from("clients")
     .select("id, name, contact_email, logo_url, archived_at")
     .eq("id", id)
-    .single();
+    .maybeSingle();
   throwIfError(error);
   return data;
 }

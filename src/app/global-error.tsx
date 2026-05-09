@@ -2,6 +2,11 @@
 
 import { useEffect } from "react";
 
+/**
+ * Last-resort error boundary above the root layout. Cannot rely on the design
+ * system (no layout available), so render minimal inline-styled HTML and never
+ * expose error internals — only the Next.js digest for log correlation.
+ */
 export default function GlobalError({
   error,
   reset,
@@ -10,47 +15,89 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[global error]", error);
+    // eslint-disable-next-line no-console
+    console.error("[global error]", { digest: error?.digest, message: error?.message });
   }, [error]);
 
   return (
-    <html>
-      <body style={{ fontFamily: "ui-sans-serif, system-ui", padding: 24 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#b91c1c" }}>
-          Application error
-        </h1>
-        <p style={{ marginTop: 4, color: "#475569", fontSize: 14 }}>
-          The error details below are exposed temporarily for debugging.
-        </p>
-        <pre
+    <html lang="en">
+      <body
+        style={{
+          fontFamily: "ui-sans-serif, system-ui, sans-serif",
+          margin: 0,
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#f8fafc",
+          color: "#0f172a",
+        }}
+      >
+        <div
           style={{
-            marginTop: 16,
-            padding: 12,
-            background: "#f1f5f9",
-            color: "#0f172a",
-            borderRadius: 8,
-            fontSize: 12,
-            overflow: "auto",
-          }}
-        >
-{`Message: ${error?.message ?? "(no message)"}
-Name:    ${error?.name ?? "(no name)"}
-Digest:  ${error?.digest ?? "(no digest)"}
-Stack:   ${error?.stack ?? "(no stack)"}`}
-        </pre>
-        <button
-          onClick={() => reset()}
-          style={{
-            marginTop: 16,
-            padding: "8px 14px",
-            borderRadius: 8,
-            border: "1px solid #cbd5e1",
+            maxWidth: 480,
+            width: "calc(100% - 32px)",
+            padding: 32,
             background: "#fff",
-            cursor: "pointer",
+            border: "1px solid #e2e8f0",
+            borderRadius: 16,
+            boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
           }}
         >
-          Try again
-        </button>
+          <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
+            Something went wrong
+          </h1>
+          <p style={{ marginTop: 8, color: "#475569", fontSize: 14 }}>
+            An unexpected error occurred. Please try again. If the problem
+            persists, contact support with the reference below.
+          </p>
+          {error?.digest ? (
+            <p
+              style={{
+                marginTop: 12,
+                fontFamily:
+                  "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
+                fontSize: 12,
+                color: "#64748b",
+              }}
+            >
+              Reference: {error.digest}
+            </p>
+          ) : null}
+          <div style={{ marginTop: 20, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              onClick={() => reset()}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 8,
+                border: "1px solid #0f172a",
+                background: "#0f172a",
+                color: "#fff",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              Try again
+            </button>
+            <a
+              href="/"
+              style={{
+                padding: "8px 14px",
+                borderRadius: 8,
+                border: "1px solid #cbd5e1",
+                background: "#fff",
+                color: "#0f172a",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              Go home
+            </a>
+          </div>
+        </div>
       </body>
     </html>
   );

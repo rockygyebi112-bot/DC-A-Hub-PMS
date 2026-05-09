@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -10,8 +11,10 @@ import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
+import { DeleteConfirm } from "@/components/workspace/delete-confirm";
 import {
   deactivateUser,
+  deleteUser,
   reactivateUser,
   setUserRole,
 } from "@/lib/admin/actions/users";
@@ -93,14 +96,40 @@ export default async function UserDetailPage({
 
       <SectionCard
         title="Danger zone"
-        description="Deactivating revokes this user's sessions and prevents future sign-ins."
+        description="Deactivating revokes sessions and blocks sign-in. Deleting permanently removes the account from auth and the profile — this cannot be undone."
         tone="destructive"
       >
-        <form action={user.is_active ? deactivate : reactivate}>
-          <Button type="submit" variant={user.is_active ? "destructive" : "default"}>
-            {user.is_active ? "Deactivate user" : "Reactivate user"}
-          </Button>
-        </form>
+        <div className="flex flex-wrap items-center gap-2">
+          <form action={user.is_active ? deactivate : reactivate}>
+            <Button type="submit" variant={user.is_active ? "outline" : "default"}>
+              {user.is_active ? "Deactivate user" : "Reactivate user"}
+            </Button>
+          </form>
+          <DeleteConfirm
+            trigger={
+              <Button variant="destructive">
+                <Trash2 className="size-4" />
+                Delete user
+              </Button>
+            }
+            title="Delete user"
+            description={
+              <>
+                This will permanently delete <strong>{user.full_name}</strong>{" "}
+                ({user.email}) from authentication and remove their profile.
+                Their authored history (activities, proofs, comments) will be
+                preserved but unattributed. This cannot be undone.
+              </>
+            }
+            confirmWord="DELETE"
+            confirmLabel="Delete permanently"
+            redirectTo="/admin/users"
+            action={async () => {
+              "use server";
+              return deleteUser(id);
+            }}
+          />
+        </div>
       </SectionCard>
     </div>
   );

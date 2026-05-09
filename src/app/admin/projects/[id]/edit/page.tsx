@@ -1,12 +1,17 @@
 import Link from "next/link";
-import { Eye, Users } from "lucide-react";
+import { Eye, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProjectForm } from "@/components/admin/forms/project-form";
 import { ProjectWorkplanPanel } from "@/components/admin/project-workplan-panel";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
-import { archiveProject, restoreProject } from "@/lib/admin/actions/projects";
+import { DeleteConfirm } from "@/components/workspace/delete-confirm";
+import {
+  archiveProject,
+  deleteProject,
+  restoreProject,
+} from "@/lib/admin/actions/projects";
 import { getProject, listClients } from "@/lib/admin/queries";
 import { listProjectPhases } from "@/lib/workspace/queries";
 
@@ -86,17 +91,42 @@ export default async function EditProjectPage({
 
       <SectionCard
         title="Danger zone"
-        description="Archived projects are hidden from non-admin users and workspace queries."
+        description="Archive hides the project. Delete permanently removes it and all phases, activities, proofs, and budgets — this cannot be undone."
         tone="destructive"
       >
-        <form action={project.archived_at ? restore : archive}>
-          <Button
-            type="submit"
-            variant={project.archived_at ? "default" : "destructive"}
-          >
-            {project.archived_at ? "Restore project" : "Archive project"}
-          </Button>
-        </form>
+        <div className="flex flex-wrap items-center gap-2">
+          <form action={project.archived_at ? restore : archive}>
+            <Button
+              type="submit"
+              variant={project.archived_at ? "default" : "outline"}
+            >
+              {project.archived_at ? "Restore project" : "Archive project"}
+            </Button>
+          </form>
+          <DeleteConfirm
+            trigger={
+              <Button variant="destructive">
+                <Trash2 className="size-4" />
+                Delete project
+              </Button>
+            }
+            title="Delete project"
+            description={
+              <>
+                This will permanently delete <strong>{project.name}</strong> and
+                every phase, activity, proof, and budget attached to it. This
+                cannot be undone.
+              </>
+            }
+            confirmWord="DELETE"
+            confirmLabel="Delete permanently"
+            redirectTo="/admin/projects"
+            action={async () => {
+              "use server";
+              return deleteProject(id);
+            }}
+          />
+        </div>
       </SectionCard>
     </div>
   );

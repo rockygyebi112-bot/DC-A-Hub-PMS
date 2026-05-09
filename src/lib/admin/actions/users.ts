@@ -144,6 +144,52 @@ export async function deactivateUser(profileId: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+// Hard-delete a user. Removes the auth.users row (cascades to profiles via FK)
+// and is irreversible. Refuses to delete the caller or the last active admin.
+export async function deleteUser(profileId: string): Promise<ActionResult> {
+  const callerId = await assertCallerIsAdmin();
+  if (!callerId) return { ok: false, error: "Not authorized" };
+
+  const admin = createAdminClient();
+  const { data: profile, error: getErr } = await admin
+    .from("profiles")
+    .select("user_id, role, is_active")
+    .eq("id", profileId)
+    .single();
+  if (getErr) return { ok: false, error: getErr.message };
+  if (profile.user_id === callerId) {
+    return { ok: false, error: "You cannot delete your own account" };
+  }
+
+  // Last-admin guard mirrors the DB trigger so we can return a friendly error.
+  if (profile.role === "admin" && profile.is_active) {
+    const { count } = await admin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "admin")
+      .eq("is_active", true);
+    if ((count ?? 0) <= 1) {
+      return { ok: false, error: "Cannot delete the last active admin" };
+    }
+  }
+
+  // Remove the profile row first (avoids the last-admin trigger firing on the
+  // auth-cascade path where role/is_active wouldn't be transitioning).
+  const { error: delProfileErr } = await admin
+    .from("profiles")
+    .delete()
+    .eq("id", profileId);
+  if (delProfileErr) return { ok: false, error: delProfileErr.message };
+
+  const { error: delAuthErr } = await admin.auth.admin.deleteUser(
+    profile.user_id,
+  );
+  if (delAuthErr) return { ok: false, error: delAuthErr.message };
+
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
 export async function reactivateUser(profileId: string): Promise<ActionResult> {
   const callerId = await assertCallerIsAdmin();
   if (!callerId) return { ok: false, error: "Not authorized" };

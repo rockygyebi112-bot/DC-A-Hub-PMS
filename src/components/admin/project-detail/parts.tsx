@@ -24,13 +24,11 @@ import { cn } from "@/lib/utils";
 
 export type DetailTabKey =
   | "overview"
-  | "workplan"
   | "team"
   | "budget";
 
 const TABS: { key: DetailTabKey; label: string; href: (id: string) => string }[] = [
   { key: "overview", label: "Overview", href: (id) => `/admin/projects/${id}` },
-  { key: "workplan", label: "Workplan", href: (id) => `/workspace/projects/${id}` },
   { key: "team", label: "Team", href: (id) => `/admin/projects/${id}/team` },
   { key: "budget", label: "Budget", href: (id) => `/admin/projects/${id}/budget` },
 ];

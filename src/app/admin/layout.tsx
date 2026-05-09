@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { SidebarBrandCard } from "@/components/admin/ui/sidebar-brand-card";
-import { getAdminCounts, listClients } from "@/lib/admin/queries";
+import { getAdminCounts, listClients, listProjects } from "@/lib/admin/queries";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { getNotificationFeed } from "@/lib/notifications/queries";
 
@@ -22,7 +22,7 @@ export default async function AdminLayout({
   if (!profile) redirect("/login");
   if (profile.role !== "admin") redirect("/");
 
-  const [counts, notifications, clients] = await Promise.all([
+  const [counts, notifications, clients, projects] = await Promise.all([
     getAdminCounts(),
     getNotificationFeed("workspace").catch(() => ({
       entries: [],
@@ -30,12 +30,18 @@ export default async function AdminLayout({
       lastReadAt: null,
     })),
     listClients().catch(() => []),
+    listProjects().catch(() => []),
   ]);
   const sidebarClients = clients.map((c) => ({
     id: c.id,
     name: c.name,
     logo_url: c.logo_url ?? null,
   }));
+  const projectClientMap: Record<string, string> = {};
+  for (const p of projects) {
+    const c = (p as { client?: { id?: string } | null }).client;
+    if (c?.id) projectClientMap[p.id] = c.id;
+  }
   const firstName = profile.fullName.trim().split(/\s+/)[0] || "Admin";
   const greeting = `${timeBasedGreeting()}, ${firstName}! 👋`;
 
@@ -84,7 +90,12 @@ export default async function AdminLayout({
       storageKey="admin-sidebar-collapsed"
       defaultLogoUrl="/logo.png"
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
-      sidebarFooter={<SidebarBrandCard clients={sidebarClients} />}
+      sidebarFooter={
+        <SidebarBrandCard
+          clients={sidebarClients}
+          projectClientMap={projectClientMap}
+        />
+      }
       greeting={greeting}
       greetingSubtitle="Here's what's happening with your projects today."
       greetingPath="/admin"

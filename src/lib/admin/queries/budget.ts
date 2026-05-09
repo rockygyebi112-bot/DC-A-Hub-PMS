@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { throwIfError } from "@/lib/supabase/errors";
 
 export type ProjectBudget = {
   id: string;
@@ -76,7 +77,7 @@ export async function getProjectBudget(
     .select("id, project_id, total_amount, currency, notes, created_at, updated_at")
     .eq("project_id", projectId)
     .maybeSingle();
-  if (error) throw error;
+  throwIfError(error);
   if (!data) return null;
   return { ...data, total_amount: toNumber(data.total_amount) };
 }
@@ -97,7 +98,7 @@ export async function listBudgetCategories(
       .select("category_id, amount, status")
       .eq("project_id", projectId),
   ]);
-  if (error) throw error;
+  throwIfError(error);
   const totals = new Map<string, { spent: number; count: number }>();
   for (const exp of expenses ?? []) {
     if (!exp.category_id) continue;
@@ -136,7 +137,7 @@ export async function listExpenses(
     .order("created_at", { ascending: false });
   if (opts.limit) q.limit(opts.limit);
   const { data, error } = await q;
-  if (error) throw error;
+  throwIfError(error);
 
   const rows: Expense[] = (data ?? []).map((row) => {
     const category = Array.isArray(row.category)

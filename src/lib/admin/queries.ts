@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { throwIfError } from "@/lib/supabase/errors";
 
 export async function listClients(opts: { includeArchived?: boolean } = {}) {
   const sb = await createClient();
@@ -11,7 +12,7 @@ export async function listClients(opts: { includeArchived?: boolean } = {}) {
     .order("name", { ascending: true });
   if (!opts.includeArchived) q.is("archived_at", null);
   const { data, error } = await q;
-  if (error) throw error;
+  throwIfError(error);
   return (data ?? []).map((c) => {
     const projects = (c.projects ?? []) as { id: string; archived_at: string | null }[];
     const projectCount = projects.filter((p) => p.archived_at === null).length;
@@ -33,7 +34,7 @@ export async function getClient(id: string) {
     .select("id, name, contact_email, logo_url, archived_at")
     .eq("id", id)
     .single();
-  if (error) throw error;
+  throwIfError(error);
   return data;
 }
 
@@ -56,7 +57,7 @@ export async function listClientProjects(clientId: string): Promise<ClientProjec
     .select("id, name, code, status, archived_at, start_date, end_date")
     .eq("client_id", clientId)
     .order("name", { ascending: true });
-  if (error) throw error;
+  throwIfError(error);
   if (!projects?.length) return [];
 
   const projectIds = projects.map((project) => project.id);
@@ -100,7 +101,7 @@ export async function listProjects(opts: { includeArchived?: boolean } = {}) {
     .order("name", { ascending: true });
   if (!opts.includeArchived) q.is("archived_at", null);
   const { data, error } = await q;
-  if (error) throw error;
+  throwIfError(error);
   return data ?? [];
 }
 
@@ -113,7 +114,7 @@ export async function getProject(id: string) {
     )
     .eq("id", id)
     .single();
-  if (error) throw error;
+  throwIfError(error);
   return data;
 }
 
@@ -125,7 +126,7 @@ export async function listUsers(opts: { includeInactive?: boolean } = {}) {
     .order("full_name", { ascending: true });
   if (!opts.includeInactive) q.eq("is_active", true);
   const { data, error } = await q;
-  if (error) throw error;
+  throwIfError(error);
   return data ?? [];
 }
 
@@ -136,7 +137,7 @@ export async function getUserByProfileId(id: string) {
     .select("id, user_id, full_name, email, role, is_active")
     .eq("id", id)
     .single();
-  if (error) throw error;
+  throwIfError(error);
   return data;
 }
 
@@ -162,14 +163,14 @@ export async function listProjectMembers(
     .from("project_members")
     .select("id, project_role, user_id")
     .eq("project_id", projectId);
-  if (error) throw error;
+  throwIfError(error);
   if (!rows || rows.length === 0) return [];
   const ids = rows.map((r) => r.user_id);
   const { data: profiles, error: pe } = await sb
     .from("profiles")
     .select("id, user_id, full_name, email, role")
     .in("user_id", ids);
-  if (pe) throw pe;
+  throwIfError(pe);
   const byUserId = new Map((profiles ?? []).map((p) => [p.user_id, p]));
   return rows.map((r) => {
     const p = byUserId.get(r.user_id);
@@ -207,7 +208,7 @@ export async function listAssignableUsers(
     .select("id, user_id, full_name, email, role")
     .in("role", targetRoles)
     .eq("is_active", true);
-  if (error) throw error;
+  throwIfError(error);
   return (data ?? []).filter((p) => !taken.has(p.user_id));
 }
 
@@ -248,6 +249,6 @@ export async function listRecentProjects(limit = 5) {
     .is("archived_at", null)
     .order("created_at", { ascending: false })
     .limit(limit);
-  if (error) throw error;
+  throwIfError(error);
   return data ?? [];
 }

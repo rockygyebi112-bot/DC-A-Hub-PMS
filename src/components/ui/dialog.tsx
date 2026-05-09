@@ -12,7 +12,11 @@ function Dialog({ ...props }: DialogPrimitive.Root.Props) {
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
+  // Intentionally omit `data-slot="dialog-trigger"`: when callers pass a
+  // `render={<Button />}` element, base-ui merges its data-slot with Button's
+  // own `data-slot="button"` differently across SSR and hydration, producing
+  // a mismatch warning. The attribute isn't used as a selector anywhere.
+  return <DialogPrimitive.Trigger {...props} />
 }
 
 function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {

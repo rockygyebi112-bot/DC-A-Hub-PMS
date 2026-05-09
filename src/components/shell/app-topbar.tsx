@@ -54,9 +54,9 @@ export function AppTopbar({
         </div>
       )}
       <div className="flex items-center gap-2">
-        {extra}avatarUrl={avatarUrl} 
+        {extra}
         <ThemeToggle />
-        <UserDropdown name={name} email={email} />
+        <UserDropdown name={name} email={email} avatarUrl={avatarUrl} />
       </div>
     </header>
   );

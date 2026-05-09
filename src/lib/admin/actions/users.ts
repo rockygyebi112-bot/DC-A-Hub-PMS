@@ -144,8 +144,9 @@ export async function deactivateUser(profileId: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-// Hard-delete a user. Removes the auth.users row (cascades to profiles via FK)
-// and is irreversible. Refuses to delete the caller or the last active admin.
+// Hard-delete a user. Removes the auth.users row first, then verifies the
+// profile is gone. Deleting auth first prevents profile resurrection from
+// auth/profile sync paths if the auth delete fails or is delayed.
 export async function deleteUser(profileId: string): Promise<ActionResult> {
   const callerId = await assertCallerIsAdmin();
   if (!callerId) return { ok: false, error: "Not authorized" };
@@ -173,18 +174,37 @@ export async function deleteUser(profileId: string): Promise<ActionResult> {
     }
   }
 
-  // Remove the profile row first (avoids the last-admin trigger firing on the
-  // auth-cascade path where role/is_active wouldn't be transitioning).
-  const { error: delProfileErr } = await admin
-    .from("profiles")
-    .delete()
-    .eq("id", profileId);
-  if (delProfileErr) return { ok: false, error: delProfileErr.message };
-
   const { error: delAuthErr } = await admin.auth.admin.deleteUser(
     profile.user_id,
   );
   if (delAuthErr) return { ok: false, error: delAuthErr.message };
+
+  // The auth FK should cascade to profiles/project_members. Keep this explicit
+  // cleanup as a safety net for projects whose database FK was not applied.
+  const { error: delMembershipErr } = await admin
+    .from("project_members")
+    .delete()
+    .eq("user_id", profile.user_id);
+  if (delMembershipErr) return { ok: false, error: delMembershipErr.message };
+
+  const { error: delProfileErr } = await admin
+    .from("profiles")
+    .delete()
+    .or(`id.eq.${profileId},user_id.eq.${profile.user_id}`);
+  if (delProfileErr) return { ok: false, error: delProfileErr.message };
+
+  const { data: remainingProfile, error: verifyProfileErr } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("user_id", profile.user_id)
+    .maybeSingle();
+  if (verifyProfileErr) return { ok: false, error: verifyProfileErr.message };
+  if (remainingProfile) {
+    return {
+      ok: false,
+      error: "User auth was deleted, but the profile could not be removed.",
+    };
+  }
 
   revalidatePath("/admin/users");
   return { ok: true };

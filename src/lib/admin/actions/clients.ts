@@ -70,8 +70,9 @@ export async function archiveClient(id: string): Promise<ActionResult> {
     .from("clients")
     .update({ archived_at: new Date().toISOString() })
     .eq("id", id);
-  if (error) return { ok: false, error: GENERIC_DB_ERROR };
+  if (error) return { ok: false, error: error.message || GENERIC_DB_ERROR };
   revalidatePath("/admin/clients");
+  revalidatePath(`/admin/clients/${id}`);
   return { ok: true };
 }
 
@@ -83,7 +84,35 @@ export async function restoreClient(id: string): Promise<ActionResult> {
     .from("clients")
     .update({ archived_at: null })
     .eq("id", id);
-  if (error) return { ok: false, error: GENERIC_DB_ERROR };
+  if (error) return { ok: false, error: error.message || GENERIC_DB_ERROR };
+  revalidatePath("/admin/clients");
+  revalidatePath(`/admin/clients/${id}`);
+  return { ok: true };
+}
+
+export async function deleteClientOrg(id: string): Promise<ActionResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
+
+  const sb = createAdminClient();
+  const { count, error: countError } = await sb
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .eq("client_id", id);
+  if (countError) {
+    return { ok: false, error: countError.message || GENERIC_DB_ERROR };
+  }
+  if ((count ?? 0) > 0) {
+    return {
+      ok: false,
+      error:
+        "This client has projects attached. Archive the client instead, or move/delete those projects first.",
+    };
+  }
+
+  const { error } = await sb.from("clients").delete().eq("id", id);
+  if (error) return { ok: false, error: error.message || GENERIC_DB_ERROR };
+
   revalidatePath("/admin/clients");
   return { ok: true };
 }

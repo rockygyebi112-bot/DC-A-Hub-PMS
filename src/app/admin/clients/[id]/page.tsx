@@ -1,13 +1,14 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Eye, FolderKanban, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ClientDangerActions } from "@/components/admin/client-danger-actions";
 import { ClientForm } from "@/components/admin/forms/client-form";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { ProjectProgress } from "@/components/workspace/project-progress";
-import { archiveClient, restoreClient } from "@/lib/admin/actions/clients";
 import { getClient, listClientProjects } from "@/lib/admin/queries";
 
 export default async function EditClientPage({
@@ -16,20 +17,21 @@ export default async function EditClientPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [client, projects] = await Promise.all([
-    getClient(id),
-    listClientProjects(id),
-  ]);
-
-  async function archive() {
-    "use server";
-    await archiveClient(id);
+  let client: Awaited<ReturnType<typeof getClient>>;
+  try {
+    client = await getClient(id);
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "PGRST116"
+    ) {
+      notFound();
+    }
+    throw error;
   }
-
-  async function restore() {
-    "use server";
-    await restoreClient(id);
-  }
+  const projects = await listClientProjects(id);
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -132,14 +134,11 @@ export default async function EditClientPage({
         description="Archived clients are hidden from non-admin users. Their projects are not archived automatically."
         tone="destructive"
       >
-        <form action={client.archived_at ? restore : archive}>
-          <Button
-            type="submit"
-            variant={client.archived_at ? "default" : "destructive"}
-          >
-            {client.archived_at ? "Restore client" : "Archive client"}
-          </Button>
-        </form>
+        <ClientDangerActions
+          clientId={id}
+          clientName={client.name}
+          archived={!!client.archived_at}
+        />
       </SectionCard>
     </div>
   );

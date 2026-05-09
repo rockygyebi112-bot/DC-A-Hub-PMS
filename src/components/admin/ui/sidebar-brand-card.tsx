@@ -10,7 +10,7 @@ import { usePathname } from "next/navigation";
  * Behavior:
  * - On a specific project route (`/admin/projects/{id}` or any nested
  *   route), only the project's owning client is rendered.
- * - On all other admin routes, every active client is rendered (max 4).
+ * - On all other admin routes, the footer is empty.
  */
 export type SidebarClient = {
   id: string;
@@ -36,17 +36,17 @@ export function SidebarBrandCard({
   const pathname = usePathname() ?? "";
   if (!clients || clients.length === 0) return null;
 
-  // Detect /admin/projects/{id} (exclude /admin/projects and /admin/projects/new)
-  let visible = clients;
+  // Only render on a specific project route: /admin/projects/{id}[/...]
+  // (exclude /admin/projects and /admin/projects/new). On every other
+  // admin route the footer stays empty.
   const m = pathname.match(/^\/admin\/projects\/([^/]+)(?:\/.*)?$/);
   const projectId = m?.[1];
-  if (projectId && projectId !== "new" && projectClientMap) {
-    const clientId = projectClientMap[projectId];
-    if (clientId) {
-      const only = clients.find((c) => c.id === clientId);
-      if (only) visible = [only];
-    }
-  }
+  if (!projectId || projectId === "new" || !projectClientMap) return null;
+  const clientId = projectClientMap[projectId];
+  if (!clientId) return null;
+  const only = clients.find((c) => c.id === clientId);
+  if (!only) return null;
+  const visible = [only];
 
   return (
     <div className="space-y-3">

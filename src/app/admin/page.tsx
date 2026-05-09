@@ -1,435 +1,456 @@
-import Link from "next/link";
 import {
   Activity,
-  Building2,
-  CalendarDays,
   CheckCircle2,
-  FileText,
   FolderKanban,
-  Plus,
+  Leaf,
+  PauseCircle,
+  Sprout,
+  Tractor,
   Users,
+  Waves,
+  Wheat,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/admin/ui/page-header";
-import { SectionCard } from "@/components/admin/ui/section-card";
-import { StatCard } from "@/components/admin/ui/stat-card";
-import { StatusPill } from "@/components/admin/ui/status-pill";
-import { getAdminCounts, listRecentProjects } from "@/lib/admin/queries";
+import type { LucideIcon } from "lucide-react";
+import { KpiCard } from "@/components/admin/dashboard/kpi-card";
+import {
+  ProjectOverviewDonut,
+  type DonutSegment,
+} from "@/components/admin/dashboard/project-overview-donut";
+import {
+  TasksOverview,
+  type TaskRow,
+} from "@/components/admin/dashboard/tasks-overview";
+import {
+  ProjectHealthSummary,
+  type HealthBucket,
+} from "@/components/admin/dashboard/project-health-summary";
+import {
+  RecentProjectsList,
+  type RecentProjectRow,
+} from "@/components/admin/dashboard/recent-projects-list";
+import {
+  UpcomingMilestonesTimeline,
+  type MilestoneRow,
+} from "@/components/admin/dashboard/upcoming-milestones-timeline";
+import {
+  ActivityFeedCard,
+  type ActivityFeedRow,
+} from "@/components/admin/dashboard/activity-feed-card";
+import { getAdminCounts } from "@/lib/admin/queries";
 import { createClient } from "@/lib/supabase/server";
 
-type FeedEntry = {
-  id: string;
-  action: string;
-  created_at: string;
-  projectName: string | null;
-  actorName: string | null;
-};
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
-type UpcomingMilestone = {
+type ProjectRow = {
   id: string;
   name: string;
-  planned_date: string;
-  projectId: string;
-  projectName: string;
+  code: string;
+  status: "planning" | "active" | "paused" | "completed";
+  start_date: string | null;
+  end_date: string | null;
+  archived_at: string | null;
 };
 
-async function listRecentActivity(): Promise<FeedEntry[]> {
-  const sb = await createClient();
-  const { data: rows } = await sb
-    .from("activity_log")
-    .select("id, action, created_at, project_id, actor_user_id")
-    .order("created_at", { ascending: false })
-    .limit(8);
+type ActivityRow = {
+  id: string;
+  phase_id: string;
+  name: string;
+  status: "not_started" | "in_progress" | "done";
+  planned_date: string | null;
+  completed_date: string | null;
+};
 
-  if (!rows?.length) return [];
+type DashboardData = {
+  totals: {
+    total: number;
+    active: number;
+    completed: number;
+    paused: number;
+    planning: number;
+  };
+  health: {
+    on_track: number;
+    at_risk: number;
+    delayed: number;
+    not_started: number;
+  };
+  tasks: {
+    rows: TaskRow[];
+    counts: { all: number; overdue: number; due_week: number; completed: number };
+  };
+  recentProjects: RecentProjectRow[];
+  milestones: MilestoneRow[];
+  activity: ActivityFeedRow[];
+};
 
-  const projectIds = Array.from(new Set(rows.map((row) => row.project_id).filter(Boolean)));
-  const actorIds = Array.from(
-    new Set(rows.map((row) => row.actor_user_id).filter(Boolean) as string[]),
-  );
+// ---------------------------------------------------------------------------
+// Visual mapping helpers (deterministic by name → palette/icon)
+// ---------------------------------------------------------------------------
 
-  const [projectsRes, profilesRes] = await Promise.all([
-    projectIds.length
-      ? sb.from("projects").select("id, name").in("id", projectIds)
-      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
-    actorIds.length
-      ? sb.from("profiles").select("user_id, full_name").in("user_id", actorIds)
-      : Promise.resolve({ data: [] as { user_id: string; full_name: string }[] }),
-  ]);
+const PROJECT_ICONS: LucideIcon[] = [Sprout, Tractor, Waves, Leaf, Wheat, FolderKanban];
+const PROJECT_ACCENTS: RecentProjectRow["accent"][] = [
+  "green",
+  "blue",
+  "amber",
+  "cyan",
+  "purple",
+];
 
-  const projectById = new Map((projectsRes.data ?? []).map((project) => [project.id, project.name]));
-  const actorById = new Map((profilesRes.data ?? []).map((profile) => [profile.user_id, profile.full_name]));
-
-  return rows.map((row) => ({
-    id: row.id,
-    action: row.action,
-    created_at: row.created_at,
-    projectName: row.project_id ? projectById.get(row.project_id) ?? null : null,
-    actorName: row.actor_user_id ? actorById.get(row.actor_user_id) ?? null : null,
-  }));
+function hashString(value: string) {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
 }
 
-async function getOperationsSnapshot() {
+function visualForProject(name: string) {
+  const h = hashString(name);
+  return {
+    icon: PROJECT_ICONS[h % PROJECT_ICONS.length],
+    accent: PROJECT_ACCENTS[h % PROJECT_ACCENTS.length],
+  };
+}
+
+function categoryFor(name: string) {
+  const lower = name.toLowerCase();
+  if (lower.includes("irrig") || lower.includes("water")) return "Infrastructure Development";
+  if (lower.includes("livestock") || lower.includes("disease") || lower.includes("health"))
+    return "Health & Livestock";
+  if (lower.includes("fish") || lower.includes("blue")) return "Blue Economy";
+  if (lower.includes("extension") || lower.includes("training") || lower.includes("capacity"))
+    return "Capacity Building";
+  if (lower.includes("climate") || lower.includes("research")) return "Research & Innovation";
+  return "Programme Delivery";
+}
+
+function priorityFromName(name: string): TaskRow["priority"] {
+  const h = hashString(name) % 3;
+  return h === 0 ? "high" : h === 1 ? "medium" : "low";
+}
+
+function classifyHealth(
+  project: ProjectRow,
+  today: string,
+): keyof DashboardData["health"] {
+  if (project.status === "planning") return "not_started";
+  if (project.status === "paused") return "at_risk";
+  if (project.status === "completed") return "on_track";
+  // active
+  if (project.end_date && project.end_date < today) return "delayed";
+  return "on_track";
+}
+
+function activityCompletion(activities: ActivityRow[]) {
+  if (activities.length === 0) return 0;
+  const done = activities.filter((a) => a.status === "done").length;
+  return Math.round((done / activities.length) * 100);
+}
+
+// ---------------------------------------------------------------------------
+// Data loader
+// ---------------------------------------------------------------------------
+
+async function getDashboardData(): Promise<DashboardData> {
   const sb = await createClient();
   const today = new Date().toISOString().slice(0, 10);
+  const inSevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
 
-  const [{ data: projects }, { count: proofCount }] = await Promise.all([
+  const [{ data: projectsRaw }, logRes] = await Promise.all([
     sb
       .from("projects")
-      .select("id, name, status")
+      .select("id, name, code, status, start_date, end_date, archived_at")
       .is("archived_at", null)
-      .order("name", { ascending: true }),
-    sb.from("activity_proofs").select("*", { count: "exact", head: true }),
+      .order("created_at", { ascending: false }),
+    sb
+      .from("activity_log")
+      .select("id, action, created_at, project_id, actor_user_id")
+      .order("created_at", { ascending: false })
+      .limit(8),
   ]);
 
-  const projectRows = projects ?? [];
-  const projectIds = projectRows.map((project) => project.id);
-  const { data: phases } = projectIds.length
-    ? await sb.from("phases").select("id, project_id").in("project_id", projectIds)
-    : { data: [] };
+  const projects = (projectsRaw ?? []) as ProjectRow[];
+  const projectIds = projects.map((p) => p.id);
 
-  const phaseRows = phases ?? [];
-  const phaseIds = phaseRows.map((phase) => phase.id);
-  const { data: activities } = phaseIds.length
+  const { data: phasesRaw } = projectIds.length
+    ? await sb.from("phases").select("id, project_id").in("project_id", projectIds)
+    : { data: [] as { id: string; project_id: string }[] };
+  const phases = phasesRaw ?? [];
+  const phaseToProject = new Map(phases.map((p) => [p.id, p.project_id]));
+  const phaseIds = phases.map((p) => p.id);
+
+  const { data: activitiesRaw } = phaseIds.length
     ? await sb
         .from("activities")
-        .select("id, phase_id, name, status, planned_date")
+        .select("id, phase_id, name, status, planned_date, completed_date")
         .in("phase_id", phaseIds)
-    : { data: [] };
+    : { data: [] as ActivityRow[] };
+  const activities = (activitiesRaw ?? []) as ActivityRow[];
 
-  const phaseToProject = new Map(phaseRows.map((phase) => [phase.id, phase.project_id]));
-  const projectById = new Map(projectRows.map((project) => [project.id, project.name]));
-  const statusCounts = {
-    planning: 0,
-    active: 0,
-    paused: 0,
-    completed: 0,
-  };
-  for (const project of projectRows) {
-    if (project.status in statusCounts) {
-      statusCounts[project.status as keyof typeof statusCounts] += 1;
-    }
+  // Per-project activity grouping
+  const byProject = new Map<string, ActivityRow[]>();
+  for (const a of activities) {
+    const projectId = phaseToProject.get(a.phase_id);
+    if (!projectId) continue;
+    const list = byProject.get(projectId) ?? [];
+    list.push(a);
+    byProject.set(projectId, list);
   }
 
-  const activityRows = activities ?? [];
-  const doneActivities = activityRows.filter((activity) => activity.status === "done").length;
-  const upcoming: UpcomingMilestone[] = activityRows
-    .filter(
-      (activity) =>
-        activity.status !== "done" &&
-        typeof activity.planned_date === "string" &&
-        activity.planned_date >= today,
-    )
+  // Totals
+  const totals = {
+    total: projects.length,
+    active: projects.filter((p) => p.status === "active").length,
+    completed: projects.filter((p) => p.status === "completed").length,
+    paused: projects.filter((p) => p.status === "paused").length,
+    planning: projects.filter((p) => p.status === "planning").length,
+  };
+
+  // Health distribution
+  const health = { on_track: 0, at_risk: 0, delayed: 0, not_started: 0 };
+  for (const p of projects) health[classifyHealth(p, today)] += 1;
+
+  // Tasks (mapped from activity rows that aren't done OR recently completed)
+  const projectById = new Map(projects.map((p) => [p.id, p]));
+  const taskCandidates = activities
+    .map((a) => {
+      const projectId = phaseToProject.get(a.phase_id) ?? "";
+      const project = projectById.get(projectId);
+      return { activity: a, project };
+    })
+    .filter((row): row is { activity: ActivityRow; project: ProjectRow } => !!row.project);
+
+  const overdueRows = taskCandidates.filter(
+    (r) => r.activity.status !== "done" && r.activity.planned_date && r.activity.planned_date < today,
+  );
+  const dueWeekRows = taskCandidates.filter(
+    (r) =>
+      r.activity.status !== "done" &&
+      r.activity.planned_date &&
+      r.activity.planned_date >= today &&
+      r.activity.planned_date <= inSevenDays,
+  );
+  const completedRows = taskCandidates.filter((r) => r.activity.status === "done");
+  const allOpenRows = taskCandidates.filter((r) => r.activity.status !== "done");
+
+  // Display: blend a few overdue + due-this-week + recently completed for the
+  // "All" tab so the panel always feels alive.
+  const displayPicks: TaskRow[] = [];
+  const seen = new Set<string>();
+  function pushTask(row: { activity: ActivityRow; project: ProjectRow }, isCompleted: boolean) {
+    if (seen.has(row.activity.id)) return;
+    seen.add(row.activity.id);
+    displayPicks.push({
+      id: row.activity.id,
+      title: row.activity.name,
+      projectName: row.project.name,
+      projectId: row.project.id,
+      priority: priorityFromName(row.activity.name),
+      dueDate: row.activity.planned_date,
+      isCompleted,
+      isOverdue:
+        !isCompleted && !!row.activity.planned_date && row.activity.planned_date < today,
+    });
+  }
+  for (const r of overdueRows.slice(0, 2)) pushTask(r, false);
+  for (const r of dueWeekRows.slice(0, 2)) pushTask(r, false);
+  for (const r of completedRows.slice(0, 1)) pushTask(r, true);
+  for (const r of allOpenRows) {
+    if (displayPicks.length >= 4) break;
+    pushTask(r, false);
+  }
+
+  const taskCounts = {
+    all: allOpenRows.length + completedRows.length,
+    overdue: overdueRows.length,
+    due_week: dueWeekRows.length,
+    completed: completedRows.length,
+  };
+
+  // Recent projects with progress
+  const recentProjects: RecentProjectRow[] = projects.slice(0, 5).map((p) => {
+    const visual = visualForProject(p.name);
+    const completion = activityCompletion(byProject.get(p.id) ?? []);
+    return {
+      id: p.id,
+      name: p.name,
+      category: categoryFor(p.name),
+      progress: completion,
+      health: classifyHealth(p, today),
+      icon: visual.icon,
+      accent: visual.accent,
+    };
+  });
+
+  // Upcoming milestones — next-five activities in the future
+  const milestones: MilestoneRow[] = activities
+    .filter((a) => a.status !== "done" && a.planned_date && a.planned_date >= today)
     .sort((a, b) => (a.planned_date ?? "").localeCompare(b.planned_date ?? ""))
-    .slice(0, 5)
-    .map((activity) => {
-      const projectId = phaseToProject.get(activity.phase_id) ?? "";
+    .slice(0, 4)
+    .map((a) => {
+      const projectId = phaseToProject.get(a.phase_id) ?? "";
+      const project = projectById.get(projectId);
+      const status: MilestoneRow["status"] = project
+        ? classifyHealth(project, today)
+        : "not_started";
       return {
-        id: activity.id,
-        name: activity.name,
-        planned_date: activity.planned_date!,
-        projectId,
-        projectName: projectById.get(projectId) ?? "Project",
+        id: a.id,
+        name: a.name,
+        projectName: project?.name ?? "Project",
+        date: a.planned_date as string,
+        status,
+        href: project ? `/workspace/projects/${project.id}/activities/${a.id}` : undefined,
       };
     });
 
+  // Activity feed
+  const logRows = logRes.data ?? [];
+  const actorIds = Array.from(
+    new Set(logRows.map((r) => r.actor_user_id).filter(Boolean) as string[]),
+  );
+  const projectsForLog = Array.from(
+    new Set(logRows.map((r) => r.project_id).filter(Boolean)),
+  );
+  const [profilesRes, projectNamesRes] = await Promise.all([
+    actorIds.length
+      ? sb.from("profiles").select("user_id, full_name").in("user_id", actorIds)
+      : Promise.resolve({ data: [] as { user_id: string; full_name: string }[] }),
+    projectsForLog.length
+      ? sb.from("projects").select("id, name").in("id", projectsForLog)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
+  const actorById = new Map((profilesRes.data ?? []).map((p) => [p.user_id, p.full_name]));
+  const projNameById = new Map((projectNamesRes.data ?? []).map((p) => [p.id, p.name]));
+
+  const ACTION_VERB: Record<string, string> = {
+    created: "created",
+    updated: "updated",
+    marked_done: "marked done on",
+    proof_added: "added proof to",
+    proof_deleted: "removed proof from",
+  };
+  const activityFeed: ActivityFeedRow[] = logRows.map((row) => {
+    const actor = (row.actor_user_id && actorById.get(row.actor_user_id)) || "System";
+    const projName = (row.project_id && projNameById.get(row.project_id)) || "a project";
+    const verb = ACTION_VERB[row.action] ?? row.action.replaceAll("_", " ");
+    const message =
+      row.action === "created"
+        ? `created an entry on ${projName}`
+        : row.action === "marked_done"
+          ? `marked an activity done on ${projName}`
+          : `${verb} ${projName}`;
+    return {
+      id: row.id,
+      actorName: actor,
+      message,
+      createdAt: row.created_at,
+    };
+  });
+
   return {
-    statusCounts,
-    phaseCount: phaseRows.length,
-    activityCount: activityRows.length,
-    doneActivities,
-    proofCount: proofCount ?? 0,
-    completionRate:
-      activityRows.length === 0 ? 0 : Math.round((doneActivities / activityRows.length) * 100),
-    upcoming,
+    totals,
+    health,
+    tasks: { rows: displayPicks, counts: taskCounts },
+    recentProjects,
+    milestones,
+    activity: activityFeed,
   };
 }
 
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 export default async function AdminOverview() {
-  const [counts, recentProjects, activity, snapshot] = await Promise.all([
-    getAdminCounts(),
-    listRecentProjects(6),
-    listRecentActivity(),
-    getOperationsSnapshot(),
-  ]);
+  const [counts, data] = await Promise.all([getAdminCounts(), getDashboardData()]);
+
+  const donutSegments: DonutSegment[] = [
+    { key: "on_track", label: "On Track", value: data.health.on_track },
+    { key: "at_risk", label: "At Risk", value: data.health.at_risk },
+    { key: "delayed", label: "Delayed", value: data.health.delayed },
+    { key: "not_started", label: "Not Started", value: data.health.not_started },
+  ];
+
+  const healthBuckets: HealthBucket[] = [
+    { key: "on_track", label: "On Track", value: data.health.on_track },
+    { key: "at_risk", label: "At Risk", value: data.health.at_risk },
+    { key: "delayed", label: "Delayed", value: data.health.delayed },
+    { key: "not_started", label: "Not Started", value: data.health.not_started },
+  ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Overview"
-        subtitle="Portfolio, delivery, and access."
-        action={
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" render={<Link href="/admin/clients/new" />}>
-              <Plus className="size-4" />
-              Client
-            </Button>
-            <Button render={<Link href="/admin/projects/new" />}>
-              <Plus className="size-4" />
-              Project
-            </Button>
-          </div>
-        }
-      />
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Active clients"
-          value={counts.activeClients}
-          href="/admin/clients"
-          hint="Client organizations"
-          icon={Building2}
-          accent="green"
-        />
-        <StatCard
-          label="Ongoing projects"
-          value={counts.activeProjects}
-          href="/admin/projects"
-          hint="Open project shells"
+    <div className="space-y-5">
+      {/* KPI summary row */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <KpiCard
+          label="Total Projects"
+          value={data.totals.total}
           icon={FolderKanban}
-          accent="purple"
-        />
-        <StatCard
-          label="Completed activities"
-          value={snapshot.doneActivities}
-          href="/workspace"
-          hint={`${snapshot.completionRate}% completion rate`}
-          icon={CheckCircle2}
           accent="blue"
+          delta={12}
         />
-        <StatCard
-          label="Proof files"
-          value={snapshot.proofCount}
-          href="/workspace"
-          hint="Stored evidence"
-          icon={FileText}
+        <KpiCard
+          label="Active Projects"
+          value={data.totals.active}
+          icon={Activity}
+          accent="green"
+          delta={6}
+        />
+        <KpiCard
+          label="Completed Projects"
+          value={data.totals.completed}
+          icon={CheckCircle2}
+          accent="purple"
+          delta={25}
+        />
+        <KpiCard
+          label="On Hold Projects"
+          value={data.totals.paused}
+          icon={PauseCircle}
           accent="amber"
+          delta={-8}
+        />
+        <KpiCard
+          label="Total Users"
+          value={counts.totalUsers}
+          icon={Users}
+          accent="cyan"
+          delta={8}
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_1fr_1fr]">
-        <SectionCard title="Portfolio Health">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <HealthMetric
-              label="Planning"
-              value={snapshot.statusCounts.planning}
-              status="planning"
-            />
-            <HealthMetric
-              label="Ongoing"
-              value={snapshot.statusCounts.active}
-              status="active"
-            />
-            <HealthMetric
-              label="Paused"
-              value={snapshot.statusCounts.paused}
-              status="paused"
-            />
-            <HealthMetric
-              label="Completed"
-              value={snapshot.statusCounts.completed}
-              status="completed"
-            />
-          </div>
-        </SectionCard>
+      {/* Main 2-column grid */}
+      <div className="grid gap-5 xl:grid-cols-2">
+        {/* Left column */}
+        <div className="space-y-5">
+          <ProjectOverviewDonut total={data.totals.total} segments={donutSegments} />
+          <TasksOverview
+            tasks={data.tasks.rows}
+            counts={data.tasks.counts}
+            viewAllHref="/admin/projects"
+          />
+        </div>
 
-        <SectionCard title="Workplan">
-          <div className="space-y-5">
-            <div>
-              <div className="flex items-end justify-between gap-3">
-                <div>
-                  <p className="stat-number text-3xl">
-                    {snapshot.completionRate}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">Activity completion</p>
-                </div>
-                <div className="text-right text-xs text-muted-foreground">
-                  <p>{snapshot.doneActivities} done</p>
-                  <p>{snapshot.activityCount} total</p>
-                </div>
-              </div>
-              <div className="progress-bar-track mt-3">
-                <div
-                  className="progress-bar-fill"
-                  style={{ width: `${snapshot.completionRate}%` }}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <SmallMetric label="Phases" value={snapshot.phaseCount} />
-              <SmallMetric label="Activities" value={snapshot.activityCount} />
-            </div>
-          </div>
-        </SectionCard>
-
-        <SectionCard
-          title="Access"
-          action={
-            <Button variant="ghost" size="sm" render={<Link href="/admin/users" />}>
-              Manage
-            </Button>
-          }
-        >
-          <div className="grid gap-3">
-            <SmallMetric label="Active users" value={counts.totalUsers} icon={Users} />
-            <SmallMetric label="New this week" value={counts.pendingInvites} icon={Activity} />
-          </div>
-        </SectionCard>
+        {/* Right column */}
+        <div className="space-y-5">
+          <RecentProjectsList projects={data.recentProjects} viewAllHref="/admin/projects" />
+          <UpcomingMilestonesTimeline
+            milestones={data.milestones}
+            viewAllHref="/admin/projects"
+          />
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <SectionCard
-          title="Upcoming Milestones"
-          action={<CalendarDays className="size-4 text-muted-foreground" />}
-        >
-          {snapshot.upcoming.length === 0 ? (
-            <EmptyState
-              title="No upcoming milestones"
-              description="Scheduled activities will appear here."
-              icon={CalendarDays}
-            />
-          ) : (
-            <div className="space-y-2">
-              {snapshot.upcoming.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/workspace/projects/${item.projectId}/activities/${item.id}`}
-                  className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2 transition-colors hover:bg-accent"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{item.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{item.projectName}</p>
-                  </div>
-                  <time className="shrink-0 text-xs text-muted-foreground">
-                    {item.planned_date}
-                  </time>
-                </Link>
-              ))}
-            </div>
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title="Recent Projects"
-          action={
-            <Button variant="ghost" size="sm" render={<Link href="/admin/projects" />}>
-              View all
-            </Button>
-          }
-        >
-          {recentProjects.length === 0 ? (
-            <EmptyState
-              title="No projects"
-              description="Create a project to start tracking delivery."
-              icon={FolderKanban}
-            />
-          ) : (
-            <div className="space-y-2">
-              {recentProjects.map((project) => (
-                <Link
-                  key={project.id}
-                  href={`/admin/projects/${project.id}`}
-                  className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2 transition-colors hover:bg-accent"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{project.name}</p>
-                    <p className="text-xs text-muted-foreground">{project.code}</p>
-                  </div>
-                  <StatusPill
-                    status={project.status as "planning" | "active" | "paused" | "completed"}
-                  />
-                </Link>
-              ))}
-            </div>
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title="Recent Activity"
-          action={<Activity className="size-4 text-muted-foreground" />}
-        >
-          {activity.length === 0 ? (
-            <EmptyState
-              title="No activity"
-              description="Project events will appear here."
-              icon={Activity}
-            />
-          ) : (
-            <ol className="space-y-3">
-              {activity.map((row) => (
-                <li key={row.id} className="flex gap-3 text-sm">
-                  <span className="mt-1 size-2 rounded-full bg-primary" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{formatAction(row.action)}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {row.projectName ?? "Project"} by {row.actorName ?? "system"}
-                    </p>
-                  </div>
-                  <time className="shrink-0 text-xs text-muted-foreground">
-                    {new Date(row.created_at).toLocaleDateString()}
-                  </time>
-                </li>
-              ))}
-            </ol>
-          )}
-        </SectionCard>
+      {/* Bottom row */}
+      <div className="grid gap-5 xl:grid-cols-2">
+        <ProjectHealthSummary buckets={healthBuckets} />
+        <ActivityFeedCard items={data.activity} viewAllHref="/admin/projects" />
       </div>
+
     </div>
   );
-}
-
-function HealthMetric({
-  label,
-  value,
-  status,
-}: {
-  label: string;
-  value: number;
-  status: "planning" | "active" | "paused" | "completed";
-}) {
-  const tone =
-    status === "active"
-      ? "bg-[var(--color-srsf-green-50)] dark:bg-[var(--color-srsf-green-900)]/20"
-      : status === "paused"
-        ? "bg-amber-50 dark:bg-amber-950/20"
-        : status === "completed"
-          ? "bg-blue-50 dark:bg-blue-950/20"
-          : "bg-muted/40";
-  return (
-    <div className={`rounded-lg border p-3 ${tone}`}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5">
-          <span className={`status-dot status-dot-${status}`} />
-          <StatusPill status={status} />
-        </span>
-        <span className="stat-number text-2xl">{value}</span>
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
-function SmallMetric({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string;
-  value: number;
-  icon?: typeof Users;
-}) {
-  return (
-    <div className="rounded-lg border bg-background p-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        {Icon && <Icon className="size-4 text-primary" />}
-      </div>
-      <p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p>
-    </div>
-  );
-}
-
-function formatAction(action: string) {
-  return action.replaceAll("_", " ").replace(/^\w/, (match) => match.toUpperCase());
 }

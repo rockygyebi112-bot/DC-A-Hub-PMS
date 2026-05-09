@@ -119,37 +119,39 @@ export function AppSidebar({
   return (
     <aside
       className={cn(
-        "sticky top-0 hidden h-screen shrink-0 border-r bg-sidebar transition-[width] duration-200 md:flex md:flex-col",
+        "sidebar-navy sticky top-0 hidden h-screen shrink-0 border-r border-[hsl(225_35%_24%)] transition-[width] duration-200 md:flex md:flex-col",
         collapsed ? "w-16" : "w-[var(--sidebar-width,240px)]",
       )}
     >
-      <div className="flex h-[var(--topbar-height,58px)] items-center gap-2.5 border-b px-3">
-        <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 shadow-sm">
+      <div className="flex items-center gap-3 px-4 pt-5 pb-4">
+        <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/95 shadow-sm">
           {displayLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={displayLogo}
               alt={`${displayBrand} logo`}
-              className="h-7 w-7 object-contain"
+              className="h-8 w-8 object-contain"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm">
+            <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">
               <Sparkles className="size-4" />
             </div>
           )}
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="font-heading truncate text-sm font-bold tracking-tight leading-tight">{displayBrand}</p>
+            <p className="font-heading truncate text-base font-bold tracking-tight leading-tight text-white">
+              {displayBrand}
+            </p>
             {displaySubtitle && (
-              <p className="truncate text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{displaySubtitle}</p>
+              <p className="truncate text-[10px] font-medium tracking-wide text-white/60">{displaySubtitle}</p>
             )}
           </div>
         )}
         <Button
           variant="ghost"
           size="icon-sm"
-          className="ml-auto h-7 w-7"
+          className="ml-auto h-7 w-7 text-white/70 hover:bg-white/5 hover:text-white"
           onClick={toggle}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
@@ -177,30 +179,23 @@ export function AppSidebar({
                   href={item.href}
                   title={collapsed ? item.label : undefined}
                   className={cn(
-                    "flex h-9 items-center gap-2.5 rounded-[10px] px-2.5 text-sm transition-colors-smooth",
+                    "flex h-10 items-center gap-3 rounded-[10px] px-3 text-sm transition-colors-smooth",
                     collapsed && "justify-center px-0",
                     active
-                      ? "sidebar-item-active bg-accent font-medium text-foreground"
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                      ? "bg-[var(--color-dca-blue-500)] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                      : "text-white/70 hover:bg-white/5 hover:text-white",
                   )}
                 >
-                  <span
-                    className={cn(
-                      "flex size-[26px] shrink-0 items-center justify-center rounded-[7px] transition-smooth",
-                      active
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-muted/60 text-muted-foreground",
-                    )}
-                  >
-                    <Icon className="size-3.5" />
+                  <span className="flex size-5 shrink-0 items-center justify-center">
+                    <Icon className="size-[18px]" strokeWidth={active ? 2.25 : 1.75} />
                   </span>
                   {!collapsed && (
                     <>
                       <span className="min-w-0 flex-1 truncate">{item.label}</span>
                       {item.badge != null && (
                         <span className={cn(
-                          "rounded-full px-2 py-0.5 font-mono text-[10px]",
-                          active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+                          "rounded-full px-2 py-0.5 font-mono text-[10px] tabular-nums",
+                          active ? "bg-white/20 text-white" : "bg-white/10 text-white/70",
                         )}>
                           {item.badge}
                         </span>

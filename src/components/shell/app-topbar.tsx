@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Bell, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { ThemeToggle } from "@/components/admin/ui/theme-toggle";
 import { UserDropdown } from "@/components/admin/ui/user-dropdown";
 import { Breadcrumbs } from "@/components/admin/ui/breadcrumbs";
@@ -34,13 +34,6 @@ export function AppTopbar({
       )}
       <div className="flex items-center gap-2">
         {extra}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative inline-flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
-        >
-          <Bell className="size-4" />
-        </button>
         <ThemeToggle />
         <UserDropdown name={name} email={email} />
       </div>

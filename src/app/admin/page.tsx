@@ -452,8 +452,9 @@ export default async function AdminOverview({
         <DashboardPeriodSelector current={period} />
       </div>
 
-      {/* KPI summary row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      {/* KPI summary row. 2 cols on phones so the section doesn't span a
+          full scroll-screen; widens to 3/5 on larger surfaces. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
         <KpiCard
           label="Total Projects"
           value={data.totals.total}

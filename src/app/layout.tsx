@@ -52,6 +52,9 @@ export default function RootLayout({
       className={`${inter.variable} ${interHeading.variable} ${dmMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
+        <a href="#main-content" className="skip-to-content">
+          Skip to main content
+        </a>
         <Providers>
           {children}
           <Toaster richColors closeButton position="bottom-right" />

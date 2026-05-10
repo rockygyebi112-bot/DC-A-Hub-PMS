@@ -27,7 +27,7 @@ export async function markNotificationsRead() {
       { user_id: user.id, last_read_at: now, updated_at: now },
       { onConflict: "user_id" },
     );
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
 
   revalidatePath("/portal", "layout");
   revalidatePath("/workspace", "layout");

@@ -70,7 +70,7 @@ export async function archiveClient(id: string): Promise<ActionResult> {
     .from("clients")
     .update({ archived_at: new Date().toISOString() })
     .eq("id", id);
-  if (error) return { ok: false, error: error.message || GENERIC_DB_ERROR };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidatePath("/admin/clients");
   revalidatePath(`/admin/clients/${id}`);
   return { ok: true };
@@ -84,7 +84,7 @@ export async function restoreClient(id: string): Promise<ActionResult> {
     .from("clients")
     .update({ archived_at: null })
     .eq("id", id);
-  if (error) return { ok: false, error: error.message || GENERIC_DB_ERROR };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidatePath("/admin/clients");
   revalidatePath(`/admin/clients/${id}`);
   return { ok: true };
@@ -100,7 +100,7 @@ export async function deleteClientOrg(id: string): Promise<ActionResult> {
     .select("id", { count: "exact", head: true })
     .eq("client_id", id);
   if (countError) {
-    return { ok: false, error: countError.message || GENERIC_DB_ERROR };
+    return { ok: false, error: dbErrorMessage(countError) };
   }
   if ((count ?? 0) > 0) {
     return {
@@ -111,7 +111,7 @@ export async function deleteClientOrg(id: string): Promise<ActionResult> {
   }
 
   const { error } = await sb.from("clients").delete().eq("id", id);
-  if (error) return { ok: false, error: error.message || GENERIC_DB_ERROR };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
 
   revalidatePath("/admin/clients");
   return { ok: true };

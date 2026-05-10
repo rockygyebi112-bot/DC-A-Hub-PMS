@@ -97,7 +97,7 @@ export async function deleteProject(id: string): Promise<ActionResult> {
   if (!auth.ok) return auth;
   const sb = createAdminClient();
   const { error } = await sb.from("projects").delete().eq("id", id);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidatePath("/admin/projects");
   revalidatePath("/admin");
   return { ok: true };

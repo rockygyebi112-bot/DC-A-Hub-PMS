@@ -51,7 +51,7 @@ export function ActivityFeedCard({
 }) {
   return (
     <div className="rounded-[var(--admin-card-radius)] border bg-card shadow-card">
-      <header className="flex items-center justify-between gap-3 px-5 py-4">
+      <header className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Activity Feed
         </h2>
@@ -71,7 +71,7 @@ export function ActivityFeedCard({
           </li>
         ) : (
           items.map((item) => (
-            <li key={item.id} className="flex items-start gap-3 px-5 py-3.5">
+            <li key={item.id} className="flex items-start gap-3 px-4 py-3.5 sm:px-5">
               <span
                 className={`flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${paletteFor(
                   item.actorName,

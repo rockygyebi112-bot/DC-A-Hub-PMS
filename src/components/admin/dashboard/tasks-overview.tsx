@@ -62,7 +62,7 @@ export function TasksOverview({
 
   return (
     <div className="rounded-[var(--admin-card-radius)] border bg-card shadow-card">
-      <header className="flex items-center justify-between gap-3 px-5 py-4">
+      <header className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Tasks Overview
         </h2>
@@ -75,7 +75,7 @@ export function TasksOverview({
           </Link>
         )}
       </header>
-      <div className="px-5">
+      <div className="px-4 sm:px-5">
         <div className="flex flex-wrap gap-2 pb-3">
           {pills.map((pill) => {
             const active = pill.key === activeFilter;
@@ -114,59 +114,71 @@ export function TasksOverview({
         ) : (
           tasks.map((task) => {
             const due = formatDue(task.dueDate);
+            const priority = PRIORITY_COLOR[task.priority];
             return (
-              <li
-                key={task.id}
-                className="flex items-start justify-between gap-4 px-5 py-3.5"
-              >
-                <div className="flex min-w-0 items-start gap-3">
-                  <span
-                    className={cn(
-                      "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
-                      task.isCompleted
-                        ? "border-[hsl(160_64%_42%)] bg-[hsl(160_64%_42%)] text-white"
-                        : "border-border bg-background",
-                    )}
-                  >
-                    {task.isCompleted && <Check className="size-3" strokeWidth={3} />}
-                  </span>
-                  <div className="min-w-0">
-                    <p
-                      className={cn(
-                        "truncate text-sm font-medium",
-                        task.isCompleted && "text-muted-foreground line-through",
-                      )}
-                    >
-                      {task.title}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {task.projectName}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1 text-right">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+              <li key={task.id}>
+                <Link
+                  href={`/admin/projects/${task.projectId}`}
+                  className="flex items-start justify-between gap-3 px-4 py-3.5 transition-colors active:bg-muted/60 sm:gap-4 sm:px-5"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
                     <span
                       className={cn(
-                        "size-1.5 rounded-full",
-                        PRIORITY_COLOR[task.priority].dot,
-                      )}
-                    />
-                    {PRIORITY_COLOR[task.priority].label}
-                  </span>
-                  {due && (
-                    <span
-                      className={cn(
-                        "text-[11px]",
-                        task.isOverdue
-                          ? "font-medium text-[hsl(0_78%_42%)]"
-                          : "text-muted-foreground",
+                        "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+                        task.isCompleted
+                          ? "border-[hsl(160_64%_42%)] bg-[hsl(160_64%_42%)] text-white"
+                          : "border-border bg-background",
                       )}
                     >
-                      Due: {due}
+                      {task.isCompleted && (
+                        <Check className="size-3" strokeWidth={3} />
+                      )}
                     </span>
-                  )}
-                </div>
+                    <div className="min-w-0">
+                      <p
+                        className={cn(
+                          "truncate text-sm font-medium",
+                          task.isCompleted &&
+                            "text-muted-foreground line-through",
+                        )}
+                      >
+                        {task.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {task.projectName}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+                    <span
+                      className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"
+                      aria-label={priority.label}
+                      title={priority.label}
+                    >
+                      <span
+                        className={cn("size-1.5 rounded-full", priority.dot)}
+                      />
+                      {/* Hide the priority text on phones to save horizontal room;
+                          the dot color still conveys the priority. */}
+                      <span className="hidden sm:inline">
+                        {priority.label}
+                      </span>
+                    </span>
+                    {due && (
+                      <span
+                        className={cn(
+                          "text-[11px] whitespace-nowrap",
+                          task.isOverdue
+                            ? "font-medium text-[hsl(0_78%_42%)]"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        <span className="hidden sm:inline">Due: </span>
+                        {due}
+                      </span>
+                    )}
+                  </div>
+                </Link>
               </li>
             );
           })

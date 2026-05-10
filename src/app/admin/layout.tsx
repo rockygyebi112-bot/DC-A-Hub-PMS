@@ -5,6 +5,7 @@ import { SidebarBrandCard } from "@/components/admin/ui/sidebar-brand-card";
 import { getAdminCounts, listClients, listProjects } from "@/lib/admin/queries";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { getNotificationFeed } from "@/lib/notifications/queries";
+import { createClient } from "@/lib/supabase/server";
 
 function timeBasedGreeting(date = new Date()) {
   const h = date.getHours();
@@ -22,7 +23,9 @@ export default async function AdminLayout({
   if (!profile) redirect("/login");
   if (profile.role !== "admin") redirect("/");
 
-  const [counts, notifications, clients, projects] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+  const sb = await createClient();
+  const [counts, notifications, clients, projects, overdueRes] = await Promise.all([
     getAdminCounts(),
     getNotificationFeed("workspace").catch(() => ({
       entries: [],
@@ -31,7 +34,13 @@ export default async function AdminLayout({
     })),
     listClients().catch(() => []),
     listProjects().catch(() => []),
+    sb
+      .from("activities")
+      .select("id", { count: "exact", head: true })
+      .lt("planned_date", today)
+      .neq("status", "done"),
   ]);
+  const overdueCount = overdueRes.count ?? 0;
   const sidebarClients = clients.map((c) => ({
     id: c.id,
     name: c.name,
@@ -44,6 +53,10 @@ export default async function AdminLayout({
   }
   const firstName = profile.fullName.trim().split(/\s+/)[0] || "Admin";
   const greeting = `${timeBasedGreeting()}, ${firstName}! 👋`;
+  const greetingSubtitle =
+    overdueCount > 0
+      ? `${overdueCount} ${overdueCount === 1 ? "activity" : "activities"} overdue across your projects.`
+      : "All projects are on track today.";
 
   const groups = [
     {
@@ -97,7 +110,7 @@ export default async function AdminLayout({
         />
       }
       greeting={greeting}
-      greetingSubtitle="Here's what's happening with your projects today."
+      greetingSubtitle={greetingSubtitle}
       greetingPath="/admin"
       topbarExtra={
         <NotificationsBell

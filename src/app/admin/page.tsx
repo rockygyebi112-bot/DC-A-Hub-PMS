@@ -39,6 +39,10 @@ import {
 } from "@/components/admin/dashboard/activity-feed-card";
 import { getAdminCounts } from "@/lib/admin/queries";
 import { createClient } from "@/lib/supabase/server";
+import {
+  DashboardPeriodSelector,
+  type DashboardPeriod,
+} from "@/components/admin/ui/dashboard-period-selector";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -154,18 +158,38 @@ function activityCompletion(activities: ActivityRow[]) {
 // Data loader
 // ---------------------------------------------------------------------------
 
-async function getDashboardData(): Promise<DashboardData> {
+function periodStartDate(period: DashboardPeriod, now = new Date()): string {
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  let start: Date;
+  if (period === "ytd") {
+    start = new Date(y, 0, 1);
+  } else if (period === "quarter") {
+    const qStartMonth = Math.floor(m / 3) * 3;
+    start = new Date(y, qStartMonth, 1);
+  } else {
+    // default: this month
+    start = new Date(y, m, 1);
+  }
+  return start.toISOString();
+}
+
+async function getDashboardData(
+  period: DashboardPeriod = "month",
+): Promise<DashboardData> {
   const sb = await createClient();
   const today = new Date().toISOString().slice(0, 10);
   const inSevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
+  const periodStart = periodStartDate(period);
 
   const [{ data: projectsRaw }, logRes] = await Promise.all([
     sb
       .from("projects")
       .select("id, name, code, status, start_date, end_date, archived_at")
       .is("archived_at", null)
+      .gte("created_at", periodStart)
       .order("created_at", { ascending: false }),
     sb
       .from("activity_log")
@@ -187,8 +211,9 @@ async function getDashboardData(): Promise<DashboardData> {
   const { data: activitiesRaw } = phaseIds.length
     ? await sb
         .from("activities")
-        .select("id, phase_id, name, status, planned_date, completed_date")
+        .select("id, phase_id, name, status, planned_date, completed_date, created_at")
         .in("phase_id", phaseIds)
+        .gte("created_at", periodStart)
     : { data: [] as ActivityRow[] };
   const activities = (activitiesRaw ?? []) as ActivityRow[];
 
@@ -390,8 +415,18 @@ async function getDashboardData(): Promise<DashboardData> {
 // Page
 // ---------------------------------------------------------------------------
 
-export default async function AdminOverview() {
-  const [counts, data] = await Promise.all([getAdminCounts(), getDashboardData()]);
+export default async function AdminOverview({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string }>;
+}) {
+  const sp = await searchParams;
+  const period: DashboardPeriod =
+    sp.period === "quarter" || sp.period === "ytd" ? sp.period : "month";
+  const [counts, data] = await Promise.all([
+    getAdminCounts(),
+    getDashboardData(period),
+  ]);
 
   const donutSegments: DonutSegment[] = [
     { key: "on_track", label: "On Track", value: data.health.on_track },
@@ -409,6 +444,14 @@ export default async function AdminOverview() {
 
   return (
     <div className="space-y-5">
+      {/* Page title + period selector */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-heading text-xl font-bold tracking-tight text-foreground">
+          Dashboard
+        </h1>
+        <DashboardPeriodSelector current={period} />
+      </div>
+
       {/* KPI summary row */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <KpiCard

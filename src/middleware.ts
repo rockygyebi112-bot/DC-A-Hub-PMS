@@ -4,11 +4,11 @@ import { decideRedirect } from "@/lib/auth/decide-redirect";
 import type { AppRole } from "@/lib/auth/require-role";
 
 /**
- * Request proxy - enforces role-based surface separation and refreshes
+ * Next.js middleware - enforces role-based surface separation and refreshes
  * the Supabase auth cookie on every request.
  *
  * Defence-in-depth: each app layout also calls `getCurrentProfile()` and
- * redirects, but proxy stops attackers who craft a direct request to a
+ * redirects, but middleware stops attackers who craft a direct request to a
  * surface they should not reach, such as a client hitting /admin.
  */
 
@@ -30,7 +30,7 @@ const PUBLIC_PREFIXES = [
   "/srsf-logo.png",
 ];
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Let static assets and auth endpoints through untouched.

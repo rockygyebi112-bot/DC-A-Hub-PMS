@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -74,7 +74,59 @@ function SortableHeader({
 export function ProjectsTable({ rows }: { rows: ProjectsTableRow[] }) {
   const router = useRouter();
   return (
-    <div className="overflow-x-auto">
+    <>
+      {/* Mobile: card list. */}
+      <ul className="space-y-2 md:hidden">
+        {rows.map((p) => {
+          const href = `/admin/projects/${p.id}`;
+          return (
+            <li key={p.id}>
+              <Link
+                href={href}
+                className={`flex min-h-16 flex-col gap-1 rounded-lg border border-border bg-card p-3 transition-colors active:bg-muted/60 ${
+                  p.archived_at ? "opacity-60" : ""
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{p.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {p.client?.name ?? "Unassigned"}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <StatusPill
+                      status={
+                        p.archived_at
+                          ? "archived"
+                          : (p.status as
+                              | "planning"
+                              | "active"
+                              | "paused"
+                              | "completed")
+                      }
+                    />
+                    <ChevronRight className="size-4 text-muted-foreground" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+                    {p.code}
+                  </code>
+                  <span className="truncate">
+                    {p.start_date || p.end_date
+                      ? `${p.start_date ?? "TBD"} \u2013 ${p.end_date ?? "TBD"}`
+                      : "Not scheduled"}
+                  </span>
+                </div>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Desktop: table. */}
+      <div className="hidden overflow-x-auto md:block">
       <Table>
         <TableHeader>
           <TableRow>
@@ -149,6 +201,7 @@ export function ProjectsTable({ rows }: { rows: ProjectsTableRow[] }) {
           })}
         </TableBody>
       </Table>
-    </div>
+      </div>
+    </>
   );
 }

@@ -46,7 +46,7 @@ export default async function AccountLayout({
           </SignOutButton>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-3xl px-4 py-8 md:px-6">{children}</main>
+      <main id="main-content" className="mx-auto w-full max-w-3xl px-4 py-8 md:px-6">{children}</main>
     </div>
   );
 }

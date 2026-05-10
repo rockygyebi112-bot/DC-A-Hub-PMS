@@ -55,7 +55,7 @@ export function AppShell({
           greetingSubtitle={greetingSubtitle}
           greetingPath={greetingPath}
         />
-        <main className="flex-1">
+        <main id="main-content" className="flex-1">
           <div className="page-enter mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
             {children}
           </div>

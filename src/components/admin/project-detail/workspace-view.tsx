@@ -13,7 +13,6 @@ import {
   FileText,
   Filter,
   ListChecks,
-  MessageSquare,
   MoreHorizontal,
   Paperclip,
   Search,
@@ -613,18 +612,7 @@ function ActivityRow({ activity }: { activity: WVActivity }) {
         </span>
       </td>
       <td className="px-3 py-3 align-top">
-        <span className="inline-flex items-center gap-1 text-[12px] text-foreground/80">
-          <MessageSquare className="size-3.5 text-muted-foreground" />
-          <span className="tabular-nums">{activity.commentCount ?? 0}</span>
-        </span>
-      </td>
-      <td className="px-3 py-3 align-top">
         <PriorityDot p={activity.priority ?? "medium"} />
-      </td>
-      <td className="px-3 py-3 align-top text-[12px] text-muted-foreground whitespace-nowrap">
-        {formatRelative(
-          activity.updatedAt ?? activity.completed_date ?? activity.planned_date,
-        )}
       </td>
       <td className="px-3 py-3 align-top">
         <button
@@ -736,56 +724,44 @@ function WorkplanCard({
                 />
                 {isExpanded && filtered.length > 0 && (
                   <div className="overflow-x-auto border-t border-border bg-muted/10">
-                    <table className="w-full min-w-[1040px] table-fixed">
+                    <table className="w-full min-w-[840px] table-fixed">
                       <thead>
                         <tr className="border-b border-border bg-muted/30">
                           <th
                             className="px-5 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
-                            style={{ width: "26%" }}
+                            style={{ width: "32%" }}
                           >
                             Activity
                           </th>
                           <th
                             className="px-3 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
-                            style={{ width: "14%" }}
+                            style={{ width: "18%" }}
                           >
                             Assignee
                           </th>
                           <th
                             className="px-3 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
-                            style={{ width: "11%" }}
+                            style={{ width: "13%" }}
                           >
                             Due date
                           </th>
                           <th
                             className="px-3 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
-                            style={{ width: "13%" }}
+                            style={{ width: "16%" }}
                           >
                             Status
                           </th>
                           <th
                             className="px-3 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
-                            style={{ width: "8%" }}
+                            style={{ width: "9%" }}
                           >
                             Evidence
-                          </th>
-                          <th
-                            className="px-3 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
-                            style={{ width: "7%" }}
-                          >
-                            Comments
                           </th>
                           <th
                             className="px-3 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
                             style={{ width: "8%" }}
                           >
                             Priority
-                          </th>
-                          <th
-                            className="px-3 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
-                            style={{ width: "9%" }}
-                          >
-                            Updated
                           </th>
                           <th
                             className="px-3 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
@@ -830,6 +806,7 @@ function ProjectHealthCard({
     health === "on-track"
       ? {
           ring: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+          headerColor: "text-emerald-600",
           headline: "On track",
           message: "The project is progressing well.",
           icon: ShieldCheck,
@@ -837,6 +814,7 @@ function ProjectHealthCard({
       : health === "at-risk"
         ? {
             ring: "bg-amber-50 text-amber-700 ring-amber-100",
+            headerColor: "text-amber-600",
             headline: "At risk",
             message: "Some activities need attention.",
             icon: AlertTriangle,
@@ -844,21 +822,24 @@ function ProjectHealthCard({
         : health === "delayed"
           ? {
               ring: "bg-red-50 text-red-700 ring-red-100",
+              headerColor: "text-red-600",
               headline: "Delayed",
               message: "Activities are running behind schedule.",
               icon: AlertTriangle,
             }
           : {
               ring: "bg-muted text-muted-foreground ring-border",
+              headerColor: "text-muted-foreground",
               headline: "Not started",
               message: "No activity yet on this project.",
               icon: Shield,
             };
   const Icon = tone.icon;
+  const milestonesOk = health === "on-track" || health === "not-started";
   return (
     <section className="rounded-[16px] border border-border bg-card shadow-card">
       <header className="flex items-center gap-2 border-b border-border px-5 py-3.5">
-        <ShieldCheck className="size-4 text-emerald-600" />
+        <Icon className={cn("size-4", tone.headerColor)} />
         <h3 className="text-sm font-semibold">Project health</h3>
       </header>
       <div className="space-y-3 px-5 py-4">
@@ -893,22 +874,36 @@ function ProjectHealthCard({
             </span>
           </li>
           <li className="flex items-center gap-2">
-            <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" />
+            <CheckCircle2
+              className={cn(
+                "size-3.5 shrink-0",
+                dueThisWeek === 0 ? "text-emerald-500" : "text-amber-500",
+              )}
+            />
             <span className="text-foreground/80">
               {dueThisWeek} activit{dueThisWeek === 1 ? "y" : "ies"} due this week
             </span>
           </li>
           <li className="flex items-center gap-2">
-            <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" />
-            <span className="text-foreground/80">Milestones are on track</span>
+            {milestonesOk ? (
+              <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" />
+            ) : (
+              <AlertTriangle
+                className={cn(
+                  "size-3.5 shrink-0",
+                  health === "delayed" ? "text-red-500" : "text-amber-500",
+                )}
+              />
+            )}
+            <span className="text-foreground/80">
+              {milestonesOk
+                ? "Milestones are on track"
+                : health === "delayed"
+                  ? "Milestones are behind schedule"
+                  : "Milestones need attention"}
+            </span>
           </li>
         </ul>
-        <Link
-          href="#"
-          className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-dca-blue-600)] hover:underline"
-        >
-          View details <ChevronRight className="size-3" />
-        </Link>
       </div>
     </section>
   );
@@ -1015,14 +1010,6 @@ function RecentUpdatesCard({
           ))}
         </ul>
       )}
-      <footer className="border-t border-border px-5 py-3 text-center">
-        <Link
-          href={viewAllHref}
-          className="text-xs font-semibold text-[var(--color-dca-blue-600)] hover:underline"
-        >
-          View all updates ›
-        </Link>
-      </footer>
     </section>
   );
 }

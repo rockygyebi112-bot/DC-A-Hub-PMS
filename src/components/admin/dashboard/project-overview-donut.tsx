@@ -97,7 +97,7 @@ export function ProjectOverviewDonut({
         </span>
       </header>
       <div className="grid gap-4 px-4 pb-5 sm:grid-cols-[200px_1fr] sm:items-center sm:gap-6 sm:px-5">
-        <div className="relative mx-auto flex size-[148px] items-center justify-center sm:size-[200px]">
+        <div className="relative mx-auto flex size-[128px] items-center justify-center sm:size-[200px]">
           <svg viewBox="0 0 200 200" className="absolute inset-0">
             <circle cx={cx} cy={cy} r={rOuter} fill="var(--muted)" />
             {arcs}

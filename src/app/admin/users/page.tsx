@@ -1,23 +1,12 @@
-import Link from "next/link";
 import { Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ArchiveToggle } from "@/components/admin/archive-toggle";
 import { InviteUserForm } from "@/components/admin/forms/invite-user-form";
 import { FilterChips } from "@/components/admin/ui/filter-chips";
 import { ListSearch } from "@/components/admin/ui/list-search";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
-import { StatusPill } from "@/components/admin/ui/status-pill";
-import { UserAvatar } from "@/components/admin/ui/user-avatar";
+import { UsersTable, type UsersTableRow } from "@/components/admin/ui/users-table";
 import { listUsers } from "@/lib/admin/queries";
 
 const ROLE_OPTIONS = [
@@ -75,53 +64,7 @@ export default async function UsersPage({
             }
           />
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-24" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((user) => (
-                  <TableRow
-                    key={user.id}
-                    className={!user.is_active ? "opacity-60" : ""}
-                    style={{ height: "var(--admin-row-h)" }}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <UserAvatar email={user.email} name={user.full_name} size="sm" />
-                        <span className="font-medium">{user.full_name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <StatusPill status={user.role as "admin" | "staff" | "client"} />
-                    </TableCell>
-                    <TableCell>
-                      <StatusPill
-                        status={user.is_active ? "active-user" : "inactive-user"}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        render={<Link href={`/admin/users/${user.id}`} />}
-                      >
-                        Open
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <UsersTable rows={rows as UsersTableRow[]} />
         )}
       </SectionCard>
     </div>

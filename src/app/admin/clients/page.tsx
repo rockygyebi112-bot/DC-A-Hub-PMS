@@ -2,19 +2,11 @@ import Link from "next/link";
 import { Building2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ArchiveToggle } from "@/components/admin/archive-toggle";
 import { ListSearch } from "@/components/admin/ui/list-search";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
-import { StatusPill } from "@/components/admin/ui/status-pill";
+import { ClientsTable } from "@/components/admin/ui/clients-table";
 import { listClients } from "@/lib/admin/queries";
 
 export default async function ClientsPage({
@@ -75,44 +67,7 @@ export default async function ClientsPage({
             }
           />
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Contact email</TableHead>
-                  <TableHead>Projects</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-24" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((c) => (
-                  <TableRow
-                    key={c.id}
-                    className={c.archived_at ? "opacity-60" : ""}
-                    style={{ height: "var(--admin-row-h)" }}
-                  >
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell>{c.contact_email ?? "-"}</TableCell>
-                    <TableCell>{c.project_count}</TableCell>
-                    <TableCell>
-                      <StatusPill status={c.archived_at ? "archived" : "active-user"} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        render={<Link href={`/admin/clients/${c.id}`} />}
-                      >
-                        Open
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <ClientsTable rows={rows} />
         )}
       </SectionCard>
     </div>

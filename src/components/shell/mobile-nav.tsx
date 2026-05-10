@@ -64,11 +64,11 @@ export function MobileNav({
             size="icon-sm"
             aria-label="Open navigation menu"
             className="md:hidden"
-          />
+          >
+            <Menu className="size-5" />
+          </Button>
         }
-      >
-        <Menu className="size-5" />
-      </DialogPrimitive.Trigger>
+      />
 
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop
@@ -123,11 +123,11 @@ export function MobileNav({
                   size="icon-sm"
                   aria-label="Close navigation menu"
                   className="text-white/70 hover:bg-white/5 hover:text-white"
-                />
+                >
+                  <X className="size-4" />
+                </Button>
               }
-            >
-              <X className="size-4" />
-            </DialogPrimitive.Close>
+            />
           </div>
 
           <div className="mt-2 flex-1 overflow-y-auto pb-4">

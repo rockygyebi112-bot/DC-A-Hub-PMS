@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/admin/ui/status-pill";
+import { cn } from "@/lib/utils";
 
 export type ProjectsTableRow = {
   id: string;
@@ -24,6 +26,51 @@ export type ProjectsTableRow = {
   client: { id: string; name: string } | null;
 };
 
+function SortableHeader({
+  label,
+  sortKey,
+}: {
+  label: string;
+  sortKey: string;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const currentSort = params.get("sort") ?? "";
+  const currentDir = params.get("dir") === "desc" ? "desc" : "asc";
+  const active = currentSort === sortKey;
+
+  function go() {
+    const next = new URLSearchParams(Array.from(params.entries()));
+    if (active) {
+      // Toggle direction on the active column.
+      next.set("sort", sortKey);
+      next.set("dir", currentDir === "asc" ? "desc" : "asc");
+    } else {
+      // Switching column defaults to asc.
+      next.set("sort", sortKey);
+      next.set("dir", "asc");
+    }
+    const qs = next.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  const Icon = active ? (currentDir === "asc" ? ChevronUp : ChevronDown) : ChevronsUpDown;
+  return (
+    <button
+      type="button"
+      onClick={go}
+      className={cn(
+        "inline-flex items-center gap-1 text-left transition-colors hover:text-foreground",
+        active ? "text-foreground" : "text-muted-foreground",
+      )}
+    >
+      <span>{label}</span>
+      <Icon className={cn("size-3.5", !active && "opacity-60")} />
+    </button>
+  );
+}
+
 export function ProjectsTable({ rows }: { rows: ProjectsTableRow[] }) {
   const router = useRouter();
   return (
@@ -31,11 +78,19 @@ export function ProjectsTable({ rows }: { rows: ProjectsTableRow[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
+            <TableHead>
+              <SortableHeader label="Name" sortKey="name" />
+            </TableHead>
             <TableHead>Code</TableHead>
-            <TableHead>Client</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Schedule</TableHead>
+            <TableHead>
+              <SortableHeader label="Client" sortKey="client_id" />
+            </TableHead>
+            <TableHead>
+              <SortableHeader label="Status" sortKey="status" />
+            </TableHead>
+            <TableHead>
+              <SortableHeader label="Start date" sortKey="start_date" />
+            </TableHead>
             <TableHead className="w-24" />
           </TableRow>
         </TableHeader>

@@ -92,14 +92,42 @@ export async function listClientProjects(clientId: string): Promise<ClientProjec
   });
 }
 
-export async function listProjects(opts: { includeArchived?: boolean } = {}) {
+const PROJECT_SORT_COLUMNS = [
+  "name",
+  "status",
+  "start_date",
+  "created_at",
+  "client_id",
+] as const;
+export type ProjectSortColumn = (typeof PROJECT_SORT_COLUMNS)[number];
+
+export function isProjectSortColumn(value: unknown): value is ProjectSortColumn {
+  return (
+    typeof value === "string" &&
+    (PROJECT_SORT_COLUMNS as readonly string[]).includes(value)
+  );
+}
+
+export async function listProjects(
+  opts: {
+    includeArchived?: boolean;
+    sort?: string;
+    dir?: "asc" | "desc";
+  } = {},
+) {
   const sb = await createClient();
+  // Allowlist sort column to prevent injection. Fall back to name asc.
+  const sortColumn: ProjectSortColumn = isProjectSortColumn(opts.sort)
+    ? opts.sort
+    : "name";
+  const ascending = opts.dir !== "desc";
+
   const q = sb
     .from("projects")
     .select(
-      "id, name, code, status, archived_at, start_date, end_date, client:clients(id, name)",
+      "id, name, code, status, archived_at, start_date, end_date, created_at, client:clients(id, name)",
     )
-    .order("name", { ascending: true });
+    .order(sortColumn, { ascending });
   if (!opts.includeArchived) q.is("archived_at", null);
   const { data, error } = await q;
   throwIfError(error);

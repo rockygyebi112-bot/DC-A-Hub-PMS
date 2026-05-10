@@ -218,13 +218,43 @@ export type AdminCounts = {
   activeProjects: number;
   totalUsers: number;
   pendingInvites: number;
+  deltas: {
+    totalProjects: number;
+    activeProjects: number;
+    completedProjects: number;
+    pausedProjects: number;
+    totalUsers: number;
+  };
 };
+
+export function computeDelta(current: number, previous: number): number {
+  if (previous === 0) return 0;
+  return Math.round(((current - previous) / previous) * 100);
+}
 
 export async function getAdminCounts(): Promise<AdminCounts> {
   const sb = await createClient();
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [clientsRes, projectsRes, usersRes, invitesRes] = await Promise.all([
+  const [
+    clientsRes,
+    projectsRes,
+    usersRes,
+    invitesRes,
+    // Current totals (active = not archived) by status
+    totalProjectsCurrentRes,
+    activeProjectsCurrentRes,
+    completedProjectsCurrentRes,
+    pausedProjectsCurrentRes,
+    totalUsersCurrentRes,
+    // Snapshot 30 days ago (rows that existed then)
+    totalProjectsPrevRes,
+    activeProjectsPrevRes,
+    completedProjectsPrevRes,
+    pausedProjectsPrevRes,
+    totalUsersPrevRes,
+  ] = await Promise.all([
     sb.from("clients").select("*", { count: "exact", head: true }).is("archived_at", null),
     sb.from("projects").select("*", { count: "exact", head: true }).is("archived_at", null),
     sb.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
@@ -232,13 +262,69 @@ export async function getAdminCounts(): Promise<AdminCounts> {
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .gte("created_at", sevenDaysAgo),
+    sb.from("projects").select("*", { count: "exact", head: true }).is("archived_at", null),
+    sb
+      .from("projects")
+      .select("*", { count: "exact", head: true })
+      .is("archived_at", null)
+      .eq("status", "active"),
+    sb
+      .from("projects")
+      .select("*", { count: "exact", head: true })
+      .is("archived_at", null)
+      .eq("status", "completed"),
+    sb
+      .from("projects")
+      .select("*", { count: "exact", head: true })
+      .is("archived_at", null)
+      .eq("status", "paused"),
+    sb.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
+    sb
+      .from("projects")
+      .select("*", { count: "exact", head: true })
+      .lt("created_at", thirtyDaysAgo),
+    sb
+      .from("projects")
+      .select("*", { count: "exact", head: true })
+      .lt("created_at", thirtyDaysAgo)
+      .eq("status", "active"),
+    sb
+      .from("projects")
+      .select("*", { count: "exact", head: true })
+      .lt("created_at", thirtyDaysAgo)
+      .eq("status", "completed"),
+    sb
+      .from("projects")
+      .select("*", { count: "exact", head: true })
+      .lt("created_at", thirtyDaysAgo)
+      .eq("status", "paused"),
+    sb
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .lt("created_at", thirtyDaysAgo),
   ]);
+
+  const totalProjectsCurrent = totalProjectsCurrentRes.count ?? 0;
+  const activeProjectsCurrent = activeProjectsCurrentRes.count ?? 0;
+  const completedProjectsCurrent = completedProjectsCurrentRes.count ?? 0;
+  const pausedProjectsCurrent = pausedProjectsCurrentRes.count ?? 0;
+  const totalUsersCurrent = totalUsersCurrentRes.count ?? 0;
 
   return {
     activeClients: clientsRes.count ?? 0,
     activeProjects: projectsRes.count ?? 0,
     totalUsers: usersRes.count ?? 0,
     pendingInvites: invitesRes.count ?? 0,
+    deltas: {
+      totalProjects: computeDelta(totalProjectsCurrent, totalProjectsPrevRes.count ?? 0),
+      activeProjects: computeDelta(activeProjectsCurrent, activeProjectsPrevRes.count ?? 0),
+      completedProjects: computeDelta(
+        completedProjectsCurrent,
+        completedProjectsPrevRes.count ?? 0,
+      ),
+      pausedProjects: computeDelta(pausedProjectsCurrent, pausedProjectsPrevRes.count ?? 0),
+      totalUsers: computeDelta(totalUsersCurrent, totalUsersPrevRes.count ?? 0),
+    },
   };
 }
 

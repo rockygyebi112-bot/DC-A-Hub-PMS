@@ -2,20 +2,12 @@ import Link from "next/link";
 import { FolderKanban, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ArchiveToggle } from "@/components/admin/archive-toggle";
 import { FilterChips } from "@/components/admin/ui/filter-chips";
 import { ListSearch } from "@/components/admin/ui/list-search";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
-import { StatusPill } from "@/components/admin/ui/status-pill";
+import { ProjectsTable, type ProjectsTableRow } from "@/components/admin/ui/projects-table";
 import { listProjects } from "@/lib/admin/queries";
 
 const STATUS_OPTIONS = [
@@ -89,60 +81,7 @@ export default async function ProjectsPage({
             }
           />
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Schedule</TableHead>
-                  <TableHead className="w-24" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((p) => (
-                  <TableRow
-                    key={p.id}
-                    className={p.archived_at ? "opacity-60" : ""}
-                    style={{ height: "var(--admin-row-h)" }}
-                  >
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell>
-                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                        {p.code}
-                      </code>
-                    </TableCell>
-                    <TableCell>{p.client?.name ?? "-"}</TableCell>
-                    <TableCell>
-                      <StatusPill
-                        status={
-                          p.archived_at
-                            ? "archived"
-                            : (p.status as "planning" | "active" | "paused" | "completed")
-                        }
-                      />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {p.start_date || p.end_date
-                        ? `${p.start_date ?? "TBD"} - ${p.end_date ?? "TBD"}`
-                        : "Not scheduled"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        render={<Link href={`/admin/projects/${p.id}`} />}
-                      >
-                        Open
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <ProjectsTable rows={rows as ProjectsTableRow[]} />
         )}
       </SectionCard>
     </div>

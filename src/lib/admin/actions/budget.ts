@@ -10,6 +10,7 @@ import {
   expenseSchema,
 } from "@/lib/admin/schemas";
 import type { ActionResult } from "@/lib/admin/actions/projects";
+import { dbErrorMessage } from "@/lib/db-errors";
 
 function revalidateBudget(projectId: string) {
   revalidatePath(`/admin/projects/${projectId}`);

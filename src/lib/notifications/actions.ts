@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { dbErrorMessage } from "@/lib/db-errors";
 
 export async function markNotificationsRead() {
   const sb = await createClient();

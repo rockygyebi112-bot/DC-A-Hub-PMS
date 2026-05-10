@@ -4,12 +4,11 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth/guards";
 import { clientFormSchema } from "@/lib/admin/schemas";
+import { dbErrorMessage } from "@/lib/db-errors";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
-
-const GENERIC_DB_ERROR = "Operation failed";
 
 export async function createClientOrg(
   raw: unknown,
@@ -31,7 +30,7 @@ export async function createClientOrg(
     })
     .select("id")
     .single();
-  if (error) return { ok: false, error: GENERIC_DB_ERROR };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidatePath("/admin/clients");
   return { ok: true, data: { id: data.id } };
 }
@@ -56,7 +55,7 @@ export async function updateClientOrg(
       logo_url: parsed.data.logo_url ?? null,
     })
     .eq("id", id);
-  if (error) return { ok: false, error: GENERIC_DB_ERROR };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidatePath("/admin/clients");
   revalidatePath(`/admin/clients/${id}`);
   return { ok: true };

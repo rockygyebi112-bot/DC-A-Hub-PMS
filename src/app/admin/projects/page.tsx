@@ -36,6 +36,24 @@ export default async function ProjectsPage({
     return true;
   });
 
+  // Live status counts (computed from search-matched rows so chip counts
+  // reflect what's actually navigable from the current view).
+  const statusSource = q
+    ? allRows.filter((p) => {
+        const haystack = `${p.name} ${p.code} ${p.client?.name ?? ""}`.toLowerCase();
+        return haystack.includes(q);
+      })
+    : allRows;
+  const statusCounts: Record<string, number> = {
+    planning: 0,
+    active: 0,
+    paused: 0,
+    completed: 0,
+  };
+  for (const p of statusSource) {
+    if (p.status in statusCounts) statusCounts[p.status] += 1;
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -54,7 +72,7 @@ export default async function ProjectsPage({
           <ListSearch placeholder="Search projects..." />
           <ArchiveToggle />
         </div>
-        <FilterChips paramName="status" options={STATUS_OPTIONS} />
+        <FilterChips paramName="status" options={STATUS_OPTIONS} counts={statusCounts} />
       </div>
 
       <SectionCard

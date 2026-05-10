@@ -20,6 +20,12 @@ import {
   Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
@@ -117,6 +123,7 @@ export function AppSidebar({
   }
 
   return (
+    <TooltipProvider delay={100}>
     <aside
       className={cn(
         "sidebar-navy sticky top-0 hidden h-screen shrink-0 border-r border-[hsl(225_35%_24%)] transition-[width] duration-200 md:flex md:flex-col",
@@ -183,11 +190,10 @@ export function AppSidebar({
                 : pathname === item.href || pathname.startsWith(item.href + "/");
               const Icon = ICONS[item.icon] ?? LayoutDashboard;
 
-              return (
+              const linkEl = (
                 <Link
                   key={item.href}
                   href={item.href}
-                  title={collapsed ? item.label : undefined}
                   className={cn(
                     "flex h-10 items-center gap-3 rounded-[10px] px-3 text-sm transition-colors-smooth",
                     collapsed && "justify-center px-0",
@@ -214,6 +220,35 @@ export function AppSidebar({
                   )}
                 </Link>
               );
+
+              if (collapsed) {
+                return (
+                  <Tooltip key={item.href}>
+                    <TooltipTrigger
+                      render={
+                        <Link
+                          href={item.href}
+                          className={cn(
+                            "flex h-10 items-center justify-center rounded-[10px] px-0 text-sm transition-colors-smooth",
+                            active
+                              ? "bg-[var(--color-dca-blue-500)] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                              : "text-white/70 hover:bg-white/5 hover:text-white",
+                          )}
+                        >
+                          <span className="flex size-5 shrink-0 items-center justify-center">
+                            <Icon className="size-[18px]" strokeWidth={active ? 2.25 : 1.75} />
+                          </span>
+                        </Link>
+                      }
+                    />
+                    <TooltipContent side="right" sideOffset={8}>
+                      {item.label}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              }
+
+              return linkEl;
             })}
           </div>
         ))}
@@ -221,5 +256,6 @@ export function AppSidebar({
 
       {!collapsed && footer && <div className="mx-3 mb-3 mt-4">{footer}</div>}
     </aside>
+    </TooltipProvider>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   Card,
@@ -94,11 +95,11 @@ export default function SignUpPage() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password" className="text-xs font-medium text-gray-600">Password</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-10" />
+            <PasswordInput id="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-10" autoComplete="new-password" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="confirmPassword" className="text-xs font-medium text-gray-600">Confirm Password</Label>
-            <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="h-10" />
+            <PasswordInput id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="h-10" autoComplete="new-password" />
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4 px-8 pb-8">

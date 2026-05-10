@@ -111,7 +111,7 @@ export function AppSidebar({
   })();
 
   const displayBrand = activeProject?.name ?? brand;
-  const displaySubtitle = activeProject ? subtitle : subtitle;
+  const displaySubtitle = subtitle;
   const displayLogo = activeProject?.logoUrl ?? defaultLogoUrl ?? null;
 
   function toggle() {

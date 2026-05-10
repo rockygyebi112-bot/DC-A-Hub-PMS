@@ -416,35 +416,35 @@ export default async function AdminOverview() {
           value={data.totals.total}
           icon={FolderKanban}
           accent="blue"
-          delta={12}
+          delta={counts.deltas.totalProjects}
         />
         <KpiCard
           label="Active Projects"
           value={data.totals.active}
           icon={Activity}
           accent="green"
-          delta={6}
+          delta={counts.deltas.activeProjects}
         />
         <KpiCard
           label="Completed Projects"
           value={data.totals.completed}
           icon={CheckCircle2}
           accent="purple"
-          delta={25}
+          delta={counts.deltas.completedProjects}
         />
         <KpiCard
           label="On Hold Projects"
           value={data.totals.paused}
           icon={PauseCircle}
           accent="amber"
-          delta={-8}
+          delta={counts.deltas.pausedProjects}
         />
         <KpiCard
           label="Total Users"
           value={counts.totalUsers}
           icon={Users}
           accent="cyan"
-          delta={8}
+          delta={counts.deltas.totalUsers}
         />
       </div>
 

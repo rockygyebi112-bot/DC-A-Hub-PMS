@@ -14,11 +14,9 @@ import type { AppRole } from "@/lib/auth/require-role";
 
 const PUBLIC_PREFIXES = [
   "/login",
-  "/signup",
   "/forgot-password",
   "/reset-password",
   "/accept-invite",
-  "/pending",
   "/auth",
   "/api",
   "/_next",

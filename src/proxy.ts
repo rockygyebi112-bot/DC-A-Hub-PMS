@@ -90,7 +90,23 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all paths except static assets handled above by early-return.
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    {
+      // Exclude paths that never need the auth/role check at the matcher level
+      // so the proxy function is not invoked at all. This protects our Vercel
+      // Hobby quotas (Edge Requests + Function Invocations) by skipping:
+      //   - API routes (they enforce their own auth)
+      //   - Next.js internals (_next/*)
+      //   - Public auth pages (login, forgot-password, reset-password, accept-invite, /auth callbacks)
+      //   - Static files in /public (logos, manifest, icons, programs)
+      //   - Anything ending in a static asset extension
+      source:
+        "/((?!api|_next|auth|login|forgot-password|reset-password|accept-invite|favicon\\.ico|logo\\.png|srsf-logo\\.png|manifest\\.json|icons|programs|.*\\.(?:png|jpg|jpeg|gif|svg|webp|avif|ico|json|xml|txt|woff|woff2|ttf|otf|map)).*)",
+      // Skip RSC prefetch requests entirely. Defence-in-depth is preserved by
+      // the layout-level getCurrentProfile() checks on actual navigation.
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
   ],
 };

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AppSidebar, type NavGroup, type ProjectBrand } from "./app-sidebar";
 import { AppTopbar } from "./app-topbar";
+import { MobileNav } from "./mobile-nav";
 
 export function AppShell({
   children,
@@ -54,6 +55,17 @@ export function AppShell({
           greeting={greeting}
           greetingSubtitle={greetingSubtitle}
           greetingPath={greetingPath}
+          mobileNav={
+            <MobileNav
+              brand={brand}
+              subtitle={subtitle}
+              groups={groups}
+              defaultLogoUrl={defaultLogoUrl}
+              projectBrands={projectBrands}
+              projectPathPrefix={projectPathPrefix}
+              footer={sidebarFooter}
+            />
+          }
         />
         <main id="main-content" className="flex-1">
           <div className="page-enter mx-auto w-full max-w-7xl px-4 py-6 md:px-8">

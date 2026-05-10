@@ -38,7 +38,6 @@ export function ErrorFallback({
   useEffect(() => {
     // Surfaced in the server console (and any attached log drain) for triage.
     // The browser console will only show the redacted message + digest.
-    // eslint-disable-next-line no-console
     console.error("[app error]", { digest: error?.digest, message: error?.message });
   }, [error]);
 

@@ -39,7 +39,7 @@ export async function upsertProjectBudget(
       },
       { onConflict: "project_id" },
     );
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidateBudget(projectId);
   return { ok: true };
 }
@@ -77,7 +77,7 @@ export async function createBudgetCategory(
     })
     .select("id")
     .single();
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidateBudget(projectId);
   return { ok: true, data: { id: data.id } };
 }
@@ -101,7 +101,7 @@ export async function updateBudgetCategory(
     })
     .eq("id", categoryId)
     .eq("project_id", projectId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidateBudget(projectId);
   return { ok: true };
 }
@@ -118,7 +118,7 @@ export async function deleteBudgetCategory(
     .delete()
     .eq("id", categoryId)
     .eq("project_id", projectId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidateBudget(projectId);
   return { ok: true };
 }
@@ -206,7 +206,7 @@ export async function createExpense(
 
   if (error) {
     if (receipt) await deleteReceipt(receipt.path);
-    return { ok: false, error: error.message };
+    return { ok: false, error: dbErrorMessage(error) };
   }
   revalidateBudget(projectId);
   return { ok: true, data: { id: data.id } };
@@ -230,7 +230,7 @@ export async function updateExpense(
     .eq("id", expenseId)
     .eq("project_id", projectId)
     .single();
-  if (existErr) return { ok: false, error: existErr.message };
+  if (existErr) return { ok: false, error: dbErrorMessage(existErr) };
 
   let nextReceipt: { path: string | null; name: string | null } = {
     path: existing.receipt_path,
@@ -270,7 +270,7 @@ export async function updateExpense(
     .update(update)
     .eq("id", expenseId)
     .eq("project_id", projectId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidateBudget(projectId);
   return { ok: true };
 }
@@ -295,7 +295,7 @@ export async function deleteExpense(
     .delete()
     .eq("id", expenseId)
     .eq("project_id", projectId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
 
   if (existing?.receipt_path) await deleteReceipt(existing.receipt_path);
   revalidateBudget(projectId);

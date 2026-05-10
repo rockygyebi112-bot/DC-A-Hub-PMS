@@ -21,7 +21,7 @@ import type { NavGroup } from "./app-sidebar";
 
 // Icons are referenced by string name (server -> client boundary cannot
 // serialize functions). Keep this map in sync with app-sidebar.tsx.
-const ICONS: Record<string, LucideIcon> = {
+export const NAV_ICONS: Record<string, LucideIcon> = {
   "layout-dashboard": LayoutDashboard,
   "folder-kanban": FolderKanban,
   "list-checks": ListChecks,
@@ -62,7 +62,7 @@ export function SidebarNavList({
               ? pathname === item.href
               : pathname === item.href ||
                 pathname.startsWith(item.href + "/");
-            const Icon = ICONS[item.icon] ?? LayoutDashboard;
+            const Icon = NAV_ICONS[item.icon] ?? LayoutDashboard;
 
             return (
               <Link

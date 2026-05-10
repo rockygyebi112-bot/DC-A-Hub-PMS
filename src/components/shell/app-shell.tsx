@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
-import { AppSidebar, type NavGroup, type ProjectBrand } from "./app-sidebar";
+import { AppSidebar, type NavGroup, type NavItem, type ProjectBrand } from "./app-sidebar";
 import { AppTopbar } from "./app-topbar";
 import { MobileNav } from "./mobile-nav";
+import { BottomNav } from "./bottom-nav";
+import { cn } from "@/lib/utils";
 
 export function AppShell({
   children,
@@ -18,6 +20,7 @@ export function AppShell({
   greeting,
   greetingSubtitle,
   greetingPath,
+  bottomNavItems,
 }: {
   children: ReactNode;
   brand: string;
@@ -33,6 +36,9 @@ export function AppShell({
   greeting?: string;
   greetingSubtitle?: string;
   greetingPath?: string;
+  /** Optional explicit list of bottom-tab destinations. Defaults to the
+   *  first four nav items across `groups`. */
+  bottomNavItems?: NavItem[];
 }) {
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -68,11 +74,19 @@ export function AppShell({
           }
         />
         <main id="main-content" className="flex-1">
-          <div className="page-enter mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
+          <div
+            className={cn(
+              "page-enter mx-auto w-full max-w-7xl px-4 py-6 md:px-8",
+              // Reserve space for the fixed bottom nav on mobile so the last
+              // bit of content isn't trapped behind it (plus iOS safe area).
+              "pb-[calc(var(--mobile-bottom-nav-h,60px)+env(safe-area-inset-bottom)+1rem)] md:pb-6",
+            )}
+          >
             {children}
           </div>
         </main>
       </div>
+      <BottomNav groups={groups} items={bottomNavItems} />
     </div>
   );
 }

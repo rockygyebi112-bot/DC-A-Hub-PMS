@@ -71,6 +71,11 @@ export type NavGroup = {
   items: NavItem[];
 };
 
+// Convenience re-export of the icon map so other shell pieces (bottom nav,
+// mobile drawer) can resolve string icon keys without re-declaring the map.
+// (NAV_ICONS lives in sidebar-nav-list.tsx to avoid a circular import here.)
+
+
 export type ProjectBrand = {
   name: string;
   logoUrl: string | null;

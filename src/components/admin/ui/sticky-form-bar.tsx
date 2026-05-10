@@ -10,8 +10,17 @@ export function StickyFormBar({
   children: ReactNode;
 }) {
   if (!visible) return null;
+  // Mobile: lift above the fixed bottom nav and respect the iOS home indicator.
+  // Negative margins match each breakpoint's page padding (px-4 on mobile,
+  // md:px-8 on desktop) so the bar spans the full content width.
   return (
-    <div className="sticky bottom-0 -mx-6 md:-mx-8 mt-6 border-t bg-background/95 px-6 md:px-8 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 z-10">
+    <div
+      className={
+        "sticky z-10 -mx-4 mt-6 border-t bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 md:-mx-8 md:px-8 " +
+        // Mobile: clear the fixed bottom nav + iOS home indicator.
+        "bottom-[calc(var(--mobile-bottom-nav-h,60px)+env(safe-area-inset-bottom,0px))] md:bottom-0"
+      }
+    >
       <div className="flex items-center justify-end gap-2">{children}</div>
     </div>
   );

@@ -27,12 +27,12 @@ export function ProjectHealthSummary({
 
   return (
     <div className="rounded-[var(--admin-card-radius)] border bg-card shadow-card">
-      <header className="flex items-center justify-between gap-3 px-5 py-4">
+      <header className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Project Health Summary
         </h2>
       </header>
-      <div className="px-5 pb-5">
+      <div className="px-4 pb-5 sm:px-5">
         <div className="status-bar">
           {buckets.map((b) => {
             const pct = (b.value / total) * 100;

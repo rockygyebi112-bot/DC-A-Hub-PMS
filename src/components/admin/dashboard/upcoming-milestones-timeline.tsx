@@ -45,7 +45,7 @@ export function UpcomingMilestonesTimeline({
 }) {
   return (
     <div className="rounded-[var(--admin-card-radius)] border bg-card shadow-card">
-      <header className="flex items-center justify-between gap-3 px-5 py-4">
+      <header className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Upcoming Milestones
         </h2>
@@ -58,7 +58,7 @@ export function UpcomingMilestonesTimeline({
           </Link>
         )}
       </header>
-      <div className="px-5 pb-5">
+      <div className="px-4 pb-5 sm:px-5">
         {milestones.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             No upcoming milestones.
@@ -91,7 +91,7 @@ export function UpcomingMilestonesTimeline({
                   />
                   <Wrapper
                     href={m.href ?? "#"}
-                    className="flex min-w-0 flex-1 items-start justify-between gap-3"
+                    className="flex min-w-0 flex-1 flex-col items-start gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{m.name}</p>
@@ -99,7 +99,14 @@ export function UpcomingMilestonesTimeline({
                         {m.projectName}
                       </p>
                     </div>
-                    <span className={cn("delivery-pill", pill.className)}>{pill.label}</span>
+                    <span
+                      className={cn(
+                        "delivery-pill shrink-0",
+                        pill.className,
+                      )}
+                    >
+                      {pill.label}
+                    </span>
                   </Wrapper>
                 </li>
               );

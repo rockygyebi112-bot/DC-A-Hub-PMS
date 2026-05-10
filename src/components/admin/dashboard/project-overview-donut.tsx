@@ -88,7 +88,7 @@ export function ProjectOverviewDonut({
 
   return (
     <div className="rounded-[var(--admin-card-radius)] border bg-card shadow-card">
-      <header className="flex items-center justify-between gap-3 px-5 py-4">
+      <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-4 sm:px-5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Project Overview
         </h2>
@@ -96,8 +96,8 @@ export function ProjectOverviewDonut({
           {filterLabel}
         </span>
       </header>
-      <div className="grid gap-6 px-5 pb-5 sm:grid-cols-[200px_1fr] sm:items-center">
-        <div className="relative mx-auto flex size-[200px] items-center justify-center">
+      <div className="grid gap-5 px-4 pb-5 sm:grid-cols-[200px_1fr] sm:items-center sm:gap-6 sm:px-5">
+        <div className="relative mx-auto flex size-[170px] items-center justify-center sm:size-[200px]">
           <svg viewBox="0 0 200 200" className="absolute inset-0">
             <circle cx={cx} cy={cy} r={rOuter} fill="var(--muted)" />
             {arcs}

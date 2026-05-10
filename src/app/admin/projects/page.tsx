@@ -20,13 +20,21 @@ const STATUS_OPTIONS = [
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archived?: string; q?: string; status?: string }>;
+  searchParams: Promise<{
+    archived?: string;
+    q?: string;
+    status?: string;
+    sort?: string;
+    dir?: string;
+  }>;
 }) {
   const sp = await searchParams;
   const includeArchived = sp.archived === "1";
   const q = (sp.q ?? "").toLowerCase().trim();
   const status = sp.status ?? "";
-  const allRows = await listProjects({ includeArchived });
+  const sort = sp.sort;
+  const dir: "asc" | "desc" = sp.dir === "desc" ? "desc" : "asc";
+  const allRows = await listProjects({ includeArchived, sort, dir });
   const rows = allRows.filter((p) => {
     if (q) {
       const haystack = `${p.name} ${p.code} ${p.client?.name ?? ""}`.toLowerCase();

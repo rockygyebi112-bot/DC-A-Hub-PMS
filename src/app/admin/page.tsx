@@ -444,8 +444,10 @@ export default async function AdminOverview({
 
   return (
     <div className="space-y-5">
-      {/* Page title + period selector */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Page title + period selector. Stack on phones so the title gets a
+          full line and the selector doesn't get squeezed; align side-by-side
+          from sm+. */}
+      <div className="flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
         <h1 className="font-heading text-xl font-bold tracking-tight text-foreground">
           Dashboard
         </h1>

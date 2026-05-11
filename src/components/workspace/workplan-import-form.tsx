@@ -43,6 +43,19 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
         <span className="mt-1 text-xs text-muted-foreground">
           Category, activity, deliverable, status, notes, responsible
         </span>
+        {/* The template link is a sibling <a> rendered inside the dropzone
+            label. stopPropagation prevents the parent label's click from
+            also opening the file picker when the user just wants the
+            template. */}
+        <a
+          href="/api/workplan/template"
+          download="workplan-template.xlsx"
+          onClick={(event) => event.stopPropagation()}
+          className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+        >
+          <Download className="size-3" />
+          Download blank template
+        </a>
         <Input
           ref={fileRef}
           name="workplan"
@@ -53,27 +66,10 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
           onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")}
         />
       </label>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
-        <Button type="submit" disabled={pending}>
-          <Upload className="size-4" />
-          {pending ? "Importing..." : "Import workplan"}
-        </Button>
-        {/* Renders as an anchor so the browser handles the file download
-            directly; we don't want this inside the <form> submit flow. */}
-        <Button
-          type="button"
-          variant="outline"
-          render={
-            <a
-              href="/api/workplan/template"
-              download="workplan-template.xlsx"
-            />
-          }
-        >
-          <Download className="size-4" />
-          Download template
-        </Button>
-      </div>
+      <Button type="submit" className="w-full" disabled={pending}>
+        <Upload className="size-4" />
+        {pending ? "Importing..." : "Import workplan"}
+      </Button>
     </form>
   );
 }

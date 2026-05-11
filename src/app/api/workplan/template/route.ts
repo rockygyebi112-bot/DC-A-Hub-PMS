@@ -39,42 +39,10 @@ export async function GET() {
     "Status",
   ];
 
-  const exampleRows: (string | number)[][] = [
-    [
-      "Inception",
-      "Kick-off meeting",
-      "Signed minutes shared with client",
-      "Confirm attendee list 2 days prior",
-      "Project Manager",
-      "done",
-    ],
-    [
-      "",
-      "Stakeholder mapping",
-      "Stakeholder register v1",
-      "Interview top 5 stakeholders",
-      "Analyst",
-      "in_progress",
-    ],
-    [
-      "Discovery",
-      "Field assessment",
-      "Field report",
-      "Coordinate logistics with field lead",
-      "Field Team",
-      "not_started",
-    ],
-    [
-      "",
-      "Requirements workshop",
-      "Workshop summary",
-      "Send pre-read 3 days prior",
-      "Lead Consultant",
-      "not_started",
-    ],
-  ];
-
-  const aoa: (string | number)[][] = [headerRow, ...exampleRows];
+  // Header-only blank template. We deliberately do NOT ship example rows so
+  // users don't have to delete fake data before uploading, and so nobody
+  // mistakes the seed content for activities tied to their project.
+  const aoa: string[][] = [headerRow];
 
   const sheet = XLSX.utils.aoa_to_sheet(aoa);
   // Reasonable column widths so the file opens with all headers visible.

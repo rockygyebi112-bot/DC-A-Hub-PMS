@@ -86,7 +86,7 @@ export function TasksOverview({
                 onClick={() => setActiveFilter(pill.key)}
                 aria-pressed={active}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                  "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                   active
                     ? "border-[var(--color-dca-navy-900)] bg-[var(--color-dca-navy-900)] text-white"
                     : "border-border bg-background text-muted-foreground hover:bg-muted",

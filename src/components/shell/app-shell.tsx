@@ -69,6 +69,7 @@ export function AppShell({
           greeting={greeting}
           greetingSubtitle={greetingSubtitle}
           greetingPath={greetingPath}
+          searchGroups={groups}
           mobileNav={
             <MobileNav
               brand={brand}

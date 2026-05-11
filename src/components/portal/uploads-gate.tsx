@@ -234,12 +234,6 @@ export function UploadsGate({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-        <ShieldCheck className="size-4" />
-        Unlocked for this session. Links expire after 5 minutes — refresh the
-        page to relock.
-      </div>
-
       {groups.map((group) => (
         <section
           key={group.phaseName}

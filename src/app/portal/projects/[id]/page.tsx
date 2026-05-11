@@ -72,11 +72,6 @@ export default async function PortalProjectPage({
           total={project.totalCount}
           health="good"
         />
-        <TimelineCard
-          startDate={project.start_date}
-          endDate={project.end_date}
-          referenceDate={referenceDate}
-        />
         <WorkplanCard
           phases={phases.length}
           activities={totalActivities}
@@ -87,6 +82,11 @@ export default async function PortalProjectPage({
           referenceDate={referenceDate}
         />
         <ManagerCard manager={manager} />
+        <TimelineCard
+          startDate={project.start_date}
+          endDate={project.end_date}
+          referenceDate={referenceDate}
+        />
       </div>
 
       {/* Main 2-column grid */}

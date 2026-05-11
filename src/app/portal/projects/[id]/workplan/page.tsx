@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, ChevronDown, FileCheck2 } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
-import { ActivityStatus } from "@/components/workspace/status-badge";
+import { PhaseActivities } from "@/components/portal/phase-activities";
 import { PortalProjectTabs } from "@/components/portal/project-tabs";
 import { WorkplanProgressTable } from "@/components/portal/workplan-progress-table";
 import { getPortalProjectDetail } from "@/lib/portal/queries";
@@ -125,46 +124,10 @@ export default async function PortalProjectWorkplanPage({
                 </summary>
 
                 <div className="border-t px-5 py-3">
-                  {phase.activities.length === 0 ? (
-                    <p className="rounded-lg border border-dashed bg-muted/40 px-3 py-6 text-center text-xs text-muted-foreground">
-                      No activities in this phase yet.
-                    </p>
-                  ) : (
-                    <ul className="divide-y">
-                      {phase.activities.map((activity) => (
-                        <li
-                          key={activity.id}
-                          className="flex flex-wrap items-center gap-3 py-2.5"
-                        >
-                          <Link
-                            href={`/portal/projects/${project.id}/activities/${activity.id}`}
-                            className="min-w-0 flex-1"
-                          >
-                            <p className="truncate text-sm font-medium hover:underline">
-                              {activity.name}
-                            </p>
-                            <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                              {activity.planned_date && (
-                                <span className="inline-flex items-center gap-1">
-                                  <CalendarDays className="size-3" />
-                                  {formatDate(activity.planned_date)}
-                                </span>
-                              )}
-                              {activity.location && <span>· {activity.location}</span>}
-                              {activity.proofCount > 0 && (
-                                <span className="inline-flex items-center gap-1">
-                                  · <FileCheck2 className="size-3" />
-                                  {activity.proofCount} proof
-                                  {activity.proofCount === 1 ? "" : "s"}
-                                </span>
-                              )}
-                            </p>
-                          </Link>
-                          <ActivityStatus status={activity.status} />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <PhaseActivities
+                    projectId={project.id}
+                    activities={phase.activities}
+                  />
                 </div>
               </details>
             );

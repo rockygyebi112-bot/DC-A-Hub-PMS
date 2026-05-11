@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type TaskRow = {
@@ -51,13 +51,52 @@ export function TasksOverview({
   viewAllHref?: string;
 }) {
   const [activeFilter, setActiveFilter] = useState<Filter>(defaultFilter);
-  const tasks = tasksByFilter[activeFilter] ?? [];
+  const [projectFilter, setProjectFilter] = useState<string>("all");
+
+  // Unique project list aggregated across every filter bucket so the
+  // dropdown shows the same options regardless of which pill is active.
+  const projectOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const key of ["all", "overdue", "due_week", "completed"] as Filter[]) {
+      for (const task of tasksByFilter[key] ?? []) {
+        if (!seen.has(task.projectId)) seen.set(task.projectId, task.projectName);
+      }
+    }
+    return Array.from(seen.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [tasksByFilter]);
+
+  const bucket = tasksByFilter[activeFilter] ?? [];
+  const tasks =
+    projectFilter === "all"
+      ? bucket
+      : bucket.filter((t) => t.projectId === projectFilter);
+  // When the user has narrowed to a single project, the per-row project
+  // line is redundant — the dropdown already communicates the scope.
+  const showProjectPerRow = projectFilter === "all";
+
+  // Counts on the filter pills should reflect the current project scope so
+  // users aren't misled into clicking a non-empty pill that becomes empty
+  // after project filtering.
+  const filteredCounts = useMemo(() => {
+    if (projectFilter === "all") return counts;
+    const tally = (key: Filter) =>
+      (tasksByFilter[key] ?? []).filter((t) => t.projectId === projectFilter)
+        .length;
+    return {
+      all: tally("all"),
+      overdue: tally("overdue"),
+      due_week: tally("due_week"),
+      completed: tally("completed"),
+    };
+  }, [counts, projectFilter, tasksByFilter]);
 
   const pills: { key: Filter; label: string; count: number }[] = [
-    { key: "all", label: "All", count: counts.all },
-    { key: "overdue", label: "Overdue", count: counts.overdue },
-    { key: "due_week", label: "Due This Week", count: counts.due_week },
-    { key: "completed", label: "Completed", count: counts.completed },
+    { key: "all", label: "All", count: filteredCounts.all },
+    { key: "overdue", label: "Overdue", count: filteredCounts.overdue },
+    { key: "due_week", label: "Due This Week", count: filteredCounts.due_week },
+    { key: "completed", label: "Completed", count: filteredCounts.completed },
   ];
 
   return (
@@ -76,7 +115,34 @@ export function TasksOverview({
         )}
       </header>
       <div className="px-4 sm:px-5">
-        <div className="flex flex-wrap gap-2 pb-3">
+        <div className="flex flex-wrap items-center gap-2 pb-3">
+          {projectOptions.length > 0 && (
+            <label className="relative inline-flex items-center">
+              <span className="sr-only">Filter by project</span>
+              <select
+                value={projectFilter}
+                onChange={(e) => setProjectFilter(e.target.value)}
+                className={cn(
+                  "appearance-none rounded-full border border-border bg-background py-1.5 pl-3 pr-8 text-xs font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/40",
+                  projectFilter !== "all" &&
+                    "border-[var(--color-dca-navy-900)] bg-[var(--color-dca-navy-900)] text-white hover:bg-[var(--color-dca-navy-900)]",
+                )}
+              >
+                <option value="all">All projects</option>
+                {projectOptions.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className={cn(
+                  "pointer-events-none absolute right-2 size-3.5",
+                  projectFilter !== "all" ? "text-white" : "text-muted-foreground",
+                )}
+              />
+            </label>
+          )}
           {pills.map((pill) => {
             const active = pill.key === activeFilter;
             return (
@@ -144,9 +210,11 @@ export function TasksOverview({
                       >
                         {task.title}
                       </p>
-                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {task.projectName}
-                      </p>
+                      {showProjectPerRow && (
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          {task.projectName}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1 text-right">

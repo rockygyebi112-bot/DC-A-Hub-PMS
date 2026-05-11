@@ -29,6 +29,8 @@ import {
   formatDate,
   formatRelative,
   formatCurrency,
+  NextMilestonesCard,
+  type Milestone,
 } from "@/components/admin/project-detail/parts";
 import { cn } from "@/lib/utils";
 
@@ -93,6 +95,8 @@ export type WorkspaceViewProps = {
     currency: string;
   };
   milestones: WVMilestone[];
+  nextMilestones: Milestone[];
+  now: number;
   upcomingDeadlines: WVMilestone[];
   recentUpdates: WVUpdate[];
   overdueCount: number;
@@ -1055,6 +1059,12 @@ export function WorkspaceView(props: WorkspaceViewProps) {
     <div className="space-y-6">
       <ProjectHero {...props} />
       <SnapshotStrip {...props} />
+
+      <NextMilestonesCard
+        milestones={props.nextMilestones}
+        viewAllHref={`/workspace/projects/${props.projectId}`}
+        now={props.now}
+      />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         <div className="space-y-6 xl:col-span-9">

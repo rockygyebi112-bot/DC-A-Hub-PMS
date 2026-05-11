@@ -9,6 +9,7 @@ import {
   daysBetween,
   formatRelative,
   ProjectTabs,
+  type Milestone,
 } from "@/components/admin/project-detail/parts";
 import { getProject } from "@/lib/admin/queries";
 import { getBudgetSummary } from "@/lib/admin/queries/budget";
@@ -121,6 +122,27 @@ export default async function ProjectOverviewPage({
   });
   const upcomingDeadlines = milestones.slice(0, 3);
 
+  // Richer milestone cards: include phase name + per-activity health
+  const nextMilestones: Milestone[] = futureActivities.slice(0, 6).map((a) => {
+    const d = new Date(a.planned_date as string);
+    const days = daysBetween(today, d);
+    const mHealth: Milestone["health"] =
+      days < 0
+        ? "delayed"
+        : a.status === "not_started" && days <= 0
+          ? "at-risk"
+          : days <= 7
+            ? "at-risk"
+            : "on-track";
+    return {
+      id: a.id,
+      title: a.name,
+      date: d,
+      phase: a.phaseName,
+      health: mHealth,
+    };
+  });
+
   // Overdue / due-this-week counts
   const sevenDays = 7;
   const overdueCount = allActivities.filter((a) => {
@@ -184,6 +206,8 @@ export default async function ProjectOverviewPage({
         currency: budgetSummary.currency,
       }}
       milestones={milestones}
+      nextMilestones={nextMilestones}
+      now={today.getTime()}
       upcomingDeadlines={upcomingDeadlines}
       recentUpdates={recentUpdates}
       overdueCount={overdueCount}

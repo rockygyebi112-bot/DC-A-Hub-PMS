@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
-import { StatusPill } from "@/components/admin/ui/status-pill";
+import { ActivityStatus } from "@/components/workspace/status-badge";
 import { PhaseActivities } from "@/components/portal/phase-activities";
 import { PortalProjectTabs } from "@/components/portal/project-tabs";
 import { getPortalProjectDetail } from "@/lib/portal/queries";
@@ -54,19 +54,24 @@ export default async function PortalProjectWorkplanPage({
             </p>
           </SectionCard>
         ) : (
-          phases.map((phase, index) => {
+          phases.map((phase) => {
             const total = phase.activities.length;
             const done = phase.activities.filter((a) => a.status === "done").length;
             const inProgress = phase.activities.filter(
               (a) => a.status === "in_progress",
             ).length;
             const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-            const phaseStatus: "planning" | "active" | "completed" =
+            // Aggregate the phase the same way activities are scored: red
+            // when nothing has started, yellow while work is in flight,
+            // green once every activity is done.
+            const phaseStatus: "not_started" | "in_progress" | "done" =
               total === 0
-                ? "planning"
+                ? "not_started"
                 : done === total
-                  ? "completed"
-                  : "active";
+                  ? "done"
+                  : done > 0 || inProgress > 0
+                    ? "in_progress"
+                    : "not_started";
 
             return (
               <details
@@ -79,10 +84,9 @@ export default async function PortalProjectWorkplanPage({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-heading text-sm font-semibold tracking-tight">
-                        <span className="text-muted-foreground">{index + 1}.</span>{" "}
                         {phase.name}
                       </h3>
-                      <StatusPill status={phaseStatus} />
+                      <ActivityStatus status={phaseStatus} />
                       <span className="font-mono text-[10px] text-muted-foreground">
                         {done}/{total} done
                         {inProgress > 0 ? ` · ${inProgress} in progress` : ""}
@@ -100,11 +104,11 @@ export default async function PortalProjectWorkplanPage({
                       <div
                         className={cn(
                           "h-full rounded-full transition-all",
-                          phaseStatus === "completed"
+                          phaseStatus === "done"
                             ? "bg-emerald-500"
-                            : phaseStatus === "active"
-                              ? "bg-blue-500"
-                              : "bg-muted-foreground/30",
+                            : phaseStatus === "in_progress"
+                              ? "bg-amber-500"
+                              : "bg-red-400/60",
                         )}
                         style={{ width: `${pct}%` }}
                       />

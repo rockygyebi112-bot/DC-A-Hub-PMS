@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, DM_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "./providers";
@@ -26,6 +26,18 @@ const dmMono = DM_Mono({
   display: "swap",
   weight: ["400", "500"],
 });
+
+// CRITICAL: without this, mobile browsers default to rendering at a 980px
+// "desktop viewport" and scale the page down to fit. That makes every
+// Tailwind responsive variant (sm:, md:, lg:) silently activate on phones,
+// breaking every mobile-specific layout. This tells the browser to use the
+// device's actual width (e.g. 390px on iPhone 14) so breakpoints work.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: "DC&A Hub PMS",

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import * as XLSX from "xlsx";
 import { headers } from "next/headers";
+import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, requireProjectReader, requireProjectWriter } from "@/lib/auth/guards";
 import {
@@ -613,12 +614,41 @@ export async function addProofLink(
  */
 export async function requestProofAccess(
   proofId: string,
+  password: string,
   purpose?: string,
 ): Promise<ActionResult<{ url: string; kind: "file" | "link"; fileName: string }>> {
   const auth = await requireAuth();
   if (!auth.ok) return auth;
 
+  if (typeof password !== "string" || password.length === 0) {
+    return { ok: false, error: "Password is required" };
+  }
+
   const sb = await createClient();
+
+  // Re-verify identity by checking the current user's password against
+  // Supabase auth. We use a brand-new supabase-js client (no cookies, no
+  // session persistence) so a successful signInWithPassword call here does
+  // not replace or refresh the user's actual session.
+  const {
+    data: { user: currentUser },
+  } = await sb.auth.getUser();
+  if (!currentUser?.email) {
+    return { ok: false, error: "Could not verify identity" };
+  }
+  const verifier = createSupabaseJsClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+  const { error: verifyError } = await verifier.auth.signInWithPassword({
+    email: currentUser.email,
+    password,
+  });
+  if (verifyError) {
+    return { ok: false, error: "Incorrect password" };
+  }
+
   const { data: proof, error: pe } = await sb
     .from("activity_proofs")
     .select(

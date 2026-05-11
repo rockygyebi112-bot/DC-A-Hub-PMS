@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth/guards";
 import {
   assignMemberSchema,
+  assignMembersSchema,
   inviteClientViewerSchema,
 } from "@/lib/admin/schemas";
 import { inviteUser } from "./users";
@@ -33,6 +34,45 @@ export async function addProjectMember(
   if (error) return { ok: false, error: GENERIC_DB_ERROR };
   revalidatePath(`/admin/projects/${projectId}/team`);
   return { ok: true };
+}
+
+export async function addProjectMembers(
+  projectId: string,
+  raw: unknown,
+): Promise<ActionResult<{ added: number; skipped: number }>> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
+
+  const parsed = assignMembersSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+
+  const sb = createAdminClient();
+
+  // Skip users who are already members of the project so the insert doesn't
+  // fail the entire batch on a unique-constraint violation.
+  const { data: existing } = await sb
+    .from("project_members")
+    .select("user_id")
+    .eq("project_id", projectId)
+    .in("user_id", parsed.data.user_ids);
+  const taken = new Set((existing ?? []).map((row) => row.user_id));
+  const toInsert = parsed.data.user_ids.filter((id) => !taken.has(id));
+
+  if (toInsert.length === 0) {
+    return { ok: true, data: { added: 0, skipped: taken.size } };
+  }
+
+  const { error } = await sb.from("project_members").insert(
+    toInsert.map((user_id) => ({
+      project_id: projectId,
+      user_id,
+      project_role: parsed.data.project_role,
+    })),
+  );
+  if (error) return { ok: false, error: GENERIC_DB_ERROR };
+
+  revalidatePath(`/admin/projects/${projectId}/team`);
+  return { ok: true, data: { added: toInsert.length, skipped: taken.size } };
 }
 
 export async function removeProjectMember(

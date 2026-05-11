@@ -52,6 +52,7 @@ export default async function ProjectTeamPage({
                 user_id: candidate.user_id,
                 full_name: candidate.full_name,
                 email: candidate.email,
+                role: candidate.role as "admin" | "staff" | "client",
               }))}
               projectRole="member"
               buttonLabel="Add staff"
@@ -62,6 +63,7 @@ export default async function ProjectTeamPage({
                 user_id: candidate.user_id,
                 full_name: candidate.full_name,
                 email: candidate.email,
+                role: candidate.role as "admin" | "staff" | "client",
               }))}
               projectRole="viewer"
               buttonLabel="Add viewer"

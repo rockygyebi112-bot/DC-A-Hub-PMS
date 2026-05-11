@@ -68,6 +68,18 @@ export const assignMemberSchema = z.object({
 });
 export type AssignMemberInput = z.infer<typeof assignMemberSchema>;
 
+// Bulk variant for the multi-select assign dialog. Lets an admin add many
+// staff (or viewers) to a project in one round-trip instead of clicking
+// through the single-select dialog repeatedly.
+export const assignMembersSchema = z.object({
+  user_ids: z
+    .array(z.string().uuid())
+    .min(1, "Pick at least one user")
+    .max(100, "Too many users in one batch"),
+  project_role: z.enum(["member", "viewer"]),
+});
+export type AssignMembersInput = z.infer<typeof assignMembersSchema>;
+
 export const inviteClientViewerSchema = z.object({
   email: z.string().trim().email(),
   full_name: z.string().trim().max(200).optional(),

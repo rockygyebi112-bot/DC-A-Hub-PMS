@@ -30,8 +30,10 @@ export async function GET() {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  // Header uses "Phase" to match the in-app terminology. The importer also
+  // accepts the legacy "Category" header for back-compat with older sheets.
   const headerRow = [
-    "Category",
+    "Phase",
     "Activity",
     "Deliverable",
     "Notes/Dependencies",

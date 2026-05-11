@@ -4,6 +4,7 @@ import { NotificationsBell } from "@/components/notifications/notifications-bell
 import { SidebarBrandCard } from "@/components/admin/ui/sidebar-brand-card";
 import { getAdminCounts, listClients, listProjects } from "@/lib/admin/queries";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
+import { listSearchableActivities } from "@/lib/search";
 import { getNotificationFeed } from "@/lib/notifications/queries";
 import { createClient } from "@/lib/supabase/server";
 
@@ -25,21 +26,23 @@ export default async function AdminLayout({
 
   const today = new Date().toISOString().slice(0, 10);
   const sb = await createClient();
-  const [counts, notifications, clients, projects, overdueRes] = await Promise.all([
-    getAdminCounts(),
-    getNotificationFeed("workspace").catch(() => ({
-      entries: [],
-      unreadCount: 0,
-      lastReadAt: null,
-    })),
-    listClients().catch(() => []),
-    listProjects().catch(() => []),
-    sb
-      .from("activities")
-      .select("id", { count: "exact", head: true })
-      .lt("planned_date", today)
-      .neq("status", "done"),
-  ]);
+  const [counts, notifications, clients, projects, overdueRes, activities] =
+    await Promise.all([
+      getAdminCounts(),
+      getNotificationFeed("workspace").catch(() => ({
+        entries: [],
+        unreadCount: 0,
+        lastReadAt: null,
+      })),
+      listClients().catch(() => []),
+      listProjects().catch(() => []),
+      sb
+        .from("activities")
+        .select("id", { count: "exact", head: true })
+        .lt("planned_date", today)
+        .neq("status", "done"),
+      listSearchableActivities().catch(() => []),
+    ]);
   const overdueCount = overdueRes.count ?? 0;
   const sidebarClients = clients.map((c) => ({
     id: c.id,
@@ -112,6 +115,11 @@ export default async function AdminLayout({
           href: `/admin/clients/${c.id}`,
           label: c.name,
           group: "Clients",
+        })),
+        ...activities.map((a) => ({
+          href: `/workspace/projects/${a.project_id}/activities/${a.id}`,
+          label: a.name,
+          group: `Activity · ${a.project_name}`,
         })),
       ]}
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}

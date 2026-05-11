@@ -1,13 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/admin/ui/theme-toggle";
 import { UserDropdown } from "@/components/admin/ui/user-dropdown";
 import { Breadcrumbs } from "@/components/admin/ui/breadcrumbs";
 import { TopbarSearch, type SearchItem } from "./topbar-search";
-import type { NavGroup } from "./app-sidebar";
 import { cn } from "@/lib/utils";
 
 export function AppTopbar({
@@ -20,7 +18,7 @@ export function AppTopbar({
   greetingSubtitle,
   greetingPath,
   mobileNav,
-  searchGroups,
+  searchItems,
 }: {
   name: string;
   email: string;
@@ -33,21 +31,12 @@ export function AppTopbar({
   greetingPath?: string;
   /** Mobile-only nav trigger rendered at the left of the topbar (e.g. hamburger). */
   mobileNav?: ReactNode;
-  /** Sidebar groups whose items power the search dropdown. */
-  searchGroups?: NavGroup[];
+  /** Items powering the search dropdown. */
+  searchItems?: SearchItem[];
 }) {
   const pathname = usePathname();
   const showGreeting = !!greeting && (!greetingPath || pathname === greetingPath);
-  const searchItems = useMemo<SearchItem[]>(() => {
-    if (!searchGroups) return [];
-    return searchGroups.flatMap((group) =>
-      group.items.map((item) => ({
-        href: item.href,
-        label: item.label,
-        group: group.group,
-      })),
-    );
-  }, [searchGroups]);
+  const items = searchItems ?? [];
   return (
     <header
       className={cn(
@@ -78,10 +67,10 @@ export function AppTopbar({
         </div>
         {/* Push right-side icons to the edge on mobile when greeting row is split out. */}
         {showGreeting && <div className="flex-1 sm:hidden" aria-hidden />}
-        {showSearch && searchItems.length > 0 && (
+        {showSearch && items.length > 0 && (
           /* Desktop only: live-search dropdown over the user's projects. */
           <div className="hidden md:block">
-            <TopbarSearch items={searchItems} />
+            <TopbarSearch items={items} />
           </div>
         )}
         <div className="flex items-center gap-1 md:gap-2">

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AppSidebar, type NavGroup, type NavItem, type ProjectBrand } from "./app-sidebar";
 import { AppTopbar } from "./app-topbar";
+import type { SearchItem } from "./topbar-search";
 import { MobileNav } from "./mobile-nav";
 import { BottomNav } from "./bottom-nav";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ export function AppShell({
   greetingSubtitle,
   greetingPath,
   bottomNavItems,
+  searchItems,
 }: {
   children: ReactNode;
   brand: string;
@@ -39,6 +41,10 @@ export function AppShell({
   /** Optional explicit list of bottom-tab destinations. Defaults to the
    *  first four nav items across `groups`. */
   bottomNavItems?: NavItem[];
+  /** Items powering the topbar search dropdown. Layouts should pass their
+   *  full project list here — the sidebar `groups` are usually truncated
+   *  for visual reasons, so falling back to them silently breaks search. */
+  searchItems?: SearchItem[];
 }) {
   return (
     // overflow-x-clip defends against any single child (table, long
@@ -69,7 +75,7 @@ export function AppShell({
           greeting={greeting}
           greetingSubtitle={greetingSubtitle}
           greetingPath={greetingPath}
-          searchGroups={groups}
+          searchItems={searchItems}
           mobileNav={
             <MobileNav
               brand={brand}

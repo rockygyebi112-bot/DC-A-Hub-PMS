@@ -46,6 +46,15 @@ export default async function PortalLayout({
     ]),
   );
 
+  // Search must see EVERY project the user can reach, not just the first
+  // 8 we render in the sidebar — otherwise typing the name of project #9
+  // returns "no matches".
+  const searchItems = projects.map((p) => ({
+    href: `/portal/projects/${p.id}`,
+    label: p.name,
+    group: "Your projects",
+  }));
+
   return (
     <AppShell
       brand="DC&A Hub"
@@ -55,6 +64,7 @@ export default async function PortalLayout({
       defaultLogoUrl="/logo.png"
       projectBrands={projectBrands}
       projectPathPrefix="/portal/projects"
+      searchItems={searchItems}
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
       topbarExtra={
         <NotificationsBell

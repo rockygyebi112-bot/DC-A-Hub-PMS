@@ -41,7 +41,7 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
           {fileName || "Upload Excel checklist"}
         </span>
         <span className="mt-1 text-xs text-muted-foreground">
-          Category, activity, deliverable, status, notes, responsible
+          Phase, activity, deliverable, notes, responsible, status
         </span>
         {/* The template link is a sibling <a> rendered inside the dropzone
             label. stopPropagation prevents the parent label's click from

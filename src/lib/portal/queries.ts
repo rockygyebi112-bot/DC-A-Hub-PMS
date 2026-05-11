@@ -206,6 +206,32 @@ async function fetchProjectActivityLog(
   });
 }
 
+/**
+ * Lightweight count of all proofs (files + links) in a project. Used by the
+ * locked Uploads page so the gate can tell the client how many documents
+ * are waiting behind the password without leaking any metadata.
+ */
+export async function countProjectDocuments(projectId: string): Promise<number> {
+  const sb = await createClient();
+  const { data: phases } = await sb
+    .from("phases")
+    .select("id")
+    .eq("project_id", projectId);
+  const phaseIds = (phases ?? []).map((p) => p.id);
+  if (phaseIds.length === 0) return 0;
+  const { data: activities } = await sb
+    .from("activities")
+    .select("id")
+    .in("phase_id", phaseIds);
+  const activityIds = (activities ?? []).map((a) => a.id);
+  if (activityIds.length === 0) return 0;
+  const { count } = await sb
+    .from("activity_proofs")
+    .select("id", { count: "exact", head: true })
+    .in("activity_id", activityIds);
+  return count ?? 0;
+}
+
 async function getProjectDocuments(
   projectId: string,
   limit: number,

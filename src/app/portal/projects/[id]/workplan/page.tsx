@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { ActivityStatus } from "@/components/workspace/status-badge";
+import { PortalProjectTabs } from "@/components/portal/project-tabs";
 import { WorkplanProgressTable } from "@/components/portal/workplan-progress-table";
 import { getPortalProjectDetail } from "@/lib/portal/queries";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,8 @@ export default async function PortalProjectWorkplanPage({
         title={`${project.name} · Workplan`}
         subtitle={`${doneActivities} of ${totalActivities} activities completed across ${phases.length} phase${phases.length === 1 ? "" : "s"}.`}
       />
+
+      <PortalProjectTabs projectId={project.id} />
 
       <WorkplanProgressTable phases={phases} />
 

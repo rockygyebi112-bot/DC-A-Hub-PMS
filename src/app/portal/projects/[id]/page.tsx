@@ -12,10 +12,10 @@ import {
 } from "@/components/portal/project-summary-cards";
 import {
   AnnouncementsCard,
-  KeyDocumentsCard,
   NeedHelpCard,
   RecentActivityCard,
 } from "@/components/portal/side-cards";
+import { PortalProjectTabs } from "@/components/portal/project-tabs";
 import { WorkplanProgressTable } from "@/components/portal/workplan-progress-table";
 import { getPortalProjectDetail } from "@/lib/portal/queries";
 
@@ -35,7 +35,6 @@ export default async function PortalProjectPage({
     manager,
     announcements,
     recentActivity,
-    documents,
     nextMilestone,
   } = detail;
 
@@ -63,6 +62,8 @@ export default async function PortalProjectPage({
         }
         subtitle={subtitle || undefined}
       />
+
+      <PortalProjectTabs projectId={project.id} />
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -109,7 +110,6 @@ export default async function PortalProjectPage({
 
         <div className="space-y-6">
           <AnnouncementsCard items={announcements} projectId={project.id} />
-          <KeyDocumentsCard documents={documents} projectId={project.id} />
           <NeedHelpCard manager={manager} />
         </div>
       </div>

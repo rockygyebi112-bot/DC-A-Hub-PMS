@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FileSpreadsheet, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,10 +53,27 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
           onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")}
         />
       </label>
-      <Button type="submit" className="w-full" disabled={pending}>
-        <Upload className="size-4" />
-        {pending ? "Importing..." : "Import workplan"}
-      </Button>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
+        <Button type="submit" disabled={pending}>
+          <Upload className="size-4" />
+          {pending ? "Importing..." : "Import workplan"}
+        </Button>
+        {/* Renders as an anchor so the browser handles the file download
+            directly; we don't want this inside the <form> submit flow. */}
+        <Button
+          type="button"
+          variant="outline"
+          render={
+            <a
+              href="/api/workplan/template"
+              download="workplan-template.xlsx"
+            />
+          }
+        >
+          <Download className="size-4" />
+          Download template
+        </Button>
+      </div>
     </form>
   );
 }

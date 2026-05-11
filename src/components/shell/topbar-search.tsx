@@ -24,13 +24,27 @@ export function TopbarSearch({ items }: { items: SearchItem[] }) {
   const [highlight, setHighlight] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Defensive dedupe: layouts can stitch projects + activities + clients
+  // together, and any accidental duplicate href would otherwise produce a
+  // React "duplicate key" warning when the dropdown renders.
+  const dedupedItems = useMemo(() => {
+    const seen = new Set<string>();
+    const out: SearchItem[] = [];
+    for (const it of items) {
+      if (seen.has(it.href)) continue;
+      seen.add(it.href);
+      out.push(it);
+    }
+    return out;
+  }, [items]);
+
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [] as SearchItem[];
-    return items
+    return dedupedItems
       .filter((it) => it.label.toLowerCase().includes(q))
       .slice(0, 8);
-  }, [items, query]);
+  }, [dedupedItems, query]);
 
   useEffect(() => {
     setHighlight(0);

@@ -41,7 +41,12 @@ export function AppShell({
   bottomNavItems?: NavItem[];
 }) {
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    // overflow-x-hidden defends against any single child (table, long
+    // unbreakable string, hardcoded width) bleeding past the viewport on
+    // phones and causing the whole page to scroll horizontally. Tables that
+    // genuinely need horizontal scroll still scroll within their own
+    // overflow-x-auto container.
+    <div className="flex min-h-screen overflow-x-hidden bg-background text-foreground">
       <AppSidebar
         brand={brand}
         subtitle={subtitle}
@@ -52,7 +57,7 @@ export function AppShell({
         projectBrands={projectBrands}
         projectPathPrefix={projectPathPrefix}
       />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
         <AppTopbar
           name={user.name}
           email={user.email}

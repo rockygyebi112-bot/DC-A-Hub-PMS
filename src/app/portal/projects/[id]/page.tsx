@@ -4,8 +4,8 @@ import { ArrowRight } from "lucide-react";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import {
+  ActivityStatusCard,
   ManagerCard,
-  MilestoneCard,
   OverallProgressCard,
   TimelineCard,
   WorkplanCard,
@@ -13,7 +13,6 @@ import {
 import {
   AnnouncementsCard,
   NeedHelpCard,
-  RecentActivityCard,
 } from "@/components/portal/side-cards";
 import { PortalProjectTabs } from "@/components/portal/project-tabs";
 import { WorkplanProgressTable } from "@/components/portal/workplan-progress-table";
@@ -34,11 +33,13 @@ export default async function PortalProjectPage({
     phases,
     manager,
     announcements,
-    recentActivity,
-    nextMilestone,
   } = detail;
 
-  const totalActivities = phases.reduce((sum, p) => sum + p.activities.length, 0);
+  const allActivities = phases.flatMap((p) => p.activities);
+  const totalActivities = allActivities.length;
+  const inProgressCount = allActivities.filter((a) => a.status === "in_progress").length;
+  const doneCount = allActivities.filter((a) => a.status === "done").length;
+  const notStartedCount = totalActivities - inProgressCount - doneCount;
   const projectStatus = (project.status ?? "active") as
     | "planning"
     | "active"
@@ -76,10 +77,10 @@ export default async function PortalProjectPage({
           phases={phases.length}
           activities={totalActivities}
         />
-        <MilestoneCard
-          title={nextMilestone?.name ?? null}
-          date={nextMilestone?.planned_date ?? null}
-          referenceDate={referenceDate}
+        <ActivityStatusCard
+          notStarted={notStartedCount}
+          inProgress={inProgressCount}
+          done={doneCount}
         />
         <ManagerCard manager={manager} />
         <TimelineCard
@@ -104,8 +105,6 @@ export default async function PortalProjectPage({
               </Link>
             </div>
           </div>
-
-          <RecentActivityCard items={recentActivity} projectId={project.id} />
         </div>
 
         <div className="space-y-6">

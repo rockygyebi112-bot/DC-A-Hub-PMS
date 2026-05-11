@@ -33,7 +33,7 @@ export function WorkplanProgressTable({
 }: {
   phases: WorkspacePhase[];
 }) {
-  const rows = phases.map((phase, index) => {
+  const rows = phases.map((phase) => {
     const total = phase.activities.length;
     const done = phase.activities.filter((a) => a.status === "done").length;
     const inProgress = phase.activities.filter((a) => a.status === "in_progress").length;
@@ -41,7 +41,7 @@ export function WorkplanProgressTable({
       ? "in_progress"
       : derivePhaseStatus(done, total);
     const percent = total === 0 ? 0 : Math.round((done / total) * 100);
-    return { phase, index, total, done, status, percent };
+    return { phase, total, done, status, percent };
   });
 
   return (
@@ -66,16 +66,13 @@ export function WorkplanProgressTable({
             <span>Status</span>
           </div>
           <ul className="divide-y">
-            {rows.map(({ phase, index, total, done, status, percent }) => (
+            {rows.map(({ phase, total, done, status, percent }) => (
               <li
                 key={phase.id}
                 className="grid grid-cols-1 gap-3 px-5 py-3 transition-colors hover:bg-muted/30 sm:grid-cols-[minmax(0,2.2fr)_minmax(0,2.6fr)_auto] sm:items-center sm:gap-4"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    <span className="text-muted-foreground">{index + 1}.</span>{" "}
-                    {phase.name}
-                  </p>
+                  <p className="text-sm font-medium">{phase.name}</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
                     {done} / {total} activit{total === 1 ? "y" : "ies"}
                   </p>

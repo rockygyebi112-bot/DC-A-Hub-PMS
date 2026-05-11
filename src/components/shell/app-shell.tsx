@@ -23,6 +23,7 @@ export function AppShell({
   greetingPath,
   bottomNavItems,
   searchItems,
+  showBreadcrumbs,
 }: {
   children: ReactNode;
   brand: string;
@@ -45,6 +46,8 @@ export function AppShell({
    *  full project list here — the sidebar `groups` are usually truncated
    *  for visual reasons, so falling back to them silently breaks search. */
   searchItems?: SearchItem[];
+  /** Hide the path-based breadcrumb trail in the topbar. */
+  showBreadcrumbs?: boolean;
 }) {
   return (
     // overflow-x-clip defends against any single child (table, long
@@ -76,6 +79,7 @@ export function AppShell({
           greetingSubtitle={greetingSubtitle}
           greetingPath={greetingPath}
           searchItems={searchItems}
+          showBreadcrumbs={showBreadcrumbs}
           mobileNav={
             <MobileNav
               brand={brand}

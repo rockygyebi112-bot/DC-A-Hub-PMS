@@ -24,13 +24,10 @@ export default async function PortalLayout({
     listSearchableActivities().catch(() => []),
   ]);
 
+  // Clients only ever care about their own projects, so we don't surface
+  // an "All projects" overview link in the portal sidebar — for single-
+  // project clients it would just bounce them back to the same page.
   const groups = [
-    {
-      group: "Portal",
-      items: [
-        { href: "/portal", label: "All projects", icon: "layout-dashboard" as const, exact: true },
-      ],
-    },
     {
       group: "Your projects",
       items: projects.slice(0, 8).map((p) => ({
@@ -74,6 +71,7 @@ export default async function PortalLayout({
       projectBrands={projectBrands}
       projectPathPrefix="/portal/projects"
       searchItems={searchItems}
+      showBreadcrumbs={false}
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
       topbarExtra={
         <NotificationsBell

@@ -19,7 +19,7 @@ import {
   Shield,
   ShieldCheck,
   SlidersHorizontal,
-  Target,
+  Activity as ActivityIcon,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -324,7 +324,16 @@ function SnapshotStrip(props: WorkspaceViewProps) {
     props.totalCount === 0
       ? 0
       : Math.round((props.doneCount / props.totalCount) * 100);
-  const nextMs = props.milestones[0];
+  const allActivities = props.phases.flatMap((p) => p.activities);
+  const total = allActivities.length;
+  const doneCount = allActivities.filter((a) => a.status === "done").length;
+  const inProgressCount = allActivities.filter(
+    (a) => a.status === "in_progress",
+  ).length;
+  const notStartedCount = allActivities.filter(
+    (a) => a.status === "not_started",
+  ).length;
+  const pct = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100));
   const budgetPercent = props.budget.hasBudget && props.budget.total > 0
     ? Math.min(100, Math.round((props.budget.spent / props.budget.total) * 100))
     : 0;
@@ -380,23 +389,54 @@ function SnapshotStrip(props: WorkspaceViewProps) {
           </div>
         </div>
 
-        {/* 3. Upcoming milestone */}
+        {/* 3. Activity status */}
         <div className="space-y-2 px-5 py-4">
           <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            <Target className="size-3.5" /> Upcoming milestone
+            <ActivityIcon className="size-3.5" /> Activity status
           </div>
-          {nextMs ? (
-            <div className="space-y-1.5">
-              <p className="line-clamp-2 text-sm font-semibold leading-snug">
-                {nextMs.title}
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                {formatDate(nextMs.date)}
-              </p>
-              <DaysBadge days={nextMs.daysFromNow} />
-            </div>
+          {total === 0 ? (
+            <p className="text-sm text-muted-foreground">No activities yet</p>
           ) : (
-            <p className="text-sm text-muted-foreground">None scheduled</p>
+            <ul className="space-y-1.5">
+              {[
+                {
+                  label: "Not started",
+                  count: notStartedCount,
+                  bar: "bg-red-500",
+                  dot: "bg-red-500",
+                },
+                {
+                  label: "In progress",
+                  count: inProgressCount,
+                  bar: "bg-amber-500",
+                  dot: "bg-amber-500",
+                },
+                {
+                  label: "Done",
+                  count: doneCount,
+                  bar: "bg-emerald-500",
+                  dot: "bg-emerald-500",
+                },
+              ].map((row) => (
+                <li key={row.label} className="space-y-0.5">
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="inline-flex items-center gap-1.5 text-foreground/80">
+                      <span className={cn("size-1.5 rounded-full", row.dot)} />
+                      {row.label}
+                    </span>
+                    <span className="font-semibold tabular-nums">
+                      {row.count}
+                    </span>
+                  </div>
+                  <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={cn("h-full rounded-full", row.bar)}
+                      style={{ width: `${pct(row.count)}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
@@ -501,12 +541,10 @@ function SnapshotStrip(props: WorkspaceViewProps) {
 /* ---------------- Workplan card ---------------- */
 
 function PhaseHeader({
-  index,
   phase,
   expanded,
   onToggle,
 }: {
-  index: number;
   phase: WVPhase;
   expanded: boolean;
   onToggle: () => void;
@@ -534,9 +572,7 @@ function PhaseHeader({
             !expanded && "-rotate-90",
           )}
         />
-        <span className="text-sm font-semibold">
-          {index + 1}. {phase.name}
-        </span>
+        <span className="text-sm font-semibold">{phase.name}</span>
         <PhaseBadge done={done} total={total} />
       </div>
       <div className="col-span-6 text-xs text-muted-foreground sm:col-span-3">
@@ -706,7 +742,7 @@ function WorkplanCard({
         </div>
       ) : (
         <div className="divide-y divide-border">
-          {phases.map((phase, idx) => {
+          {phases.map((phase) => {
             const isExpanded = expanded.has(phase.id);
             const filtered = q
               ? phase.activities.filter((a) =>
@@ -716,7 +752,6 @@ function WorkplanCard({
             return (
               <div key={phase.id}>
                 <PhaseHeader
-                  index={idx}
                   phase={phase}
                   expanded={isExpanded}
                   onToggle={() => toggle(phase.id)}

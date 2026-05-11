@@ -19,6 +19,7 @@ export function AppTopbar({
   greetingPath,
   mobileNav,
   searchItems,
+  showBreadcrumbs = true,
 }: {
   name: string;
   email: string;
@@ -33,6 +34,8 @@ export function AppTopbar({
   mobileNav?: ReactNode;
   /** Items powering the search dropdown. */
   searchItems?: SearchItem[];
+  /** Hide the path-based breadcrumb trail (e.g. for client-facing surfaces). */
+  showBreadcrumbs?: boolean;
 }) {
   const pathname = usePathname();
   const showGreeting = !!greeting && (!greetingPath || pathname === greetingPath);
@@ -61,9 +64,9 @@ export function AppTopbar({
               <h1 className="truncate">{greeting}</h1>
               {greetingSubtitle && <p className="truncate">{greetingSubtitle}</p>}
             </div>
-          ) : (
+          ) : showBreadcrumbs ? (
             <Breadcrumbs />
-          )}
+          ) : null}
         </div>
         {/* Push right-side icons to the edge on mobile when greeting row is split out. */}
         {showGreeting && <div className="flex-1 sm:hidden" aria-hidden />}

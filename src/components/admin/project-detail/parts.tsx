@@ -641,7 +641,7 @@ export function WorkplanOverviewCard({
         </div>
       ) : (
         <ul className="divide-y">
-          {phases.map((phase, idx) => {
+          {phases.map((phase) => {
             const percent =
               phase.total === 0 ? 0 : Math.round((phase.done / phase.total) * 100);
             const status = phaseStatus(phase.done, phase.total);
@@ -651,9 +651,6 @@ export function WorkplanOverviewCard({
                 className="grid grid-cols-12 items-center gap-4 px-5 py-3.5 transition-colors hover:bg-muted/30"
               >
                 <div className="col-span-12 flex items-center gap-3 sm:col-span-5">
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    {idx + 1}.
-                  </span>
                   <span className="truncate text-sm font-medium">{phase.name}</span>
                 </div>
                 <div className="col-span-6 text-xs text-muted-foreground sm:col-span-2">

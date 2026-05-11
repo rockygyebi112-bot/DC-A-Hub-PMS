@@ -12,6 +12,7 @@ import {
   Play,
 } from "lucide-react";
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
+import { ProofAccessButton } from "@/components/workspace/proof-access-button";
 import type {
   PortalActivityFeedItem,
   PortalAnnouncement,
@@ -225,8 +226,15 @@ export function KeyDocumentsCard({
             const { Icon, color } = isLink
               ? { Icon: FileText, color: "text-muted-foreground bg-muted" }
               : fileIcon(pill);
-            const href = isLink ? doc.url ?? "#" : doc.signedUrl ?? "#";
             const displayName = doc.activity_name ?? doc.file_name;
+            let hint: string | null = null;
+            if (isLink && doc.url) {
+              try {
+                hint = new URL(doc.url).host;
+              } catch {
+                hint = doc.url;
+              }
+            }
             return (
               <li
                 key={doc.id}
@@ -251,15 +259,21 @@ export function KeyDocumentsCard({
                     <span>{formatDate(doc.created_at)}</span>
                   </div>
                 </div>
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  aria-label={`Download ${doc.file_name}`}
-                >
-                  <Download className="size-3.5" />
-                </a>
+                <ProofAccessButton
+                  proofId={doc.id}
+                  fileName={doc.file_name}
+                  kind={isLink ? "link" : "file"}
+                  hint={hint}
+                  trigger={
+                    <button
+                      type="button"
+                      className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      aria-label={`Open ${doc.file_name}`}
+                    >
+                      <Download className="size-3.5" />
+                    </button>
+                  }
+                />
               </li>
             );
           })}

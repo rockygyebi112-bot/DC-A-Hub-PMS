@@ -1,4 +1,4 @@
-import { ExternalLink, FileText, Link2, Trash2, Upload } from "lucide-react";
+import { FileText, Link2, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { ActivityStatus } from "@/components/workspace/status-badge";
 import { DeleteConfirm } from "@/components/workspace/delete-confirm";
+import { ProofAccessButton } from "@/components/workspace/proof-access-button";
 import {
   addProofLink,
   deleteActivity,
@@ -186,27 +187,16 @@ export default async function WorkspaceActivityPage({
               />
             ) : (
               <div className="space-y-2">
-                {proofs.map((proof) => {
-                  const href = proof.kind === "link" ? proof.url ?? "#" : proof.signedUrl ?? "#";
-                  const Icon = proof.kind === "link" ? ExternalLink : FileText;
-                  return (
-                    <a
-                      key={proof.id}
-                      href={href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-start gap-2 rounded-lg border bg-background p-3 text-sm transition-colors hover:bg-accent"
-                    >
-                      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{proof.file_name}</span>
-                        <span className="mt-1 block truncate text-xs text-muted-foreground">
-                          {proof.caption ?? (proof.kind === "link" ? proof.url : "No caption")}
-                        </span>
-                      </div>
-                    </a>
-                  );
-                })}
+                {proofs.map((proof) => (
+                  <ProofAccessButton
+                    key={proof.id}
+                    proofId={proof.id}
+                    fileName={proof.file_name}
+                    caption={proof.caption}
+                    kind={proof.kind}
+                    hint={proof.kind === "link" ? proof.url : proof.mime_type}
+                  />
+                ))}
               </div>
             )}
           </SectionCard>

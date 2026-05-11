@@ -448,6 +448,54 @@ export type Database = {
           },
         ]
       }
+      proof_access_log: {
+        Row: {
+          accessed_at: string
+          id: string
+          ip_address: string | null
+          project_id: string
+          proof_id: string
+          purpose: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accessed_at?: string
+          id?: string
+          ip_address?: string | null
+          project_id: string
+          proof_id: string
+          purpose?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accessed_at?: string
+          id?: string
+          ip_address?: string | null
+          project_id?: string
+          proof_id?: string
+          purpose?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proof_access_log_proof_id_fkey"
+            columns: ["proof_id"]
+            isOneToOne: false
+            referencedRelation: "activity_proofs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proof_access_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           created_at: string

@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import * as XLSX from "xlsx";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { requireProjectWriter } from "@/lib/auth/guards";
+import { requireAuth, requireProjectReader, requireProjectWriter } from "@/lib/auth/guards";
 import {
   validateUpload,
   sanitizeFileName,
@@ -596,4 +597,85 @@ export async function addProofLink(
   revalidatePath(`/portal/projects/${projectId}/activities/${activityId}`);
   revalidatePath(`/admin/projects/${projectId}`);
   return { ok: true };
+}
+
+/**
+ * Resolve an attached proof (file or link) into an actual URL that the
+ * caller can open, but only after re-verifying project access and writing
+ * an audit row to `proof_access_log`. This is the only place that mints
+ * signed URLs for proof files — the listing query intentionally does not.
+ *
+ * For files: returns a short-lived (5 min) signed URL on the `proofs`
+ * storage bucket. For external links: returns the stored https URL.
+ *
+ * The optional `purpose` string is stored in the audit log so admins can
+ * see why a user opened a document (e.g. "audit review", "client report").
+ */
+export async function requestProofAccess(
+  proofId: string,
+  purpose?: string,
+): Promise<ActionResult<{ url: string; kind: "file" | "link"; fileName: string }>> {
+  const auth = await requireAuth();
+  if (!auth.ok) return auth;
+
+  const sb = await createClient();
+  const { data: proof, error: pe } = await sb
+    .from("activity_proofs")
+    .select(
+      "id, kind, file_path, file_name, url, activity:activities(id, phase:phases(id, project_id))",
+    )
+    .eq("id", proofId)
+    .maybeSingle();
+  if (pe || !proof) return { ok: false, error: "Document not found" };
+
+  // Walk activity -> phase -> project to find which project this proof
+  // belongs to, so we can re-check membership before issuing access.
+  const activity = Array.isArray(proof.activity) ? proof.activity[0] : proof.activity;
+  const phase = Array.isArray(activity?.phase) ? activity?.phase[0] : activity?.phase;
+  const projectId: string | undefined = phase?.project_id;
+  if (!projectId) return { ok: false, error: "Project not found" };
+
+  const authz = await requireProjectReader(projectId);
+  if (!authz.ok) return { ok: false, error: "Not authorized to view this document" };
+
+  // Mint the URL. Files get a 5-minute signed URL so a leaked link expires
+  // quickly. Links are passed through unchanged (we already validated the
+  // scheme at insert time in `proofLinkSchema`).
+  let url: string | null = null;
+  const kind: "file" | "link" = proof.kind === "link" ? "link" : "file";
+  if (kind === "link") {
+    url = proof.url ?? null;
+  } else if (proof.file_path) {
+    const { data: signed } = await sb.storage
+      .from("proofs")
+      .createSignedUrl(proof.file_path, 5 * 60);
+    url = signed?.signedUrl ?? null;
+  }
+  if (!url) return { ok: false, error: "Could not resolve document URL" };
+
+  // Best-effort audit log. Failure to log MUST NOT block the user from
+  // opening the document, but is surfaced in server logs so it can be
+  // alerted on.
+  const trimmedPurpose = (purpose ?? "").trim().slice(0, 500);
+  try {
+    const hdrs = await headers();
+    const userAgent = hdrs.get("user-agent");
+    const fwd = hdrs.get("x-forwarded-for");
+    const ip = fwd ? fwd.split(",")[0]?.trim() || null : null;
+    await sb.from("proof_access_log").insert({
+      proof_id: proof.id,
+      project_id: projectId,
+      user_id: auth.userId,
+      purpose: trimmedPurpose || null,
+      user_agent: userAgent,
+      ip_address: ip,
+    });
+  } catch (err) {
+    console.error("proof_access_log insert failed", err);
+  }
+
+  return {
+    ok: true,
+    data: { url, kind, fileName: proof.file_name ?? "Document" },
+  };
 }

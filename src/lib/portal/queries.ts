@@ -243,16 +243,13 @@ async function getProjectDocuments(
     ]),
   );
 
+  // Signed URLs are intentionally NOT minted here. The portal Key Documents
+  // card now routes every open through `requestProofAccess`, which logs the
+  // view and re-checks membership before returning a short-lived URL.
   return Promise.all(
     proofs.map(async (p): Promise<PortalDocument> => {
       const kind = (p.kind === "link" ? "link" : "file") as "file" | "link";
-      let signedUrl: string | null = null;
-      if (kind === "file" && p.file_path) {
-        const { data: signed } = await sb.storage
-          .from("proofs")
-          .createSignedUrl(p.file_path, 60 * 60);
-        signedUrl = signed?.signedUrl ?? null;
-      }
+      const signedUrl: string | null = null;
       const meta = activityById.get(p.activity_id);
       return {
         id: p.id,

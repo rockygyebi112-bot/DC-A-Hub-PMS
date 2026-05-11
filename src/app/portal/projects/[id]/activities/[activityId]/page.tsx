@@ -1,7 +1,7 @@
-import { ExternalLink, FileText } from "lucide-react";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { ActivityStatus } from "@/components/workspace/status-badge";
+import { ProofAccessButton } from "@/components/workspace/proof-access-button";
 import { getPortalActivity } from "@/lib/portal/queries";
 
 export default async function PortalActivityPage({
@@ -68,30 +68,16 @@ export default async function PortalActivityPage({
             <p className="text-sm text-muted-foreground">No proofs uploaded yet.</p>
           ) : (
             <div className="space-y-2">
-              {proofs.map((proof) => {
-                const href = proof.kind === "link" ? proof.url ?? "#" : proof.signedUrl ?? "#";
-                const Icon = proof.kind === "link" ? ExternalLink : FileText;
-                return (
-                  <a
-                    key={proof.id}
-                    href={href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-start gap-2 rounded-lg border bg-background p-3 text-sm transition-colors hover:bg-accent"
-                  >
-                    <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{proof.file_name}</span>
-                      <span className="mt-1 block truncate text-xs text-muted-foreground">
-                        {proof.caption ??
-                          (proof.kind === "link"
-                            ? proof.url ?? "External link"
-                            : proof.mime_type ?? "Proof file")}
-                      </span>
-                    </div>
-                  </a>
-                );
-              })}
+              {proofs.map((proof) => (
+                <ProofAccessButton
+                  key={proof.id}
+                  proofId={proof.id}
+                  fileName={proof.file_name}
+                  caption={proof.caption}
+                  kind={proof.kind}
+                  hint={proof.kind === "link" ? proof.url : proof.mime_type}
+                />
+              ))}
             </div>
           )}
         </SectionCard>

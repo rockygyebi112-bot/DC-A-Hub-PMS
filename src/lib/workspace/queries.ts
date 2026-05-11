@@ -176,6 +176,12 @@ export async function getActivity(activityId: string) {
   };
 }
 
+/**
+ * Returns proof metadata only. Signed URLs are intentionally NOT minted here
+ * so attached documents and links aren't directly clickable from any rendered
+ * page — every access now goes through `requestProofAccess`, which logs the
+ * view, re-verifies project membership, and issues a short-lived signed URL.
+ */
 export async function listActivityProofs(activityId: string): Promise<WorkspaceProof[]> {
   const sb = await createClient();
   const { data, error } = await sb
@@ -185,19 +191,10 @@ export async function listActivityProofs(activityId: string): Promise<WorkspaceP
     .order("created_at", { ascending: false });
   throwIfError(error);
 
-  return Promise.all(
-    (data ?? []).map(async (proof): Promise<WorkspaceProof> => {
-      const kind = (proof.kind === "link" ? "link" : "file") as "file" | "link";
-      let signedUrl: string | null = null;
-      if (kind === "file" && proof.file_path) {
-        const { data: signed } = await sb.storage
-          .from("proofs")
-          .createSignedUrl(proof.file_path, 60 * 60);
-        signedUrl = signed?.signedUrl ?? null;
-      }
-      return { ...proof, kind, signedUrl };
-    }),
-  );
+  return (data ?? []).map((proof): WorkspaceProof => {
+    const kind = (proof.kind === "link" ? "link" : "file") as "file" | "link";
+    return { ...proof, kind, signedUrl: null };
+  });
 }
 
 export async function listProjectTeam(projectId: string) {

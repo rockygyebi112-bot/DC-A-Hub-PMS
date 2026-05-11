@@ -49,14 +49,12 @@ export function ProofAccessButton({
 }: ProofAccessButtonProps) {
   const [open, setOpen] = useState(false);
   const [ack, setAck] = useState(false);
-  const [purpose, setPurpose] = useState("");
   const [password, setPassword] = useState("");
   const [pending, startTransition] = useTransition();
   const Icon = kind === "link" ? ExternalLink : FileText;
 
   function reset() {
     setAck(false);
-    setPurpose("");
     setPassword("");
   }
 
@@ -75,7 +73,7 @@ export function ProofAccessButton({
       return;
     }
     startTransition(async () => {
-      const res = await requestProofAccess(proofId, password, purpose);
+      const res = await requestProofAccess(proofId, password);
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -140,30 +138,46 @@ export function ProofAccessButton({
             project leads.
           </p>
           <div className="space-y-2">
-            <label className="block text-xs font-medium text-muted-foreground">
-              Purpose (optional)
-            </label>
-            <Input
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              placeholder="e.g. audit review, client report preparation"
-              maxLength={500}
-            />
-          </div>
-          <div className="space-y-2">
             <label
               htmlFor="proof-access-password"
               className="block text-xs font-medium text-muted-foreground"
             >
               Confirm with your account password
             </label>
+            {/* Hidden honeypot fields trick browser autofill into ignoring
+                the real password field below, so the user has to type their
+                password every time. */}
+            <input
+              type="text"
+              name="username"
+              autoComplete="username"
+              tabIndex={-1}
+              aria-hidden
+              style={{ display: "none" }}
+              readOnly
+            />
+            <input
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              tabIndex={-1}
+              aria-hidden
+              style={{ display: "none" }}
+              readOnly
+            />
             <Input
               id="proof-access-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your sign-in password"
-              autoComplete="current-password"
+              autoComplete="new-password"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-1p-ignore
+              data-lpignore="true"
+              data-form-type="other"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();

@@ -36,28 +36,38 @@ export function AppTopbar({
   return (
     <header
       className={cn(
-        "topbar-glass sticky top-0 z-20 flex h-[68px] items-center gap-2 border-b px-3 md:gap-3 md:px-6",
+        "topbar-glass sticky top-0 z-20 border-b",
         // Respect the iOS notch / dynamic island on mobile.
         "pt-[env(safe-area-inset-top)]",
       )}
     >
-      {mobileNav}
-      <div className="min-w-0 flex-1 overflow-hidden">
-        {showGreeting ? (
-          <div className="topbar-greeting">
-            <h1 className="truncate">{greeting}</h1>
-            {/* Hide the subtitle below sm so the greeting line doesn't wrap on narrow phones. */}
-            {greetingSubtitle && (
-              <p className="hidden truncate sm:block">{greetingSubtitle}</p>
-            )}
-          </div>
-        ) : (
-          <Breadcrumbs />
-        )}
-      </div>
-      {showSearch && (
-        <>
-          {/* Desktop: inline search input. */}
+      <div className="flex h-[68px] items-center gap-2 px-3 md:gap-3 md:px-6">
+        {mobileNav}
+        {/* Mobile: when a greeting is shown, hide the inline slot so the row
+            collapses to just the hamburger + right-side icons. The full
+            greeting renders on its own row below for breathing room. */}
+        <div
+          className={cn(
+            "min-w-0 flex-1 overflow-hidden",
+            showGreeting && "hidden sm:block",
+          )}
+        >
+          {showGreeting ? (
+            <div className="topbar-greeting">
+              <h1 className="truncate">{greeting}</h1>
+              {greetingSubtitle && <p className="truncate">{greetingSubtitle}</p>}
+            </div>
+          ) : (
+            <Breadcrumbs />
+          )}
+        </div>
+        {/* Push right-side icons to the edge on mobile when greeting row is split out. */}
+        {showGreeting && <div className="flex-1 sm:hidden" aria-hidden />}
+        {showSearch && (
+          /* Desktop only: inline search input. The mobile search icon was a
+              placeholder and made the topbar feel crowded next to the greeting,
+              notifications, theme toggle and avatar — drop it until search is
+              actually wired up. */
           <div className="hidden md:block">
             <label className="relative flex items-center">
               <Search className="pointer-events-none absolute left-3.5 size-4 text-muted-foreground" />
@@ -68,21 +78,19 @@ export function AppTopbar({
               />
             </label>
           </div>
-          {/* Mobile: search icon button (placeholder for future command palette). */}
-          <button
-            type="button"
-            aria-label="Search"
-            className="inline-flex size-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted/60 hover:text-foreground md:hidden"
-          >
-            <Search className="size-5" />
-          </button>
-        </>
-      )}
-      <div className="flex items-center gap-1 md:gap-2">
-        {extra}
-        <ThemeToggle />
-        <UserDropdown name={name} email={email} avatarUrl={avatarUrl} />
+        )}
+        <div className="flex items-center gap-1 md:gap-2">
+          {extra}
+          <ThemeToggle />
+          <UserDropdown name={name} email={email} avatarUrl={avatarUrl} />
+        </div>
       </div>
+      {showGreeting && (
+        <div className="topbar-greeting border-t border-border/60 px-4 pb-2 pt-1.5 sm:hidden">
+          <h1>{greeting}</h1>
+          {greetingSubtitle && <p>{greetingSubtitle}</p>}
+        </div>
+      )}
     </header>
   );
 }

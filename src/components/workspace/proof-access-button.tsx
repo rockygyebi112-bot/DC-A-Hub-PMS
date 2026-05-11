@@ -50,12 +50,14 @@ export function ProofAccessButton({
   const [open, setOpen] = useState(false);
   const [ack, setAck] = useState(false);
   const [purpose, setPurpose] = useState("");
+  const [password, setPassword] = useState("");
   const [pending, startTransition] = useTransition();
   const Icon = kind === "link" ? ExternalLink : FileText;
 
   function reset() {
     setAck(false);
     setPurpose("");
+    setPassword("");
   }
 
   function handleOpenChange(next: boolean) {
@@ -68,8 +70,12 @@ export function ProofAccessButton({
       toast.error("Please acknowledge the confidentiality notice");
       return;
     }
+    if (!password) {
+      toast.error("Enter your account password to continue");
+      return;
+    }
     startTransition(async () => {
-      const res = await requestProofAccess(proofId, purpose);
+      const res = await requestProofAccess(proofId, password, purpose);
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -144,6 +150,28 @@ export function ProofAccessButton({
               maxLength={500}
             />
           </div>
+          <div className="space-y-2">
+            <label
+              htmlFor="proof-access-password"
+              className="block text-xs font-medium text-muted-foreground"
+            >
+              Confirm with your account password
+            </label>
+            <Input
+              id="proof-access-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your sign-in password"
+              autoComplete="current-password"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  confirm();
+                }
+              }}
+            />
+          </div>
           <label className="flex items-start gap-2">
             <Checkbox
               checked={ack}
@@ -164,7 +192,7 @@ export function ProofAccessButton({
           >
             Cancel
           </Button>
-          <Button onClick={confirm} disabled={pending || !ack}>
+          <Button onClick={confirm} disabled={pending || !ack || !password}>
             {pending ? (
               <>
                 <Loader2 className="size-4 animate-spin" />

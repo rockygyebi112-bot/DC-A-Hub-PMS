@@ -41,12 +41,15 @@ export function AppShell({
   bottomNavItems?: NavItem[];
 }) {
   return (
-    // overflow-x-hidden defends against any single child (table, long
+    // overflow-x-clip defends against any single child (table, long
     // unbreakable string, hardcoded width) bleeding past the viewport on
-    // phones and causing the whole page to scroll horizontally. Tables that
-    // genuinely need horizontal scroll still scroll within their own
+    // phones and causing the whole page to scroll horizontally. We avoid
+    // overflow-x-hidden here because it establishes a scroll container that
+    // breaks `position: sticky` on the sidebar — causing the navy nav to
+    // scroll away with the page instead of pinning to the viewport. Tables
+    // that genuinely need horizontal scroll still scroll within their own
     // overflow-x-auto container.
-    <div className="flex min-h-screen overflow-x-hidden bg-background text-foreground">
+    <div className="flex min-h-screen overflow-x-clip bg-background text-foreground">
       <AppSidebar
         brand={brand}
         subtitle={subtitle}

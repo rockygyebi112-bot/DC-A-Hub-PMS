@@ -69,6 +69,11 @@ export default async function WorkspaceLayout({
       defaultLogoUrl="/logo.png"
       projectBrands={projectBrands}
       projectPathPrefix="/workspace/projects"
+      searchItems={projects.map((p) => ({
+        href: `/workspace/projects/${p.id}`,
+        label: p.name,
+        group: "Projects",
+      }))}
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
       sidebarFooter={
         <div className="rounded-lg border bg-background/70 p-3 text-xs text-muted-foreground">

@@ -106,12 +106,13 @@ export function MobileNav({
             </div>
             <div className="min-w-0 flex-1">
               <DialogPrimitive.Title
-                className="font-heading truncate text-base font-bold tracking-tight leading-tight text-white"
+                className="font-heading text-sm font-bold tracking-tight leading-tight text-white break-words [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical] overflow-hidden"
+                title={displayBrand}
               >
                 {displayBrand}
               </DialogPrimitive.Title>
               {subtitle && (
-                <p className="truncate text-[10px] font-medium tracking-wide text-white/60">
+                <p className="mt-0.5 truncate text-[10px] font-medium tracking-wide text-white/60">
                   {subtitle}
                 </p>
               )}
@@ -135,6 +136,30 @@ export function MobileNav({
           </div>
 
           {footer && <div className="mx-3 mb-3 mt-2">{footer}</div>}
+
+          {/* Bottom brand chip — mirrors the desktop rail. */}
+          <div className="flex items-center gap-2 border-t border-white/10 px-4 py-3">
+            <div className="flex size-7 shrink-0 items-center justify-center">
+              {defaultLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={defaultLogoUrl}
+                  alt={`${brand} logo`}
+                  className="h-7 w-7 object-contain"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">
+                  <Sparkles className="size-3.5" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1 leading-tight">
+              <p className="font-heading truncate text-xs font-semibold text-white">
+                {brand}
+              </p>
+              <p className="text-[10px] text-white/50">Powered by DC&A Hub</p>
+            </div>
+          </div>
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

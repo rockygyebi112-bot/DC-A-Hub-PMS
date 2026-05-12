@@ -122,10 +122,6 @@ export function ProofComments({
   const [taggedGroups, setTaggedGroups] = useState<Set<GroupKey>>(
     () => new Set<GroupKey>(),
   );
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionAnchor, setMentionAnchor] = useState<number | null>(null);
-  const [mentionHighlight, setMentionHighlight] = useState(0);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Load the stored last-read marker on mount. Reading from localStorage
   // has to happen in an effect to avoid SSR hydration mismatches.
@@ -210,7 +206,6 @@ export function ProofComments({
             status === "TIMED_OUT" ||
             status === "CLOSED"
           ) {
-            // eslint-disable-next-line no-console
             console.warn(
               `[proof-comments] realtime channel ${status} for proof ${proofId}`,
             );
@@ -284,91 +279,19 @@ export function ProofComments({
     return Array.from(byId.values());
   }, [draft, taggedUsers, taggedGroups, mentionables]);
 
-  function handleDraftChange(value: string, caret: number) {
-    setDraft(value);
-    // Detect an active "@..." token at the caret. We walk back from the
-    // caret until we hit whitespace, an @, or the start of the string.
-    const upToCaret = value.slice(0, caret);
-    const atIdx = upToCaret.lastIndexOf("@");
-    if (atIdx === -1) {
-      setMentionQuery(null);
-      setMentionAnchor(null);
-      return;
-    }
-    // The character before the @ must be whitespace or start-of-string,
-    // otherwise we'd hijack things like email addresses.
-    const charBefore = atIdx === 0 ? " " : upToCaret[atIdx - 1];
-    if (!/\s/.test(charBefore) && atIdx !== 0) {
-      setMentionQuery(null);
-      setMentionAnchor(null);
-      return;
-    }
-    const query = upToCaret.slice(atIdx + 1);
-    if (query.includes("\n") || query.length > 30) {
-      setMentionQuery(null);
-      setMentionAnchor(null);
-      return;
-    }
-    setMentionQuery(query);
-    setMentionAnchor(atIdx);
-    setMentionHighlight(0);
+  // Callbacks consumed by both the composer and edit MentionTextarea
+  // instances when the user picks a person or group from the picker.
+  function tagUser(user: MentionableUser) {
+    setTaggedUsers((prev) =>
+      prev.some((u) => u.user_id === user.user_id) ? prev : [...prev, user],
+    );
   }
-
-  const filteredItems = useMemo<PickerItem[]>(() => {
-    if (mentionQuery === null) return [];
-    const q = mentionQuery.toLowerCase();
-    const groupItems: PickerItem[] = GROUPS.filter(
-      (g) => !q || g.label.startsWith(q),
-    ).map((g) => ({ kind: "group" as const, group: g }));
-    const userItems: PickerItem[] = mentionables
-      .filter((u) => {
-        if (!q) return true;
-        return (
-          u.full_name.toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q)
-        );
-      })
-      .map((u) => ({ kind: "user" as const, user: u }));
-    return [...groupItems, ...userItems].slice(0, 6);
-  }, [mentionQuery, mentionables]);
-
-  function pickItem(item: PickerItem) {
-    if (mentionAnchor === null) return;
-    const before = draft.slice(0, mentionAnchor);
-    // Replace the in-progress token (anchor..caret) with the full mention.
-    // Anything after the caret is preserved as-is.
-    const ta = textareaRef.current;
-    const caret = ta ? ta.selectionStart ?? draft.length : draft.length;
-    const after = draft.slice(caret);
-    const insertion =
-      item.kind === "user"
-        ? `@${item.user.full_name} `
-        : `${item.group.token} `;
-    const next = `${before}${insertion}${after}`;
-    setDraft(next);
-    if (item.kind === "user") {
-      const user = item.user;
-      setTaggedUsers((prev) =>
-        prev.some((u) => u.user_id === user.user_id) ? prev : [...prev, user],
-      );
-    } else {
-      const key = item.group.key;
-      setTaggedGroups((prev) => {
-        if (prev.has(key)) return prev;
-        const nextSet = new Set(prev);
-        nextSet.add(key);
-        return nextSet;
-      });
-    }
-    setMentionQuery(null);
-    setMentionAnchor(null);
-    // Restore focus + caret to right after the insertion.
-    queueMicrotask(() => {
-      const el = textareaRef.current;
-      if (!el) return;
-      el.focus();
-      const pos = before.length + insertion.length;
-      el.setSelectionRange(pos, pos);
+  function tagGroup(key: GroupKey) {
+    setTaggedGroups((prev) => {
+      if (prev.has(key)) return prev;
+      const nextSet = new Set(prev);
+      nextSet.add(key);
+      return nextSet;
     });
   }
 
@@ -534,30 +457,18 @@ export function ProofComments({
                       </div>
                       {isEditing ? (
                         <div className="mt-1 space-y-1.5">
-                          <div className="relative">
-                            <MentionHighlightOverlay
-                              value={editDraft}
-                              knownTokens={mentionTokens}
-                            />
-                            <textarea
-                              value={editDraft}
-                              onChange={(e) => setEditDraft(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Escape") {
-                                  e.preventDefault();
-                                  cancelEdit();
-                                }
-                                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                                  e.preventDefault();
-                                  saveEdit(c.id);
-                                }
-                              }}
-                              rows={2}
-                              maxLength={4000}
-                              autoFocus
-                              className="relative flex w-full min-h-9 rounded-md border bg-transparent px-3 py-1 text-sm leading-5 shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                            />
-                          </div>
+                          <MentionTextarea
+                            value={editDraft}
+                            onChange={setEditDraft}
+                            mentionables={mentionables}
+                            mentionTokens={mentionTokens}
+                            onPickUser={tagUser}
+                            onPickGroup={tagGroup}
+                            onSubmit={() => saveEdit(c.id)}
+                            onEscape={cancelEdit}
+                            rows={2}
+                            autoFocus
+                          />
                           <div className="flex items-center gap-2">
                             <Button
                               type="button"
@@ -634,133 +545,16 @@ export function ProofComments({
           )}
 
           <div className="space-y-2">
-            <div className="relative">
-              <MentionHighlightOverlay
-                value={draft}
-                knownTokens={mentionTokens}
-              />
-              <textarea
-                ref={textareaRef}
-                value={draft}
-                onChange={(e) =>
-                  handleDraftChange(e.target.value, e.target.selectionStart ?? 0)
-                }
-                onKeyDown={(e) => {
-                  if (mentionQuery !== null && filteredItems.length > 0) {
-                    if (e.key === "ArrowDown") {
-                      e.preventDefault();
-                      setMentionHighlight(
-                        (h) => (h + 1) % filteredItems.length,
-                      );
-                      return;
-                    }
-                    if (e.key === "ArrowUp") {
-                      e.preventDefault();
-                      setMentionHighlight(
-                        (h) =>
-                          (h - 1 + filteredItems.length) %
-                          filteredItems.length,
-                      );
-                      return;
-                    }
-                    if (e.key === "Enter" || e.key === "Tab") {
-                      e.preventDefault();
-                      pickItem(filteredItems[mentionHighlight]);
-                      return;
-                    }
-                    if (e.key === "Escape") {
-                      e.preventDefault();
-                      setMentionQuery(null);
-                      setMentionAnchor(null);
-                      return;
-                    }
-                  }
-                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                    e.preventDefault();
-                    submit();
-                  }
-                }}
-                placeholder=""
-                rows={2}
-                maxLength={4000}
-                className="relative flex w-full min-h-9 rounded-md border bg-transparent px-3 py-1 text-sm leading-5 shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              />
-
-              {mentionQuery !== null && filteredItems.length > 0 && (
-                <div className="absolute bottom-full left-0 z-10 mb-1 w-72 max-w-full overflow-hidden rounded-md border bg-popover shadow-md">
-                  <ul className="max-h-60 overflow-y-auto py-1 text-sm">
-                    {filteredItems.map((item, idx) => {
-                      const active = idx === mentionHighlight;
-                      const key =
-                        item.kind === "user"
-                          ? `u:${item.user.user_id}`
-                          : `g:${item.group.key}`;
-                      return (
-                        <li key={key}>
-                          <button
-                            type="button"
-                            onMouseDown={(e) => {
-                              // mousedown so the textarea doesn't lose focus
-                              // before our click runs.
-                              e.preventDefault();
-                              pickItem(item);
-                            }}
-                            onMouseEnter={() => setMentionHighlight(idx)}
-                            className={cn(
-                              "flex w-full items-center gap-2 px-2 py-1.5 text-left",
-                              active ? "bg-accent text-accent-foreground" : "",
-                            )}
-                          >
-                            {item.kind === "user" ? (
-                              <>
-                                <UserAvatar
-                                  email={item.user.email}
-                                  name={item.user.full_name}
-                                  avatarUrl={item.user.avatar_url}
-                                  size="sm"
-                                />
-                                <span className="min-w-0 flex-1">
-                                  <span className="block truncate text-xs font-semibold">
-                                    {item.user.full_name}
-                                    {item.user.is_manager && (
-                                      <span className="ml-1.5 rounded bg-primary/10 px-1 py-px text-[9px] font-medium uppercase tracking-wider text-primary">
-                                        PM
-                                      </span>
-                                    )}
-                                  </span>
-                                  <span className="block truncate text-[10px] text-muted-foreground">
-                                    {item.user.role === "client"
-                                      ? "Client"
-                                      : item.user.email}
-                                  </span>
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-[10px] font-semibold uppercase text-primary">
-                                  {item.group.key === "everyone" ? "ALL" : "TM"}
-                                </span>
-                                <span className="min-w-0 flex-1">
-                                  <span className="block truncate text-xs font-semibold">
-                                    @{item.group.label}
-                                    <span className="ml-1.5 rounded bg-muted px-1 py-px text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
-                                      Group
-                                    </span>
-                                  </span>
-                                  <span className="block truncate text-[10px] text-muted-foreground">
-                                    {item.group.sublabel}
-                                  </span>
-                                </span>
-                              </>
-                            )}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-            </div>
+            <MentionTextarea
+              value={draft}
+              onChange={setDraft}
+              mentionables={mentionables}
+              mentionTokens={mentionTokens}
+              onPickUser={tagUser}
+              onPickGroup={tagGroup}
+              onSubmit={submit}
+              rows={2}
+            />
 
             <div className="flex items-center justify-between">
               <span className="text-[10px] text-muted-foreground">
@@ -852,6 +646,242 @@ function renderBodyWithMentions(body: string, knownTokens: string[]) {
     ) : (
       <span key={idx}>{seg.value}</span>
     ),
+  );
+}
+
+/**
+ * Reusable textarea with @mention picker + highlight overlay. The picker
+ * tracks its own caret/query/highlight state so both the composer and
+ * the inline edit form can share the same UX without each duplicating
+ * the keyboard / mouse plumbing.
+ */
+function MentionTextarea({
+  value,
+  onChange,
+  mentionables,
+  mentionTokens,
+  onPickUser,
+  onPickGroup,
+  onSubmit,
+  onEscape,
+  rows = 2,
+  autoFocus = false,
+  placeholder = "",
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  mentionables: MentionableUser[];
+  mentionTokens: string[];
+  onPickUser?: (user: MentionableUser) => void;
+  onPickGroup?: (key: GroupKey) => void;
+  onSubmit?: () => void;
+  onEscape?: () => void;
+  rows?: number;
+  autoFocus?: boolean;
+  placeholder?: string;
+}) {
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+  const [query, setQuery] = useState<string | null>(null);
+  const [anchor, setAnchor] = useState<number | null>(null);
+  const [highlight, setHighlight] = useState(0);
+
+  const items = useMemo<PickerItem[]>(() => {
+    if (query === null) return [];
+    const q = query.toLowerCase();
+    const groupItems: PickerItem[] = GROUPS.filter(
+      (g) => !q || g.label.startsWith(q),
+    ).map((g) => ({ kind: "group" as const, group: g }));
+    const userItems: PickerItem[] = mentionables
+      .filter(
+        (u) =>
+          !q ||
+          u.full_name.toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q),
+      )
+      .map((u) => ({ kind: "user" as const, user: u }));
+    return [...groupItems, ...userItems].slice(0, 6);
+  }, [query, mentionables]);
+
+  function handleChange(next: string, caret: number) {
+    onChange(next);
+    // Detect an active "@..." token at the caret by walking back to the
+    // most recent '@' and confirming it's preceded by whitespace / SOS.
+    const upToCaret = next.slice(0, caret);
+    const atIdx = upToCaret.lastIndexOf("@");
+    if (atIdx === -1) {
+      setQuery(null);
+      setAnchor(null);
+      return;
+    }
+    const charBefore = atIdx === 0 ? " " : upToCaret[atIdx - 1];
+    if (!/\s/.test(charBefore) && atIdx !== 0) {
+      setQuery(null);
+      setAnchor(null);
+      return;
+    }
+    const q = upToCaret.slice(atIdx + 1);
+    if (q.includes("\n") || q.length > 30) {
+      setQuery(null);
+      setAnchor(null);
+      return;
+    }
+    setQuery(q);
+    setAnchor(atIdx);
+    setHighlight(0);
+  }
+
+  function pick(item: PickerItem) {
+    if (anchor === null) return;
+    const before = value.slice(0, anchor);
+    const ta = ref.current;
+    const caret = ta ? ta.selectionStart ?? value.length : value.length;
+    const after = value.slice(caret);
+    const insertion =
+      item.kind === "user"
+        ? `@${item.user.full_name} `
+        : `${item.group.token} `;
+    const next = `${before}${insertion}${after}`;
+    onChange(next);
+    if (item.kind === "user") onPickUser?.(item.user);
+    else onPickGroup?.(item.group.key);
+    setQuery(null);
+    setAnchor(null);
+    queueMicrotask(() => {
+      const el = ref.current;
+      if (!el) return;
+      el.focus();
+      const pos = before.length + insertion.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
+  const pickerOpen = query !== null && items.length > 0;
+
+  return (
+    <div className="relative">
+      <MentionHighlightOverlay value={value} knownTokens={mentionTokens} />
+      <textarea
+        ref={ref}
+        value={value}
+        onChange={(e) =>
+          handleChange(e.target.value, e.target.selectionStart ?? 0)
+        }
+        onKeyDown={(e) => {
+          if (pickerOpen) {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setHighlight((h) => (h + 1) % items.length);
+              return;
+            }
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setHighlight((h) => (h - 1 + items.length) % items.length);
+              return;
+            }
+            if (e.key === "Enter" || e.key === "Tab") {
+              e.preventDefault();
+              pick(items[highlight]);
+              return;
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
+              setQuery(null);
+              setAnchor(null);
+              return;
+            }
+          }
+          if (e.key === "Escape" && onEscape) {
+            e.preventDefault();
+            onEscape();
+            return;
+          }
+          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+            e.preventDefault();
+            onSubmit?.();
+          }
+        }}
+        placeholder={placeholder}
+        rows={rows}
+        maxLength={4000}
+        autoFocus={autoFocus}
+        className="relative flex w-full min-h-9 rounded-md border bg-transparent px-3 py-1 text-sm leading-5 shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      />
+
+      {pickerOpen && (
+        <div className="absolute bottom-full left-0 z-10 mb-1 w-72 max-w-full overflow-hidden rounded-md border bg-popover shadow-md">
+          <ul className="max-h-60 overflow-y-auto py-1 text-sm">
+            {items.map((item, idx) => {
+              const active = idx === highlight;
+              const key =
+                item.kind === "user"
+                  ? `u:${item.user.user_id}`
+                  : `g:${item.group.key}`;
+              return (
+                <li key={key}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      // mousedown so the textarea doesn't lose focus
+                      // before our click runs.
+                      e.preventDefault();
+                      pick(item);
+                    }}
+                    onMouseEnter={() => setHighlight(idx)}
+                    className={cn(
+                      "flex w-full items-center gap-2 px-2 py-1.5 text-left",
+                      active ? "bg-accent text-accent-foreground" : "",
+                    )}
+                  >
+                    {item.kind === "user" ? (
+                      <>
+                        <UserAvatar
+                          email={item.user.email}
+                          name={item.user.full_name}
+                          avatarUrl={item.user.avatar_url}
+                          size="sm"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-semibold">
+                            {item.user.full_name}
+                            {item.user.is_manager && (
+                              <span className="ml-1.5 rounded bg-primary/10 px-1 py-px text-[9px] font-medium uppercase tracking-wider text-primary">
+                                PM
+                              </span>
+                            )}
+                          </span>
+                          <span className="block truncate text-[10px] text-muted-foreground">
+                            {item.user.role === "client"
+                              ? "Client"
+                              : item.user.email}
+                          </span>
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-[10px] font-semibold uppercase text-primary">
+                          {item.group.key === "everyone" ? "ALL" : "TM"}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-semibold">
+                            @{item.group.label}
+                            <span className="ml-1.5 rounded bg-muted px-1 py-px text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
+                              Group
+                            </span>
+                          </span>
+                          <span className="block truncate text-[10px] text-muted-foreground">
+                            {item.group.sublabel}
+                          </span>
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -206,15 +206,27 @@ export function ProofComments({
     setLastReadAt(now);
   }, [open, readStorageKey, comments]);
 
-  // Lazy-load the mention list the first time the user shows interest in
-  // commenting (i.e. when the section is open).
+  // Load the mention list eagerly. We need it regardless of whether the
+  // composer is open so that already-posted comments can highlight
+  // "@Full Name" tokens correctly (otherwise we can't tell where a name
+  // ends and the surrounding prose begins).
   useEffect(() => {
-    if (!open || mentionablesLoadedRef.current) return;
+    if (mentionablesLoadedRef.current) return;
     mentionablesLoadedRef.current = true;
     listMentionableUsers(proofId).then((res) => {
       if (res.ok) setMentionables(res.data);
     });
-  }, [open, proofId]);
+  }, [proofId]);
+
+  // Tokens we'll highlight inside a comment body / draft. Real teammate
+  // names take precedence over the @everyone / @team group shortcuts so
+  // we sort longest-first and try those first when scanning. Recomputed
+  // whenever the mention list changes.
+  const mentionTokens = useMemo(() => {
+    const names = mentionables.map((u) => u.full_name).filter(Boolean);
+    const groups = GROUPS.map((g) => g.label); // "everyone", "team"
+    return [...names, ...groups].sort((a, b) => b.length - a.length);
+  }, [mentionables]);
 
   // Determine which tagged users still appear (by name) in the body. We
   // compute this on the fly so deletions in the textarea silently un-tag.
@@ -491,24 +503,30 @@ export function ProofComments({
                       </div>
                       {isEditing ? (
                         <div className="mt-1 space-y-1.5">
-                          <textarea
-                            value={editDraft}
-                            onChange={(e) => setEditDraft(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Escape") {
-                                e.preventDefault();
-                                cancelEdit();
-                              }
-                              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                                e.preventDefault();
-                                saveEdit(c.id);
-                              }
-                            }}
-                            rows={2}
-                            maxLength={4000}
-                            autoFocus
-                            className="flex w-full min-h-9 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                          />
+                          <div className="relative">
+                            <MentionHighlightOverlay
+                              value={editDraft}
+                              knownTokens={mentionTokens}
+                            />
+                            <textarea
+                              value={editDraft}
+                              onChange={(e) => setEditDraft(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Escape") {
+                                  e.preventDefault();
+                                  cancelEdit();
+                                }
+                                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                                  e.preventDefault();
+                                  saveEdit(c.id);
+                                }
+                              }}
+                              rows={2}
+                              maxLength={4000}
+                              autoFocus
+                              className="relative flex w-full min-h-9 rounded-md border bg-transparent px-3 py-1 text-sm leading-5 shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                            />
+                          </div>
                           <div className="flex items-center gap-2">
                             <Button
                               type="button"
@@ -538,7 +556,7 @@ export function ProofComments({
                         </div>
                       ) : (
                         <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-foreground/90">
-                          {renderBodyWithMentions(c.body)}
+                          {renderBodyWithMentions(c.body, mentionTokens)}
                         </p>
                       )}
                     </div>
@@ -586,6 +604,10 @@ export function ProofComments({
 
           <div className="space-y-2">
             <div className="relative">
+              <MentionHighlightOverlay
+                value={draft}
+                knownTokens={mentionTokens}
+              />
               <textarea
                 ref={textareaRef}
                 value={draft}
@@ -630,7 +652,7 @@ export function ProofComments({
                 placeholder="Add a comment… type @ to tag a teammate"
                 rows={2}
                 maxLength={4000}
-                className="flex w-full min-h-9 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                className="relative flex w-full min-h-9 rounded-md border bg-transparent px-3 py-1 text-sm leading-5 shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               />
 
               {mentionQuery !== null && filteredItems.length > 0 && (
@@ -761,25 +783,110 @@ export function ProofComments({
 }
 
 /**
- * Highlight `@Full Name` tokens in the rendered comment body. We don't try
- * to be too clever — any `@<word with optional spaces>` that matches our
- * convention gets the chip styling.
+ * Walk the body and split it into plain text + mention segments. A
+ * mention is `@` immediately followed by one of the known tokens
+ * (teammate full names + group labels like "everyone" / "team"). Longest
+ * tokens are checked first so "@Jane Doe" wins over "@Jane".
  */
-function renderBodyWithMentions(body: string) {
-  // Split on @Mention tokens. We accept letters, numbers, spaces, '.' and '-'
-  // up to ~30 chars so "@Mary Ann O'Connor" works without being greedy.
-  const parts = body.split(/(@[A-Za-z][A-Za-z0-9 .'\-]{0,30}?)(?=[\s,.!?:;)]|$)/g);
-  return parts.map((part, idx) => {
-    if (part.startsWith("@") && part.length > 1) {
-      return (
-        <span
-          key={idx}
-          className="rounded bg-primary/10 px-1 py-px font-medium text-primary"
-        >
-          {part}
-        </span>
-      );
+function segmentMentions(body: string, knownTokens: string[]) {
+  type Seg = { kind: "text" | "mention"; value: string };
+  const segs: Seg[] = [];
+  const push = (kind: Seg["kind"], value: string) => {
+    if (!value) return;
+    const last = segs[segs.length - 1];
+    if (last && last.kind === kind && kind === "text") {
+      last.value += value;
+    } else {
+      segs.push({ kind, value });
     }
-    return <span key={idx}>{part}</span>;
-  });
+  };
+  let i = 0;
+  while (i < body.length) {
+    if (body[i] === "@") {
+      let matched: string | null = null;
+      for (const tok of knownTokens) {
+        if (!tok) continue;
+        if (
+          body.slice(i + 1, i + 1 + tok.length).toLowerCase() ===
+          tok.toLowerCase()
+        ) {
+          // Boundary: the character after the token must be whitespace,
+          // punctuation, or end-of-string — otherwise we'd match "@team"
+          // inside "@teammate".
+          const next = body[i + 1 + tok.length];
+          if (!next || /[\s,.!?:;)]/.test(next)) {
+            matched = body.slice(i, i + 1 + tok.length);
+            break;
+          }
+        }
+      }
+      if (matched) {
+        push("mention", matched);
+        i += matched.length;
+        continue;
+      }
+    }
+    push("text", body[i]);
+    i++;
+  }
+  return segs;
+}
+
+/**
+ * Render a comment body with `@Mention` chips highlighted.
+ */
+function renderBodyWithMentions(body: string, knownTokens: string[]) {
+  return segmentMentions(body, knownTokens).map((seg, idx) =>
+    seg.kind === "mention" ? (
+      <span
+        key={idx}
+        className="rounded bg-primary/10 px-1 py-px font-medium text-primary"
+      >
+        {seg.value}
+      </span>
+    ) : (
+      <span key={idx}>{seg.value}</span>
+    ),
+  );
+}
+
+/**
+ * Mirror overlay rendered behind the comment textarea. The overlay paints
+ * mention tokens with a coloured background while leaving every glyph
+ * itself transparent — the real text comes from the textarea on top.
+ * Padding / font / line-height MUST match the textarea exactly so the
+ * highlight aligns character-for-character.
+ */
+function MentionHighlightOverlay({
+  value,
+  knownTokens,
+}: {
+  value: string;
+  knownTokens: string[];
+}) {
+  const segs = segmentMentions(value, knownTokens);
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words rounded-md border border-transparent px-3 py-1 text-sm leading-5"
+    >
+      {segs.map((seg, idx) =>
+        seg.kind === "mention" ? (
+          <span
+            key={idx}
+            className="rounded bg-primary/15 text-transparent"
+          >
+            {seg.value}
+          </span>
+        ) : (
+          <span key={idx} className="text-transparent">
+            {seg.value}
+          </span>
+        ),
+      )}
+      {/* Trailing newline guard so the overlay grows the same way as the
+          textarea when the user hits Enter at the end of the input. */}
+      {value.endsWith("\n") ? "\u200b" : ""}
+    </div>
+  );
 }

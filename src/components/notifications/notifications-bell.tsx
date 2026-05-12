@@ -61,16 +61,16 @@ export function NotificationsBell({
             type="button"
             aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
             className="relative inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          />
+          >
+            <Bell className="size-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 inline-flex min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 font-mono text-[9px] font-bold text-destructive-foreground ring-2 ring-background">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
         }
-      >
-        <Bell className="size-4" />
-        {unreadCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 inline-flex min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 font-mono text-[9px] font-bold text-destructive-foreground ring-2 ring-background">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </PopoverTrigger>
+      />
       <PopoverContent
         align="end"
         sideOffset={8}

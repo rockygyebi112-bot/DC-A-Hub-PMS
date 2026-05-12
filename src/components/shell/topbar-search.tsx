@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,31 +12,70 @@ export type SearchItem = {
   group?: string;
 };
 
+type SearchableActivity = {
+  id: string;
+  name: string;
+  project_id: string;
+  project_name: string;
+  phase_name: string | null;
+};
+
 /**
  * Topbar search with live dropdown. Filters across the navigation items
  * passed in (typically every project the user can access). Clicking a
  * result — or pressing Enter on the highlighted row — navigates to it.
+ *
+ * Activities are fetched lazily from `/api/search/activities` the first
+ * time the dropdown opens so the layout doesn't have to pay for a 200-row
+ * activities join on every page navigation. `activityHrefBase` decides
+ * whether matches link into `/workspace` or `/portal`.
  */
-export function TopbarSearch({ items }: { items: SearchItem[] }) {
+export function TopbarSearch({
+  items,
+  activityHrefBase = "/workspace",
+}: {
+  items: SearchItem[];
+  activityHrefBase?: "/workspace" | "/portal";
+}) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
+  const [activities, setActivities] = useState<SearchableActivity[]>([]);
+  const [activitiesLoaded, setActivitiesLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const loadActivities = useCallback(async () => {
+    if (activitiesLoaded) return;
+    setActivitiesLoaded(true); // optimistic so we don't double-fetch
+    try {
+      const res = await fetch("/api/search/activities", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as SearchableActivity[];
+      if (Array.isArray(data)) setActivities(data);
+    } catch {
+      // best-effort: project search still works without activities
+    }
+  }, [activitiesLoaded]);
 
   // Defensive dedupe: layouts can stitch projects + activities + clients
   // together, and any accidental duplicate href would otherwise produce a
   // React "duplicate key" warning when the dropdown renders.
   const dedupedItems = useMemo(() => {
+    const activityItems: SearchItem[] = activities.map((a) => ({
+      href: `${activityHrefBase}/projects/${a.project_id}/activities/${a.id}`,
+      label: a.name,
+      group: `Activity · ${a.project_name}`,
+    }));
     const seen = new Set<string>();
     const out: SearchItem[] = [];
-    for (const it of items) {
+    for (const it of [...items, ...activityItems]) {
       if (seen.has(it.href)) continue;
       seen.add(it.href);
       out.push(it);
     }
     return out;
-  }, [items]);
+  }, [items, activities, activityHrefBase]);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -97,8 +136,15 @@ export function TopbarSearch({ items }: { items: SearchItem[] }) {
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(true);
+            // First keystroke triggers the lazy activities fetch.
+            void loadActivities();
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            setOpen(true);
+            // Pre-warm activities the moment the user focuses the box so
+            // results are already there by the time they finish typing.
+            void loadActivities();
+          }}
           onKeyDown={onKeyDown}
           placeholder="Search projects..."
           className="h-10 w-[300px] rounded-full border border-border bg-muted/40 pl-10 pr-4 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:bg-background lg:w-[340px]"

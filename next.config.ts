@@ -50,6 +50,10 @@ const nextConfig: NextConfig = {
     // sizes; we cover phone / tablet / desktop / retina with these.
     deviceSizes: [640, 828, 1080, 1200, 1920],
     imageSizes: [64, 128, 256, 384],
+    // Serve next-gen formats first. AVIF compresses ~30% smaller than WebP
+    // on average; both are universally supported by modern browsers and
+    // Next.js falls back to the original PNG/JPG for older clients.
+    formats: ["image/avif", "image/webp"],
   },
   async headers() {
     return [

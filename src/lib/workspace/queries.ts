@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { throwIfError } from "@/lib/supabase/errors";
 
@@ -60,42 +61,61 @@ export type WorkspaceProof = {
 
 export const listWorkspaceProjects = cache(async (): Promise<WorkspaceProject[]> => {
   const sb = await createClient();
+  // Single PostgREST query with nested selects pulls projects + their
+  // phases + activity statuses in one round-trip. This replaces the prior
+  // three serial fetches (projects -> phases -> activities) and is the
+  // dominant cost on every workspace navigation.
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[query] listWorkspaceProjects -> projects (joined)");
+  }
   const { data: projects, error } = await sb
     .from("projects")
-    .select("id, name, code, status, start_date, end_date, description, client:clients(id, name, logo_url)")
+    .select(
+      `id, name, code, status, start_date, end_date, description,
+       client:clients(id, name, logo_url),
+       phases(id, activities(id, phase_id, status))`,
+    )
     .is("archived_at", null)
     .order("name", { ascending: true });
   throwIfError(error);
   if (!projects?.length) return [];
 
-  const projectIds = projects.map((project) => project.id);
-  const { data: phases } = await sb
-    .from("phases")
-    .select("id, project_id")
-    .in("project_id", projectIds);
-  const phaseIds = (phases ?? []).map((phase) => phase.id);
-  const { data: activities } = phaseIds.length
-    ? await sb.from("activities").select("id, phase_id, status").in("phase_id", phaseIds)
-    : { data: [] };
+  type JoinedProject = {
+    id: string;
+    name: string;
+    code: string;
+    status: string;
+    start_date: string | null;
+    end_date: string | null;
+    description: string | null;
+    client:
+      | { id: string; name: string; logo_url: string | null }
+      | { id: string; name: string; logo_url: string | null }[]
+      | null;
+    phases:
+      | { id: string; activities: { id: string; phase_id: string; status: string }[] | null }[]
+      | null;
+  };
 
-  const phaseToProject = new Map((phases ?? []).map((phase) => [phase.id, phase.project_id]));
-  const counts = new Map<string, { done: number; total: number }>();
-  for (const activity of activities ?? []) {
-    const projectId = phaseToProject.get(activity.phase_id);
-    if (!projectId) continue;
-    const current = counts.get(projectId) ?? { done: 0, total: 0 };
-    current.total += 1;
-    if (activity.status === "done") current.done += 1;
-    counts.set(projectId, current);
-  }
-
-  return projects.map((project) => {
-    const count = counts.get(project.id) ?? { done: 0, total: 0 };
+  return (projects as unknown as JoinedProject[]).map((project) => {
+    let done = 0;
+    let total = 0;
+    for (const phase of project.phases ?? []) {
+      for (const activity of phase.activities ?? []) {
+        total += 1;
+        if (activity.status === "done") done += 1;
+      }
+    }
+    const {
+      phases: _phases,
+      client,
+      ...rest
+    } = project;
     return {
-      ...project,
-      client: Array.isArray(project.client) ? project.client[0] ?? null : project.client,
-      doneCount: count.done,
-      totalCount: count.total,
+      ...rest,
+      client: Array.isArray(client) ? client[0] ?? null : client,
+      doneCount: done,
+      totalCount: total,
     };
   });
 });
@@ -261,3 +281,25 @@ export const listProjectTeam = cache(async (projectId: string) => {
   }));
 });
 
+/**
+ * Cross-request cached loader powering the workspace shell. Returns just
+ * the bits the layout needs — projects for the sidebar/search and the
+ * notification feed — so every page navigation can be served from the
+ * server-side cache instead of issuing fresh Supabase calls. Bust with
+ * `revalidateTag('workspace-layout')` or
+ * `revalidateTag('workspace-layout-<userId>')` from server actions.
+ */
+export type WorkspaceLayoutData = {
+  projects: WorkspaceProject[];
+};
+
+export function getWorkspaceLayoutData(userId: string): Promise<WorkspaceLayoutData> {
+  return unstable_cache(
+    async () => {
+      const projects = await listWorkspaceProjects().catch(() => [] as WorkspaceProject[]);
+      return { projects };
+    },
+    [`workspace-layout-${userId}`],
+    { revalidate: 30, tags: ["workspace-layout", `workspace-layout-${userId}`] },
+  )();
+}

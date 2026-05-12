@@ -19,6 +19,7 @@ export function AppTopbar({
   greetingPath,
   mobileNav,
   searchItems,
+  searchActivityHrefBase = "/workspace",
   showBreadcrumbs = true,
 }: {
   name: string;
@@ -34,6 +35,9 @@ export function AppTopbar({
   mobileNav?: ReactNode;
   /** Items powering the search dropdown. */
   searchItems?: SearchItem[];
+  /** Base path used when navigating to activity matches in the search
+   *  dropdown. Defaults to `/workspace`; portal-facing shells pass `/portal`. */
+  searchActivityHrefBase?: "/workspace" | "/portal";
   /** Hide the path-based breadcrumb trail (e.g. for client-facing surfaces). */
   showBreadcrumbs?: boolean;
 }) {
@@ -73,7 +77,7 @@ export function AppTopbar({
         {showSearch && items.length > 0 && (
           /* Desktop only: live-search dropdown over the user's projects. */
           <div className="hidden md:block">
-            <TopbarSearch items={items} />
+            <TopbarSearch items={items} activityHrefBase={searchActivityHrefBase} />
           </div>
         )}
         <div className="flex items-center gap-1 md:gap-2">

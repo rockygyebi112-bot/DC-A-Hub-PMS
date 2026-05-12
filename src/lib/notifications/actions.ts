@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { dbErrorMessage } from "@/lib/db-errors";
 
@@ -30,6 +30,12 @@ export async function markNotificationsRead() {
     );
   if (error) return { ok: false, error: dbErrorMessage(error) };
 
+  // Bust the per-user cached notification feed so the bell reflects the new
+  // last_read_at on the very next navigation.
+  // Next.js 16 requires a profile arg on revalidateTag; 'max' evicts the
+  // tagged cache entry as aggressively as possible (matches the prior
+  // single-arg behaviour from Next 15).
+  revalidateTag(`notifications-${user.id}`, "max");
   revalidatePath("/portal", "layout");
   revalidatePath("/workspace", "layout");
   return { ok: true };

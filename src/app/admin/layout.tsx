@@ -2,11 +2,9 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { SidebarBrandCard } from "@/components/admin/ui/sidebar-brand-card";
-import { getAdminCounts, listClients, listProjects } from "@/lib/admin/queries";
+import { getAdminLayoutData } from "@/lib/admin/queries";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
-import { listSearchableActivities } from "@/lib/search";
-import { getNotificationFeed } from "@/lib/notifications/queries";
-import { createClient } from "@/lib/supabase/server";
+import { getCachedNotificationFeed } from "@/lib/notifications/queries";
 
 function timeBasedGreeting(date = new Date()) {
   const h = date.getHours();
@@ -24,26 +22,19 @@ export default async function AdminLayout({
   if (!profile) redirect("/login");
   if (profile.role !== "admin") redirect("/");
 
-  const today = new Date().toISOString().slice(0, 10);
-  const sb = await createClient();
-  const [counts, notifications, clients, projects, overdueRes, activities] =
-    await Promise.all([
-      getAdminCounts(),
-      getNotificationFeed("workspace").catch(() => ({
-        entries: [],
-        unreadCount: 0,
-        lastReadAt: null,
-      })),
-      listClients().catch(() => []),
-      listProjects().catch(() => []),
-      sb
-        .from("activities")
-        .select("id", { count: "exact", head: true })
-        .lt("planned_date", today)
-        .neq("status", "done"),
-      listSearchableActivities().catch(() => []),
-    ]);
-  const overdueCount = overdueRes.count ?? 0;
+  // Layout data + notifications are both served from `unstable_cache` so
+  // every navigation reuses the same RSC payload instead of hitting
+  // Supabase 4-6 times. The relevant server actions bust these tags on
+  // mutation so the UI stays fresh.
+  const [layout, notifications] = await Promise.all([
+    getAdminLayoutData(profile.userId),
+    getCachedNotificationFeed(profile.userId, "workspace").catch(() => ({
+      entries: [],
+      unreadCount: 0,
+      lastReadAt: null,
+    })),
+  ]);
+  const { counts, clients, projects, overdueCount } = layout;
   const sidebarClients = clients.map((c) => ({
     id: c.id,
     name: c.name,
@@ -115,11 +106,6 @@ export default async function AdminLayout({
           href: `/admin/clients/${c.id}`,
           label: c.name,
           group: "Clients",
-        })),
-        ...activities.map((a) => ({
-          href: `/workspace/projects/${a.project_id}/activities/${a.id}`,
-          label: a.name,
-          group: `Activity · ${a.project_name}`,
         })),
       ]}
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}

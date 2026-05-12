@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export type NotificationEntry = {
@@ -169,4 +170,21 @@ export async function getNotificationFeed(
     unreadCount,
     lastReadAt,
   };
+}
+
+/**
+ * Cross-request cached wrapper around `getNotificationFeed`. The user id is
+ * baked into the cache key so each user gets their own bucket. Mutations
+ * (mark-as-read, new activity_log inserts) should call
+ * `revalidateTag('notifications-<userId>')` to invalidate.
+ */
+export function getCachedNotificationFeed(
+  userId: string,
+  surface: "portal" | "workspace",
+): Promise<NotificationFeed> {
+  return unstable_cache(
+    () => getNotificationFeed(surface),
+    [`notifications-${surface}-${userId}`],
+    { revalidate: 60, tags: [`notifications-${userId}`] },
+  )();
 }

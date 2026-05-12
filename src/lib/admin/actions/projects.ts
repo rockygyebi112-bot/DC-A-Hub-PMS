@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth/guards";
 import { projectFormSchema } from "@/lib/admin/schemas";
@@ -35,6 +35,10 @@ export async function createProject(
     .single();
   if (error) return { ok: false, error: GENERIC_DB_ERROR };
   revalidatePath("/admin/projects");
+  // Both shells (admin + workspace) render their sidebars from cached
+  // layout payloads; bust them so the new project appears immediately.
+  revalidateTag("admin-layout", "max");
+  revalidateTag("workspace-layout", "max");
   return { ok: true, data: { id: data.id } };
 }
 
@@ -62,6 +66,8 @@ export async function updateProject(
   if (error) return { ok: false, error: GENERIC_DB_ERROR };
   revalidatePath("/admin/projects");
   revalidatePath(`/admin/projects/${id}`);
+  revalidateTag("admin-layout", "max");
+  revalidateTag("workspace-layout", "max");
   return { ok: true };
 }
 
@@ -75,6 +81,8 @@ export async function archiveProject(id: string): Promise<ActionResult> {
     .eq("id", id);
   if (error) return { ok: false, error: GENERIC_DB_ERROR };
   revalidatePath("/admin/projects");
+  revalidateTag("admin-layout", "max");
+  revalidateTag("workspace-layout", "max");
   return { ok: true };
 }
 
@@ -88,6 +96,8 @@ export async function restoreProject(id: string): Promise<ActionResult> {
     .eq("id", id);
   if (error) return { ok: false, error: GENERIC_DB_ERROR };
   revalidatePath("/admin/projects");
+  revalidateTag("admin-layout", "max");
+  revalidateTag("workspace-layout", "max");
   return { ok: true };
 }
 
@@ -101,5 +111,7 @@ export async function deleteProject(id: string): Promise<ActionResult> {
   if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidatePath("/admin/projects");
   revalidatePath("/admin");
+  revalidateTag("admin-layout", "max");
+  revalidateTag("workspace-layout", "max");
   return { ok: true };
 }

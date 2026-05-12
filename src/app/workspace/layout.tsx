@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
-import { listWorkspaceProjects } from "@/lib/workspace/queries";
-import { listSearchableActivities } from "@/lib/search";
-import { getNotificationFeed } from "@/lib/notifications/queries";
+import { getWorkspaceLayoutData } from "@/lib/workspace/queries";
+import { getCachedNotificationFeed } from "@/lib/notifications/queries";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 
 export default async function WorkspaceLayout({
@@ -15,15 +14,17 @@ export default async function WorkspaceLayout({
   if (!profile) redirect("/login");
   if (profile.role !== "admin" && profile.role !== "staff") redirect("/portal");
 
-  const [projects, notifications, activities] = await Promise.all([
-    listWorkspaceProjects().catch(() => []),
-    getNotificationFeed("workspace").catch(() => ({
+  // Both loaders are wrapped in `unstable_cache` so every page navigation
+  // reuses the same RSC payload until a mutation busts the tag.
+  const [layout, notifications] = await Promise.all([
+    getWorkspaceLayoutData(profile.userId),
+    getCachedNotificationFeed(profile.userId, "workspace").catch(() => ({
       entries: [],
       unreadCount: 0,
       lastReadAt: null,
     })),
-    listSearchableActivities().catch(() => []),
   ]);
+  const { projects } = layout;
   const activeCount = projects.filter((p) => p.status === "active").length;
 
   const groups = [
@@ -71,18 +72,11 @@ export default async function WorkspaceLayout({
       defaultLogoUrl="/logo.png"
       projectBrands={projectBrands}
       projectPathPrefix="/workspace/projects"
-      searchItems={[
-        ...projects.map((p) => ({
-          href: `/workspace/projects/${p.id}`,
-          label: p.name,
-          group: "Projects",
-        })),
-        ...activities.map((a) => ({
-          href: `/workspace/projects/${a.project_id}/activities/${a.id}`,
-          label: a.name,
-          group: `Activity · ${a.project_name}`,
-        })),
-      ]}
+      searchItems={projects.map((p) => ({
+        href: `/workspace/projects/${p.id}`,
+        label: p.name,
+        group: "Projects",
+      }))}
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
       sidebarFooter={
         <div className="rounded-lg border bg-background/70 p-3 text-xs text-muted-foreground">

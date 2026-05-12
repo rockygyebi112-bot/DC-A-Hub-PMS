@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import {
   Activity,
   CheckCircle2,
@@ -435,6 +436,51 @@ export default async function AdminOverview({
   const sp = await searchParams;
   const period: DashboardPeriod =
     sp.period === "quarter" || sp.period === "ytd" ? sp.period : "month";
+
+  return (
+    <div className="space-y-5">
+      {/* Shell renders immediately — period selector is interactive even
+          while the data-heavy body below is still streaming. */}
+      <div className="flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+        <h1 className="font-heading text-xl font-bold tracking-tight text-foreground">
+          Dashboard
+        </h1>
+        <DashboardPeriodSelector current={period} />
+      </div>
+      <Suspense
+        key={period}
+        fallback={<DashboardSkeleton />}
+      >
+        <DashboardBody period={period} />
+      </Suspense>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  // Simple shimmer placeholders so the dashboard area doesn't pop in with a
+  // jarring layout shift while the data resolves. Heights are tuned to roughly
+  // match the real KPI row + cards so the page doesn't reflow when content
+  // streams in.
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-[92px] animate-pulse rounded-2xl border bg-muted/40"
+          />
+        ))}
+      </div>
+      <div className="grid gap-5 xl:grid-cols-2">
+        <div className="h-[280px] animate-pulse rounded-2xl border bg-muted/40" />
+        <div className="h-[280px] animate-pulse rounded-2xl border bg-muted/40" />
+      </div>
+    </div>
+  );
+}
+
+async function DashboardBody({ period }: { period: DashboardPeriod }) {
   const [counts, data] = await Promise.all([
     getAdminCounts(),
     getDashboardData(period),
@@ -456,16 +502,6 @@ export default async function AdminOverview({
 
   return (
     <div className="space-y-5">
-      {/* Page title + period selector. Stack on phones so the title gets a
-          full line and the selector doesn't get squeezed; align side-by-side
-          from sm+. */}
-      <div className="flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-        <h1 className="font-heading text-xl font-bold tracking-tight text-foreground">
-          Dashboard
-        </h1>
-        <DashboardPeriodSelector current={period} />
-      </div>
-
       {/* KPI summary row. 2 cols on phones so the section doesn't span a
           full scroll-screen; widens to 3/5 on larger surfaces. */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">

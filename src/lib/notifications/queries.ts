@@ -89,10 +89,20 @@ export async function getNotificationFeed(
   // they themselves triggered. We only suppress this for proof_commented
   // since the existing actions (proof_added, marked_done, started) tend
   // to be staff-driven and useful as a "saved" confirmation.
-  const entries = (rows ?? []).filter(
-    (row) =>
-      !(row.action === "proof_commented" && row.actor_user_id === user.id),
-  );
+  //
+  // We also suppress the broadcast 'proof_commented' row for any user
+  // who was @mentioned in that same comment — they already get a
+  // targeted 'proof_mentioned' entry and shouldn't see two bell items
+  // for one event. mentioned_user_ids is written into meta by
+  // addProofComment at the time the broadcast row is inserted.
+  const entries = (rows ?? []).filter((row) => {
+    if (row.action !== "proof_commented") return true;
+    if (row.actor_user_id === user.id) return false;
+    const mentioned = (row.meta as { mentioned_user_ids?: unknown } | null)
+      ?.mentioned_user_ids;
+    if (Array.isArray(mentioned) && mentioned.includes(user.id)) return false;
+    return true;
+  });
   if (entries.length === 0) {
     return { entries: [], unreadCount: 0, lastReadAt };
   }

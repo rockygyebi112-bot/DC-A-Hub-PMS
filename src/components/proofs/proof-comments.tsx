@@ -685,7 +685,7 @@ export function ProofComments({
                     submit();
                   }
                 }}
-                placeholder="Add a comment… type @ to tag a teammate"
+                placeholder=""
                 rows={2}
                 maxLength={4000}
                 className="relative flex w-full min-h-9 rounded-md border bg-transparent px-3 py-1 text-sm leading-5 shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"

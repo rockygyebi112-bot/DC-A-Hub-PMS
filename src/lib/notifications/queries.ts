@@ -12,6 +12,13 @@ export type NotificationEntry = {
   activity_name: string | null;
   actor_name: string | null;
   href: string | null;
+  /**
+   * Free-form metadata recorded at the time of the event. Currently used
+   * by 'proof_commented' rows to carry the proof filename and a preview
+   * snippet of the comment so the notifications bell can render
+   * "Comment on report.pdf: 'Looks great…'" without an extra round-trip.
+   */
+  meta: Record<string, unknown> | null;
 };
 
 export type NotificationFeed = {
@@ -25,7 +32,15 @@ const FEED_LIMIT = 20;
 // Actions surfaced to client viewers in the portal. Clients should only be
 // notified when work actually moves forward or proof is uploaded — not when
 // activities are merely created or generically edited.
-const PORTAL_VISIBLE_ACTIONS = new Set(["started", "marked_done", "proof_added"]);
+const PORTAL_VISIBLE_ACTIONS = new Set([
+  "started",
+  "marked_done",
+  "proof_added",
+  // Clients should see when the project team replies to their comments
+  // (and vice versa). Comments are bidirectional, so the same event shows
+  // up for both surfaces.
+  "proof_commented",
+]);
 
 export async function getNotificationFeed(
   hrefBase: "portal" | "workspace" = "portal",
@@ -41,7 +56,7 @@ export async function getNotificationFeed(
 
   const baseQuery = sb
     .from("activity_log")
-    .select("id, action, created_at, project_id, activity_id, actor_user_id")
+    .select("id, action, created_at, project_id, activity_id, actor_user_id, meta")
     .order("created_at", { ascending: false })
     .limit(FEED_LIMIT);
   const filteredQuery =
@@ -69,7 +84,14 @@ export async function getNotificationFeed(
   ]);
 
   const lastReadAt = cursor?.last_read_at ?? null;
-  const entries = rows ?? [];
+  // Comments are noisy — there's no point notifying users about events
+  // they themselves triggered. We only suppress this for proof_commented
+  // since the existing actions (proof_added, marked_done, started) tend
+  // to be staff-driven and useful as a "saved" confirmation.
+  const entries = (rows ?? []).filter(
+    (row) =>
+      !(row.action === "proof_commented" && row.actor_user_id === user.id),
+  );
   if (entries.length === 0) {
     return { entries: [], unreadCount: 0, lastReadAt };
   }
@@ -119,6 +141,11 @@ export async function getNotificationFeed(
       activity_name: activityId ? activityById.get(activityId) ?? null : null,
       actor_name: row.actor_user_id ? actorById.get(row.actor_user_id) ?? null : null,
       href,
+      meta:
+        (row as { meta?: unknown }).meta &&
+        typeof (row as { meta?: unknown }).meta === "object"
+          ? ((row as { meta?: Record<string, unknown> }).meta ?? null)
+          : null,
     };
   });
 

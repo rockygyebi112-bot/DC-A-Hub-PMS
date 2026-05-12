@@ -1,8 +1,11 @@
+import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { ActivityStatus } from "@/components/workspace/status-badge";
 import { ProofAccessButton } from "@/components/workspace/proof-access-button";
+import { ProofComments } from "@/components/proofs/proof-comments";
 import { getPortalActivity } from "@/lib/portal/queries";
+import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
 export default async function PortalActivityPage({
   params,
@@ -10,7 +13,11 @@ export default async function PortalActivityPage({
   params: Promise<{ id: string; activityId: string }>;
 }) {
   const { id, activityId } = await params;
-  const { activity, proofs } = await getPortalActivity(activityId);
+  const [profile, { activity, proofs }] = await Promise.all([
+    getCurrentProfile(),
+    getPortalActivity(activityId),
+  ]);
+  if (!profile) notFound();
 
   return (
     <div className="mx-auto w-full max-w-5xl">
@@ -67,16 +74,22 @@ export default async function PortalActivityPage({
           {proofs.length === 0 ? (
             <p className="text-sm text-muted-foreground">No proofs uploaded yet.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-4">
               {proofs.map((proof) => (
-                <ProofAccessButton
-                  key={proof.id}
-                  proofId={proof.id}
-                  fileName={proof.file_name}
-                  caption={proof.caption}
-                  kind={proof.kind}
-                  hint={proof.kind === "link" ? proof.url : proof.mime_type}
-                />
+                <div key={proof.id} className="space-y-2">
+                  <ProofAccessButton
+                    proofId={proof.id}
+                    fileName={proof.file_name}
+                    caption={proof.caption}
+                    kind={proof.kind}
+                    hint={proof.kind === "link" ? proof.url : proof.mime_type}
+                  />
+                  <ProofComments
+                    proofId={proof.id}
+                    currentUserId={profile.userId}
+                    isAdmin={profile.role === "admin"}
+                  />
+                </div>
               ))}
             </div>
           )}

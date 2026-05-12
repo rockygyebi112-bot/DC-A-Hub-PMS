@@ -10,10 +10,7 @@ import {
   TimelineCard,
   WorkplanCard,
 } from "@/components/portal/project-summary-cards";
-import {
-  AnnouncementsCard,
-  NeedHelpCard,
-} from "@/components/portal/side-cards";
+import { NeedHelpCard } from "@/components/portal/side-cards";
 import { PortalProjectTabs } from "@/components/portal/project-tabs";
 import { WorkplanProgressTable } from "@/components/portal/workplan-progress-table";
 import { getPortalProjectDetail } from "@/lib/portal/queries";
@@ -32,7 +29,6 @@ export default async function PortalProjectPage({
     project,
     phases,
     manager,
-    announcements,
   } = detail;
 
   const allActivities = phases.flatMap((p) => p.activities);
@@ -54,6 +50,7 @@ export default async function PortalProjectPage({
   return (
     <div className="space-y-6">
       <PageHeader
+        showBack={false}
         backFallbackHref="/portal"
         title={
           <span className="flex flex-wrap items-center gap-3">
@@ -108,7 +105,6 @@ export default async function PortalProjectPage({
         </div>
 
         <div className="space-y-6">
-          <AnnouncementsCard items={announcements} projectId={project.id} />
           <NeedHelpCard manager={manager} />
         </div>
       </div>

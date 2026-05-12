@@ -6,7 +6,6 @@ import {
   ChevronDown,
   ClipboardList,
   Columns3,
-  FileSpreadsheet,
   Layers,
   ListChecks,
   MoreVertical,
@@ -106,10 +105,6 @@ export default async function WorkspaceProjectPage({
         backFallbackHref="/workspace"
         action={
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" render={<a href="#import-checklist" />}>
-              <FileSpreadsheet className="size-4" />
-              Import checklist
-            </Button>
             <Button variant="outline" render={<Link href={`/workspace/projects/${id}/team`} />}>
               <Users className="size-4" />
               Team

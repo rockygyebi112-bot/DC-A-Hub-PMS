@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { Loader2, MessageSquare, Send, Trash2 } from "lucide-react";
+import { Loader2, MessageSquare, Pencil, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
@@ -11,6 +11,7 @@ import {
   deleteProofComment,
   listMentionableUsers,
   listProofComments,
+  updateProofComment,
   type MentionableUser,
   type ProofComment,
 } from "@/lib/proofs/comments";
@@ -95,10 +96,17 @@ export function ProofComments({
   const [posting, startPosting] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletePending, startDelete] = useTransition();
+  // Edit-mode state — one comment at a time.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [editPending, startEdit] = useTransition();
 
-  // Stable client + once-per-open flag so collapsing/re-opening doesn't
-  // cause cascading setState-in-effect lint complaints.
-  const fetchedRef = useRef(false);
+  // Per-user / per-proof last-read marker. Stored in localStorage so the
+  // "unread comments" badge persists across refreshes without adding a
+  // backend table. Other devices won't sync — acceptable trade-off for
+  // what is essentially a UI-only affordance.
+  const readStorageKey = `dcahub.proof-comments.lastRead:${currentUserId}:${proofId}`;
+  const [lastReadAt, setLastReadAt] = useState<string | null>(null);
   const loading = open && comments === null;
 
   // Mention infrastructure ---------------------------------------------------
@@ -119,32 +127,39 @@ export function ProofComments({
   const [mentionHighlight, setMentionHighlight] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Initial fetch -----------------------------------------------------------
+  // Load the stored last-read marker on mount. Reading from localStorage
+  // has to happen in an effect to avoid SSR hydration mismatches.
   useEffect(() => {
-    if (!open || fetchedRef.current) return;
-    fetchedRef.current = true;
+    try {
+      const stored = window.localStorage.getItem(readStorageKey);
+      // Sync external (localStorage) state into React. The one-time
+      // write here is the standard pattern for client-only values that
+      // can't be read during SSR.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLastReadAt(stored);
+    } catch {
+      // Private mode / storage quota — fall back to treating everything
+      // as read so we don't show a stale badge on every load.
+      setLastReadAt(new Date().toISOString());
+    }
+  }, [readStorageKey]);
+
+  // Initial fetch + realtime subscription — always on, regardless of
+  // whether the thread is expanded. We need the list available at all
+  // times so we can (1) show the unread badge on the collapsed header
+  // and (2) stream incoming comments live to every viewer without
+  // requiring them to click "Show" first.
+  useEffect(() => {
     let cancelled = false;
     listProofComments(proofId).then((res) => {
       if (cancelled) return;
       if (!res.ok) {
-        toast.error(res.error);
         setComments([]);
         return;
       }
       setComments(res.data);
     });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, proofId]);
 
-  // Realtime subscription ---------------------------------------------------
-  // Subscribe whenever the section is open so other users' comments arrive
-  // immediately. We refetch on every change rather than try to reconstruct
-  // the row locally (the realtime payload doesn't include the joined
-  // profile data, so a refetch keeps author names accurate).
-  useEffect(() => {
-    if (!open) return;
     const sb = createClient();
     const channel = sb
       .channel(`proof-comments-${proofId}`)
@@ -157,16 +172,39 @@ export function ProofComments({
           filter: `proof_id=eq.${proofId}`,
         },
         () => {
+          // Refetch rather than reconstruct — the realtime payload
+          // doesn't include joined profile data, and a small fetch keeps
+          // author names accurate.
           listProofComments(proofId).then((res) => {
-            if (res.ok) setComments(res.data);
+            if (!cancelled && res.ok) setComments(res.data);
           });
         },
       )
       .subscribe();
+
     return () => {
+      cancelled = true;
       sb.removeChannel(channel);
     };
-  }, [open, proofId]);
+  }, [proofId]);
+
+  // When the thread is expanded, mark everything currently visible as
+  // read so the unread badge clears. New comments that arrive after this
+  // point will bump past the stored marker and re-badge if the user
+  // collapses and later returns.
+  useEffect(() => {
+    if (!open) return;
+    const now = new Date().toISOString();
+    try {
+      window.localStorage.setItem(readStorageKey, now);
+    } catch {
+      // ignore
+    }
+    // Syncing the externally-persisted read marker back into React state
+    // so the unread badge recomputes. This is the intended pattern.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLastReadAt(now);
+  }, [open, readStorageKey, comments]);
 
   // Lazy-load the mention list the first time the user shows interest in
   // commenting (i.e. when the section is open).
@@ -329,7 +367,45 @@ export function ProofComments({
     });
   }
 
+  function beginEdit(c: ProofComment) {
+    setEditingId(c.id);
+    setEditDraft(c.body);
+  }
+  function cancelEdit() {
+    setEditingId(null);
+    setEditDraft("");
+  }
+  function saveEdit(id: string) {
+    const body = editDraft.trim();
+    if (!body) return;
+    startEdit(async () => {
+      const res = await updateProofComment(id, body);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      setComments((prev) =>
+        prev ? prev.map((c) => (c.id === id ? res.data : c)) : prev,
+      );
+      setEditingId(null);
+      setEditDraft("");
+      toast.success("Comment updated");
+    });
+  }
+
   const count = comments?.length ?? null;
+  // Unread = comments authored by someone else whose created_at is newer
+  // than the stored last-read marker. We never count your own messages.
+  // When lastReadAt is null (first ever visit) every foreign comment is
+  // considered unread.
+  const unreadCount = useMemo(() => {
+    if (!comments || open) return 0;
+    return comments.filter(
+      (c) =>
+        c.author_user_id !== currentUserId &&
+        (!lastReadAt || c.created_at > lastReadAt),
+    ).length;
+  }, [comments, currentUserId, lastReadAt, open]);
 
   return (
     <div className="mt-2 rounded-lg border bg-muted/20">
@@ -345,6 +421,14 @@ export function ProofComments({
           {count != null && (
             <span className="rounded-full bg-muted px-1.5 py-px font-mono text-[10px] tabular-nums">
               {count}
+            </span>
+          )}
+          {unreadCount > 0 && (
+            <span
+              className="rounded-full bg-primary px-1.5 py-px font-mono text-[10px] font-semibold tabular-nums text-primary-foreground"
+              aria-label={`${unreadCount} unread`}
+            >
+              {unreadCount} new
             </span>
           )}
         </span>
@@ -363,8 +447,20 @@ export function ProofComments({
           ) : comments && comments.length > 0 ? (
             <ul className="space-y-3">
               {comments.map((c) => {
-                const canDelete = isAdmin || c.author_user_id === currentUserId;
+                const isAuthor = c.author_user_id === currentUserId;
+                const canDelete = isAdmin || isAuthor;
+                const canEdit = isAuthor;
                 const isDeleting = deletePending && deletingId === c.id;
+                const isEditing = editingId === c.id;
+                const isSaving = editPending && isEditing;
+                // `updated_at` is bumped by a trigger on every update; if
+                // it's materially newer than `created_at` we consider the
+                // comment edited. 2s threshold avoids false positives from
+                // insert-time write timing.
+                const wasEdited =
+                  new Date(c.updated_at).getTime() -
+                    new Date(c.created_at).getTime() >
+                  2000;
                 return (
                   <li key={c.id} className="flex items-start gap-2.5">
                     <UserAvatar
@@ -384,28 +480,99 @@ export function ProofComments({
                         >
                           {formatRelative(c.created_at)}
                         </span>
+                        {wasEdited && (
+                          <span
+                            className="text-[10px] italic text-muted-foreground"
+                            title={`Edited ${new Date(c.updated_at).toLocaleString()}`}
+                          >
+                            (edited)
+                          </span>
+                        )}
                       </div>
-                      <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-foreground/90">
-                        {renderBodyWithMentions(c.body)}
-                      </p>
+                      {isEditing ? (
+                        <div className="mt-1 space-y-1.5">
+                          <textarea
+                            value={editDraft}
+                            onChange={(e) => setEditDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") {
+                                e.preventDefault();
+                                cancelEdit();
+                              }
+                              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                                e.preventDefault();
+                                saveEdit(c.id);
+                              }
+                            }}
+                            rows={2}
+                            maxLength={4000}
+                            autoFocus
+                            className="flex w-full min-h-9 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                          />
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              size="xs"
+                              onClick={() => saveEdit(c.id)}
+                              disabled={
+                                isSaving ||
+                                editDraft.trim().length === 0 ||
+                                editDraft.trim() === c.body.trim()
+                              }
+                            >
+                              {isSaving ? (
+                                <Loader2 className="size-3 animate-spin" />
+                              ) : null}
+                              Save
+                            </Button>
+                            <Button
+                              type="button"
+                              size="xs"
+                              variant="ghost"
+                              onClick={cancelEdit}
+                              disabled={isSaving}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-foreground/90">
+                          {renderBodyWithMentions(c.body)}
+                        </p>
+                      )}
                     </div>
-                    {canDelete && (
-                      <button
-                        type="button"
-                        onClick={() => remove(c.id)}
-                        disabled={isDeleting}
-                        aria-label="Delete comment"
-                        className={cn(
-                          "shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive",
-                          isDeleting && "opacity-50",
+                    {!isEditing && (
+                      <div className="flex shrink-0 items-center gap-0.5">
+                        {canEdit && (
+                          <button
+                            type="button"
+                            onClick={() => beginEdit(c)}
+                            aria-label="Edit comment"
+                            className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
                         )}
-                      >
-                        {isDeleting ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <Trash2 className="size-3.5" />
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => remove(c.id)}
+                            disabled={isDeleting}
+                            aria-label="Delete comment"
+                            className={cn(
+                              "rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive",
+                              isDeleting && "opacity-50",
+                            )}
+                          >
+                            {isDeleting ? (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="size-3.5" />
+                            )}
+                          </button>
                         )}
-                      </button>
+                      </div>
                     )}
                   </li>
                 );

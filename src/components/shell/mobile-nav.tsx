@@ -139,13 +139,13 @@ export function MobileNav({
 
           {/* Bottom brand chip — mirrors the desktop rail. */}
           <div className="flex items-center gap-2 border-t border-white/10 px-4 py-3">
-            <div className="flex size-7 shrink-0 items-center justify-center">
+            <div className="flex size-10 shrink-0 items-center justify-center">
               {defaultLogoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={defaultLogoUrl}
                   alt={`${brand} logo`}
-                  className="h-7 w-7 object-contain"
+                  className="h-10 w-10 object-contain"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">

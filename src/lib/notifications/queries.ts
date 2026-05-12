@@ -40,6 +40,7 @@ const PORTAL_VISIBLE_ACTIONS = new Set([
   // (and vice versa). Comments are bidirectional, so the same event shows
   // up for both surfaces.
   "proof_commented",
+  "proof_mentioned",
 ]);
 
 export async function getNotificationFeed(

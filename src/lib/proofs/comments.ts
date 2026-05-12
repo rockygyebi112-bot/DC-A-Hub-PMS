@@ -17,6 +17,15 @@ export type ProofComment = {
   author_avatar_url: string | null;
 };
 
+export type MentionableUser = {
+  user_id: string;
+  full_name: string;
+  email: string;
+  role: "admin" | "staff" | "client";
+  avatar_url: string | null;
+  is_manager: boolean;
+};
+
 const bodySchema = z
   .string()
   .trim()
@@ -110,12 +119,76 @@ export async function listProofComments(
 }
 
 /**
+ * List the people the current user can @mention in a comment on a given
+ * proof. That's every project_member plus all admins (admins aren't
+ * always added to project_members but should always be reachable). The
+ * "manager" flag highlights the most senior staff member so the picker
+ * can label them as Project Manager.
+ */
+export async function listMentionableUsers(
+  proofId: string,
+): Promise<{ ok: true; data: MentionableUser[] } | { ok: false; error: string }> {
+  const ctx = await proofContext(proofId);
+  if (!ctx) return { ok: false, error: "Proof not found" };
+
+  const guard = await requireProjectReader(ctx.projectId);
+  if (!guard.ok) return { ok: false, error: guard.error };
+
+  const sb = await createClient();
+  const [{ data: memberRows }, { data: adminRows }] = await Promise.all([
+    sb
+      .from("project_members")
+      .select("user_id")
+      .eq("project_id", ctx.projectId),
+    sb.from("profiles").select("user_id").eq("role", "admin"),
+  ]);
+
+  const userIds = new Set<string>();
+  for (const m of memberRows ?? []) userIds.add(m.user_id as string);
+  for (const a of adminRows ?? []) userIds.add(a.user_id as string);
+  // Don't suggest the author themselves — you can't @ yourself usefully.
+  userIds.delete(guard.userId);
+  if (userIds.size === 0) return { ok: true, data: [] };
+
+  const { data: profiles } = await sb
+    .from("profiles")
+    .select("user_id, full_name, email, role, avatar_url")
+    .in("user_id", Array.from(userIds));
+
+  const ROLE_RANK: Record<string, number> = { admin: 0, staff: 1, client: 2 };
+  const sorted = (profiles ?? []).slice().sort((a, b) => {
+    const ra = ROLE_RANK[a.role as string] ?? 3;
+    const rb = ROLE_RANK[b.role as string] ?? 3;
+    if (ra !== rb) return ra - rb;
+    return (a.full_name ?? "").localeCompare(b.full_name ?? "");
+  });
+
+  return {
+    ok: true,
+    data: sorted.map((p, idx) => ({
+      user_id: p.user_id as string,
+      full_name: (p.full_name as string) ?? "",
+      email: (p.email as string) ?? "",
+      role: p.role as MentionableUser["role"],
+      avatar_url: (p.avatar_url as string | null) ?? null,
+      // Highlight the top-ranked admin/staff entry as the "manager" so the
+      // UI can label them Project Manager — matches getProjectManager.
+      is_manager: idx === 0 && (p.role === "admin" || p.role === "staff"),
+    })),
+  };
+}
+
+/**
  * Add a comment to a proof. Allowed for anyone with project access
- * (members, admins, and client viewers all qualify).
+ * (members, admins, and client viewers all qualify). Optionally tags
+ * specific users via @mentions; each tagged user gets a per-user
+ * 'proof_mentioned' notification in addition to the broadcast
+ * 'proof_commented' one.
  */
 export async function addProofComment(
   proofId: string,
   rawBody: string,
+  mentionedUserIds: string[] = [],
 ): Promise<{ ok: true; data: ProofComment } | { ok: false; error: string }> {
   const parsed = bodySchema.safeParse(rawBody);
   if (!parsed.success) {
@@ -162,6 +235,31 @@ export async function addProofComment(
       preview,
     },
   });
+
+  // De-dup, drop self-mentions, and sanity-check the IDs are valid uuids
+  // before writing per-user mention notifications. We use the same
+  // 'proof_mentioned' action for each so the bell can target a single
+  // user via target_user_id.
+  const validMentions = Array.from(new Set(mentionedUserIds))
+    .filter((id) => typeof id === "string" && id.length === 36)
+    .filter((id) => id !== guard.userId);
+  if (validMentions.length > 0) {
+    await sb.from("activity_log").insert(
+      validMentions.map((targetUserId) => ({
+        project_id: ctx.projectId,
+        activity_id: ctx.activityId,
+        actor_user_id: guard.userId,
+        target_user_id: targetUserId,
+        action: "proof_mentioned",
+        meta: {
+          proof_id: proofId,
+          proof_name: ctx.fileName,
+          comment_id: data.id,
+          preview,
+        },
+      })),
+    );
+  }
 
   // The proof lives under both surfaces; revalidate both to refresh the
   // comment list wherever it's rendered.

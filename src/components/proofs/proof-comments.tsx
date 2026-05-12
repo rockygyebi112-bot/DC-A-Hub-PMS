@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Loader2, MessageSquare, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
+import { createClient } from "@/lib/supabase/client";
 import {
   addProofComment,
   deleteProofComment,
+  listMentionableUsers,
   listProofComments,
+  type MentionableUser,
   type ProofComment,
 } from "@/lib/proofs/comments";
 import { cn } from "@/lib/utils";
@@ -29,12 +31,20 @@ function formatRelative(iso: string) {
   return new Date(iso).toLocaleString();
 }
 
+function metaKeyLabel() {
+  if (typeof navigator === "undefined") return "Ctrl";
+  return /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
+}
+
 /**
- * Lightweight comments thread on a single proof. Lazy-loads the list when
- * the user expands the section so a long activity page with many proofs
- * doesn't trigger N+1 round-trips on first render. Anyone with project
- * read access can post — that includes client viewers, which is the whole
- * point: clients need a way to flag concerns on a specific document.
+ * Lightweight comments thread on a single proof.
+ *
+ * - Lazy-loads the comment list when the user expands the section.
+ * - Subscribes to Supabase Realtime on `proof_comments` so new comments
+ *   from other users stream in without a refresh.
+ * - Provides an @mention picker. Typing `@` opens a dropdown with project
+ *   teammates + admins; selecting one inserts `@Full Name` into the
+ *   textarea and tags them. Each tagged user gets a per-user notification.
  */
 export function ProofComments({
   proofId,
@@ -53,13 +63,25 @@ export function ProofComments({
   const [posting, startPosting] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletePending, startDelete] = useTransition();
-  // Tracks whether the initial fetch has been kicked off so a re-render
-  // (e.g. from collapsing then re-expanding the section) doesn't refire it.
-  // Using a ref means we never call setState inside the effect body just to
-  // mark "loading", which keeps React's strict-mode + lint rules happy.
+
+  // Stable client + once-per-open flag so collapsing/re-opening doesn't
+  // cause cascading setState-in-effect lint complaints.
   const fetchedRef = useRef(false);
   const loading = open && comments === null;
 
+  // Mention infrastructure ---------------------------------------------------
+  const [mentionables, setMentionables] = useState<MentionableUser[]>([]);
+  const mentionablesLoadedRef = useRef(false);
+  // Tracks who's been tagged in the current draft. Map key = user id, value
+  // = display name we inserted. We re-derive on each submit by scanning the
+  // body so deletions in the textarea silently un-tag the user.
+  const [taggedUsers, setTaggedUsers] = useState<MentionableUser[]>([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionAnchor, setMentionAnchor] = useState<number | null>(null);
+  const [mentionHighlight, setMentionHighlight] = useState(0);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Initial fetch -----------------------------------------------------------
   useEffect(() => {
     if (!open || fetchedRef.current) return;
     fetchedRef.current = true;
@@ -78,18 +100,144 @@ export function ProofComments({
     };
   }, [open, proofId]);
 
+  // Realtime subscription ---------------------------------------------------
+  // Subscribe whenever the section is open so other users' comments arrive
+  // immediately. We refetch on every change rather than try to reconstruct
+  // the row locally (the realtime payload doesn't include the joined
+  // profile data, so a refetch keeps author names accurate).
+  useEffect(() => {
+    if (!open) return;
+    const sb = createClient();
+    const channel = sb
+      .channel(`proof-comments-${proofId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "proof_comments",
+          filter: `proof_id=eq.${proofId}`,
+        },
+        () => {
+          listProofComments(proofId).then((res) => {
+            if (res.ok) setComments(res.data);
+          });
+        },
+      )
+      .subscribe();
+    return () => {
+      sb.removeChannel(channel);
+    };
+  }, [open, proofId]);
+
+  // Lazy-load the mention list the first time the user shows interest in
+  // commenting (i.e. when the section is open).
+  useEffect(() => {
+    if (!open || mentionablesLoadedRef.current) return;
+    mentionablesLoadedRef.current = true;
+    listMentionableUsers(proofId).then((res) => {
+      if (res.ok) setMentionables(res.data);
+    });
+  }, [open, proofId]);
+
+  // Determine which tagged users still appear (by name) in the body. We
+  // compute this on the fly so deletions in the textarea silently un-tag.
+  const effectiveMentions = useMemo(() => {
+    if (taggedUsers.length === 0) return [] as MentionableUser[];
+    return taggedUsers.filter((u) => draft.includes(`@${u.full_name}`));
+  }, [draft, taggedUsers]);
+
+  function handleDraftChange(value: string, caret: number) {
+    setDraft(value);
+    // Detect an active "@..." token at the caret. We walk back from the
+    // caret until we hit whitespace, an @, or the start of the string.
+    const upToCaret = value.slice(0, caret);
+    const atIdx = upToCaret.lastIndexOf("@");
+    if (atIdx === -1) {
+      setMentionQuery(null);
+      setMentionAnchor(null);
+      return;
+    }
+    // The character before the @ must be whitespace or start-of-string,
+    // otherwise we'd hijack things like email addresses.
+    const charBefore = atIdx === 0 ? " " : upToCaret[atIdx - 1];
+    if (!/\s/.test(charBefore) && atIdx !== 0) {
+      setMentionQuery(null);
+      setMentionAnchor(null);
+      return;
+    }
+    const query = upToCaret.slice(atIdx + 1);
+    if (query.includes("\n") || query.length > 30) {
+      setMentionQuery(null);
+      setMentionAnchor(null);
+      return;
+    }
+    setMentionQuery(query);
+    setMentionAnchor(atIdx);
+    setMentionHighlight(0);
+  }
+
+  const filteredMentionables = useMemo(() => {
+    if (mentionQuery === null) return [] as MentionableUser[];
+    const q = mentionQuery.toLowerCase();
+    return mentionables
+      .filter((u) => {
+        if (!q) return true;
+        return (
+          u.full_name.toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 6);
+  }, [mentionQuery, mentionables]);
+
+  function pickMention(user: MentionableUser) {
+    if (mentionAnchor === null) return;
+    const before = draft.slice(0, mentionAnchor);
+    // Replace the in-progress token (anchor..caret) with the full mention.
+    // Anything after the caret is preserved as-is.
+    const ta = textareaRef.current;
+    const caret = ta ? ta.selectionStart ?? draft.length : draft.length;
+    const after = draft.slice(caret);
+    const insertion = `@${user.full_name} `;
+    const next = `${before}${insertion}${after}`;
+    setDraft(next);
+    setTaggedUsers((prev) =>
+      prev.some((u) => u.user_id === user.user_id) ? prev : [...prev, user],
+    );
+    setMentionQuery(null);
+    setMentionAnchor(null);
+    // Restore focus + caret to right after the insertion.
+    queueMicrotask(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      const pos = before.length + insertion.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
   function submit() {
     const body = draft.trim();
     if (!body) return;
+    const mentionedIds = effectiveMentions.map((u) => u.user_id);
     startPosting(async () => {
-      const res = await addProofComment(proofId, body);
+      const res = await addProofComment(proofId, body, mentionedIds);
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
+      // Optimistic local update — realtime will overwrite it on the next
+      // refetch, but we don't want the user to wait.
       setComments((prev) => (prev ? [...prev, res.data] : [res.data]));
       setDraft("");
-      toast.success("Comment posted");
+      setTaggedUsers([]);
+      const tagged = mentionedIds.length;
+      toast.success(
+        tagged > 0
+          ? `Comment posted · ${tagged} ${tagged === 1 ? "person" : "people"} tagged`
+          : "Comment posted",
+      );
     });
   }
 
@@ -163,7 +311,7 @@ export function ProofComments({
                         </span>
                       </div>
                       <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-foreground/90">
-                        {c.body}
+                        {renderBodyWithMentions(c.body)}
                       </p>
                     </div>
                     {canDelete && (
@@ -195,23 +343,120 @@ export function ProofComments({
           )}
 
           <div className="space-y-2">
-            <Textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="Add a comment…"
-              rows={2}
-              maxLength={4000}
-              onKeyDown={(e) => {
-                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                  e.preventDefault();
-                  submit();
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                value={draft}
+                onChange={(e) =>
+                  handleDraftChange(e.target.value, e.target.selectionStart ?? 0)
                 }
-              }}
-              className="text-sm"
-            />
+                onKeyDown={(e) => {
+                  if (mentionQuery !== null && filteredMentionables.length > 0) {
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setMentionHighlight(
+                        (h) => (h + 1) % filteredMentionables.length,
+                      );
+                      return;
+                    }
+                    if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setMentionHighlight(
+                        (h) =>
+                          (h - 1 + filteredMentionables.length) %
+                          filteredMentionables.length,
+                      );
+                      return;
+                    }
+                    if (e.key === "Enter" || e.key === "Tab") {
+                      e.preventDefault();
+                      pickMention(filteredMentionables[mentionHighlight]);
+                      return;
+                    }
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      setMentionQuery(null);
+                      setMentionAnchor(null);
+                      return;
+                    }
+                  }
+                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                    e.preventDefault();
+                    submit();
+                  }
+                }}
+                placeholder="Add a comment… type @ to tag a teammate"
+                rows={2}
+                maxLength={4000}
+                className="flex w-full min-h-9 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              />
+
+              {mentionQuery !== null && filteredMentionables.length > 0 && (
+                <div className="absolute bottom-full left-0 z-10 mb-1 w-72 max-w-full overflow-hidden rounded-md border bg-popover shadow-md">
+                  <ul className="max-h-60 overflow-y-auto py-1 text-sm">
+                    {filteredMentionables.map((u, idx) => {
+                      const active = idx === mentionHighlight;
+                      return (
+                        <li key={u.user_id}>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              // mousedown so the textarea doesn't lose focus
+                              // before our click runs.
+                              e.preventDefault();
+                              pickMention(u);
+                            }}
+                            onMouseEnter={() => setMentionHighlight(idx)}
+                            className={cn(
+                              "flex w-full items-center gap-2 px-2 py-1.5 text-left",
+                              active ? "bg-accent text-accent-foreground" : "",
+                            )}
+                          >
+                            <UserAvatar
+                              email={u.email}
+                              name={u.full_name}
+                              avatarUrl={u.avatar_url}
+                              size="sm"
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-xs font-semibold">
+                                {u.full_name}
+                                {u.is_manager && (
+                                  <span className="ml-1.5 rounded bg-primary/10 px-1 py-px text-[9px] font-medium uppercase tracking-wider text-primary">
+                                    PM
+                                  </span>
+                                )}
+                              </span>
+                              <span className="block truncate text-[10px] text-muted-foreground">
+                                {u.role === "client" ? "Client" : u.email}
+                              </span>
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {effectiveMentions.length > 0 && (
+              <p className="text-[10px] text-muted-foreground">
+                Will notify:{" "}
+                {effectiveMentions.map((u, i) => (
+                  <span key={u.user_id}>
+                    {i > 0 ? ", " : ""}
+                    <span className="font-medium text-foreground">
+                      {u.full_name}
+                    </span>
+                  </span>
+                ))}
+              </p>
+            )}
+
             <div className="flex items-center justify-between">
               <span className="text-[10px] text-muted-foreground">
-                Tip: press {navigatorMetaLabel()} + Enter to send
+                Tip: type <kbd className="rounded bg-muted px-1">@</kbd> to tag · press {metaKeyLabel()} + Enter to send
               </span>
               <Button
                 type="button"
@@ -234,7 +479,26 @@ export function ProofComments({
   );
 }
 
-function navigatorMetaLabel() {
-  if (typeof navigator === "undefined") return "Ctrl";
-  return /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
+/**
+ * Highlight `@Full Name` tokens in the rendered comment body. We don't try
+ * to be too clever — any `@<word with optional spaces>` that matches our
+ * convention gets the chip styling.
+ */
+function renderBodyWithMentions(body: string) {
+  // Split on @Mention tokens. We accept letters, numbers, spaces, '.' and '-'
+  // up to ~30 chars so "@Mary Ann O'Connor" works without being greedy.
+  const parts = body.split(/(@[A-Za-z][A-Za-z0-9 .'\-]{0,30}?)(?=[\s,.!?:;)]|$)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith("@") && part.length > 1) {
+      return (
+        <span
+          key={idx}
+          className="rounded bg-primary/10 px-1 py-px font-medium text-primary"
+        >
+          {part}
+        </span>
+      );
+    }
+    return <span key={idx}>{part}</span>;
+  });
 }

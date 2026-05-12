@@ -201,21 +201,47 @@ async function getDashboardData(
   const projects = (projectsRaw ?? []) as ProjectRow[];
   const projectIds = projects.map((p) => p.id);
 
-  const { data: phasesRaw } = projectIds.length
-    ? await sb.from("phases").select("id, project_id").in("project_id", projectIds)
-    : { data: [] as { id: string; project_id: string }[] };
-  const phases = phasesRaw ?? [];
-  const phaseToProject = new Map(phases.map((p) => [p.id, p.project_id]));
-  const phaseIds = phases.map((p) => p.id);
+  // Kick off the activity-log enrichment (profiles + project names) in
+  // parallel with the activities query below — it only depends on logRes,
+  // which we already have, so there's no reason to wait.
+  const logRows = logRes.data ?? [];
+  const actorIds = Array.from(
+    new Set(logRows.map((r) => r.actor_user_id).filter(Boolean) as string[]),
+  );
+  const projectsForLog = Array.from(
+    new Set(logRows.map((r) => r.project_id).filter(Boolean)),
+  );
+  const logEnrichmentPromise = Promise.all([
+    actorIds.length
+      ? sb.from("profiles").select("user_id, full_name").in("user_id", actorIds)
+      : Promise.resolve({ data: [] as { user_id: string; full_name: string }[] }),
+    projectsForLog.length
+      ? sb.from("projects").select("id, name").in("id", projectsForLog)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
 
-  const { data: activitiesRaw } = phaseIds.length
+  // Pull activities + their parent phase's project_id in a single round-trip
+  // via PostgREST's embedded resource filter, instead of fetching phases first
+  // and then activities (which adds an unnecessary serial hop).
+  type ActivityWithPhase = ActivityRow & { phases: { project_id: string } | null };
+  const { data: activitiesRaw } = projectIds.length
     ? await sb
         .from("activities")
-        .select("id, phase_id, name, status, planned_date, completed_date, created_at")
-        .in("phase_id", phaseIds)
+        .select(
+          "id, phase_id, name, status, planned_date, completed_date, created_at, phases!inner(project_id)",
+        )
+        .in("phases.project_id", projectIds)
         .gte("created_at", periodStart)
-    : { data: [] as ActivityRow[] };
-  const activities = (activitiesRaw ?? []) as ActivityRow[];
+    : { data: [] as ActivityWithPhase[] };
+  const activitiesWithPhase = (activitiesRaw ?? []) as unknown as ActivityWithPhase[];
+  const activities: ActivityRow[] = activitiesWithPhase.map(
+    ({ phases: _phases, ...rest }) => rest,
+  );
+  const phaseToProject = new Map(
+    activitiesWithPhase
+      .filter((a) => a.phases?.project_id)
+      .map((a) => [a.phase_id, a.phases!.project_id]),
+  );
 
   // Per-project activity grouping
   const byProject = new Map<string, ActivityRow[]>();
@@ -357,22 +383,8 @@ async function getDashboardData(
       };
     });
 
-  // Activity feed
-  const logRows = logRes.data ?? [];
-  const actorIds = Array.from(
-    new Set(logRows.map((r) => r.actor_user_id).filter(Boolean) as string[]),
-  );
-  const projectsForLog = Array.from(
-    new Set(logRows.map((r) => r.project_id).filter(Boolean)),
-  );
-  const [profilesRes, projectNamesRes] = await Promise.all([
-    actorIds.length
-      ? sb.from("profiles").select("user_id, full_name").in("user_id", actorIds)
-      : Promise.resolve({ data: [] as { user_id: string; full_name: string }[] }),
-    projectsForLog.length
-      ? sb.from("projects").select("id, name").in("id", projectsForLog)
-      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
-  ]);
+  // Activity feed — enrichment was kicked off in parallel earlier.
+  const [profilesRes, projectNamesRes] = await logEnrichmentPromise;
   const actorById = new Map((profilesRes.data ?? []).map((p) => [p.user_id, p.full_name]));
   const projNameById = new Map((projectNamesRes.data ?? []).map((p) => [p.id, p.name]));
 

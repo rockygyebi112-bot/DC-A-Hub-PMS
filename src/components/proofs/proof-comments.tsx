@@ -284,11 +284,6 @@ export function ProofComments({
     return Array.from(byId.values());
   }, [draft, taggedUsers, taggedGroups, mentionables]);
 
-  const activeGroups = useMemo(
-    () => GROUPS.filter((g) => taggedGroups.has(g.key) && draft.includes(g.token)),
-    [draft, taggedGroups],
-  );
-
   function handleDraftChange(value: string, caret: number) {
     setDraft(value);
     // Detect an active "@..." token at the caret. We walk back from the
@@ -766,32 +761,6 @@ export function ProofComments({
                 </div>
               )}
             </div>
-
-            {effectiveMentions.length > 0 && (
-              <p className="text-[10px] text-muted-foreground">
-                Will notify{" "}
-                <span className="font-mono">({effectiveMentions.length})</span>:{" "}
-                {activeGroups.map((g, i) => (
-                  <span key={`g:${g.key}`}>
-                    {i > 0 ? ", " : ""}
-                    <span className="font-medium text-foreground">
-                      @{g.label}
-                    </span>
-                  </span>
-                ))}
-                {activeGroups.length > 0 && taggedUsers.filter((u) => draft.includes(`@${u.full_name}`)).length > 0 && ", "}
-                {taggedUsers
-                  .filter((u) => draft.includes(`@${u.full_name}`))
-                  .map((u, i) => (
-                    <span key={u.user_id}>
-                      {i > 0 ? ", " : ""}
-                      <span className="font-medium text-foreground">
-                        {u.full_name}
-                      </span>
-                    </span>
-                  ))}
-              </p>
-            )}
 
             <div className="flex items-center justify-between">
               <span className="text-[10px] text-muted-foreground">

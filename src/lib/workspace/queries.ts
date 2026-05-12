@@ -102,8 +102,50 @@ export async function listWorkspaceProjects(): Promise<WorkspaceProject[]> {
 export async function getWorkspaceProject(
   projectId: string,
 ): Promise<WorkspaceProject | null> {
-  const projects = await listWorkspaceProjects();
-  return projects.find((item) => item.id === projectId) ?? null;
+  // Fetch the single project + its phase/activity counts directly. Going via
+  // `listWorkspaceProjects()` previously loaded every project + every phase +
+  // every activity in the workspace just to find one row, which scaled linearly
+  // with the org's data and dominated the TTFB on /workspace/projects/[id].
+  const sb = await createClient();
+  const { data: project, error } = await sb
+    .from("projects")
+    .select(
+      "id, name, code, status, start_date, end_date, description, archived_at, client:clients(id, name, logo_url)",
+    )
+    .eq("id", projectId)
+    .is("archived_at", null)
+    .maybeSingle();
+  throwIfError(error);
+  if (!project) return null;
+
+  // Pull activities + their parent phase via an embedded resource so we can
+  // filter by `phases.project_id` in a single round-trip instead of fetching
+  // phases first.
+  const { data: activitiesRaw } = await sb
+    .from("activities")
+    .select("id, status, phases!inner(project_id)")
+    .eq("phases.project_id", projectId);
+  const activities = (activitiesRaw ?? []) as Array<{
+    id: string;
+    status: string;
+    phases: { project_id: string } | null;
+  }>;
+
+  let done = 0;
+  let total = 0;
+  for (const activity of activities) {
+    if (!activity.phases) continue;
+    total += 1;
+    if (activity.status === "done") done += 1;
+  }
+
+  const { archived_at: _archivedAt, ...rest } = project;
+  return {
+    ...rest,
+    client: Array.isArray(project.client) ? project.client[0] ?? null : project.client,
+    doneCount: done,
+    totalCount: total,
+  };
 }
 
 export async function listProjectPhases(projectId: string): Promise<WorkspacePhase[]> {

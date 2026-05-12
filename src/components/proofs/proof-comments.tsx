@@ -36,6 +36,38 @@ function metaKeyLabel() {
   return /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
 }
 
+// --- Mention group shortcuts ------------------------------------------------
+// "@everyone" tags every mentionable (project members + all admins).
+// "@team" narrows to staff + admins only, which is the typical "ping the
+// internal team without spamming the client" use case.
+type GroupKey = "everyone" | "team";
+const GROUPS: {
+  key: GroupKey;
+  token: string;
+  label: string;
+  sublabel: string;
+  filter: (u: MentionableUser) => boolean;
+}[] = [
+  {
+    key: "everyone",
+    token: "@everyone",
+    label: "everyone",
+    sublabel: "Notify all project members",
+    filter: () => true,
+  },
+  {
+    key: "team",
+    token: "@team",
+    label: "team",
+    sublabel: "Notify staff & admins only",
+    filter: (u) => u.role === "admin" || u.role === "staff",
+  },
+];
+
+type PickerItem =
+  | { kind: "user"; user: MentionableUser }
+  | { kind: "group"; group: (typeof GROUPS)[number] };
+
 /**
  * Lightweight comments thread on a single proof.
  *
@@ -76,6 +108,12 @@ export function ProofComments({
   // = display name we inserted. We re-derive on each submit by scanning the
   // body so deletions in the textarea silently un-tag the user.
   const [taggedUsers, setTaggedUsers] = useState<MentionableUser[]>([]);
+  // Group shortcuts: "everyone" = all mentionables, "team" = staff+admins.
+  // Stored separately from taggedUsers so the Will-notify preview can
+  // show the group name instead of listing every member.
+  const [taggedGroups, setTaggedGroups] = useState<Set<GroupKey>>(
+    () => new Set<GroupKey>(),
+  );
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionAnchor, setMentionAnchor] = useState<number | null>(null);
   const [mentionHighlight, setMentionHighlight] = useState(0);
@@ -142,10 +180,28 @@ export function ProofComments({
 
   // Determine which tagged users still appear (by name) in the body. We
   // compute this on the fly so deletions in the textarea silently un-tag.
+  // Groups still present in the draft expand to their member ids so the
+  // server can dispatch one targeted notification per user.
   const effectiveMentions = useMemo(() => {
-    if (taggedUsers.length === 0) return [] as MentionableUser[];
-    return taggedUsers.filter((u) => draft.includes(`@${u.full_name}`));
-  }, [draft, taggedUsers]);
+    const direct = taggedUsers.filter((u) => draft.includes(`@${u.full_name}`));
+    const byId = new Map<string, MentionableUser>(
+      direct.map((u) => [u.user_id, u]),
+    );
+    for (const g of GROUPS) {
+      if (!taggedGroups.has(g.key)) continue;
+      if (!draft.includes(g.token)) continue;
+      for (const u of mentionables) {
+        if (!g.filter(u)) continue;
+        if (!byId.has(u.user_id)) byId.set(u.user_id, u);
+      }
+    }
+    return Array.from(byId.values());
+  }, [draft, taggedUsers, taggedGroups, mentionables]);
+
+  const activeGroups = useMemo(
+    () => GROUPS.filter((g) => taggedGroups.has(g.key) && draft.includes(g.token)),
+    [draft, taggedGroups],
+  );
 
   function handleDraftChange(value: string, caret: number) {
     setDraft(value);
@@ -177,10 +233,13 @@ export function ProofComments({
     setMentionHighlight(0);
   }
 
-  const filteredMentionables = useMemo(() => {
-    if (mentionQuery === null) return [] as MentionableUser[];
+  const filteredItems = useMemo<PickerItem[]>(() => {
+    if (mentionQuery === null) return [];
     const q = mentionQuery.toLowerCase();
-    return mentionables
+    const groupItems: PickerItem[] = GROUPS.filter(
+      (g) => !q || g.label.startsWith(q),
+    ).map((g) => ({ kind: "group" as const, group: g }));
+    const userItems: PickerItem[] = mentionables
       .filter((u) => {
         if (!q) return true;
         return (
@@ -188,10 +247,11 @@ export function ProofComments({
           u.email.toLowerCase().includes(q)
         );
       })
-      .slice(0, 6);
+      .map((u) => ({ kind: "user" as const, user: u }));
+    return [...groupItems, ...userItems].slice(0, 6);
   }, [mentionQuery, mentionables]);
 
-  function pickMention(user: MentionableUser) {
+  function pickItem(item: PickerItem) {
     if (mentionAnchor === null) return;
     const before = draft.slice(0, mentionAnchor);
     // Replace the in-progress token (anchor..caret) with the full mention.
@@ -199,12 +259,26 @@ export function ProofComments({
     const ta = textareaRef.current;
     const caret = ta ? ta.selectionStart ?? draft.length : draft.length;
     const after = draft.slice(caret);
-    const insertion = `@${user.full_name} `;
+    const insertion =
+      item.kind === "user"
+        ? `@${item.user.full_name} `
+        : `${item.group.token} `;
     const next = `${before}${insertion}${after}`;
     setDraft(next);
-    setTaggedUsers((prev) =>
-      prev.some((u) => u.user_id === user.user_id) ? prev : [...prev, user],
-    );
+    if (item.kind === "user") {
+      const user = item.user;
+      setTaggedUsers((prev) =>
+        prev.some((u) => u.user_id === user.user_id) ? prev : [...prev, user],
+      );
+    } else {
+      const key = item.group.key;
+      setTaggedGroups((prev) => {
+        if (prev.has(key)) return prev;
+        const nextSet = new Set(prev);
+        nextSet.add(key);
+        return nextSet;
+      });
+    }
     setMentionQuery(null);
     setMentionAnchor(null);
     // Restore focus + caret to right after the insertion.
@@ -232,6 +306,7 @@ export function ProofComments({
       setComments((prev) => (prev ? [...prev, res.data] : [res.data]));
       setDraft("");
       setTaggedUsers([]);
+      setTaggedGroups(new Set());
       const tagged = mentionedIds.length;
       toast.success(
         tagged > 0
@@ -351,11 +426,11 @@ export function ProofComments({
                   handleDraftChange(e.target.value, e.target.selectionStart ?? 0)
                 }
                 onKeyDown={(e) => {
-                  if (mentionQuery !== null && filteredMentionables.length > 0) {
+                  if (mentionQuery !== null && filteredItems.length > 0) {
                     if (e.key === "ArrowDown") {
                       e.preventDefault();
                       setMentionHighlight(
-                        (h) => (h + 1) % filteredMentionables.length,
+                        (h) => (h + 1) % filteredItems.length,
                       );
                       return;
                     }
@@ -363,14 +438,14 @@ export function ProofComments({
                       e.preventDefault();
                       setMentionHighlight(
                         (h) =>
-                          (h - 1 + filteredMentionables.length) %
-                          filteredMentionables.length,
+                          (h - 1 + filteredItems.length) %
+                          filteredItems.length,
                       );
                       return;
                     }
                     if (e.key === "Enter" || e.key === "Tab") {
                       e.preventDefault();
-                      pickMention(filteredMentionables[mentionHighlight]);
+                      pickItem(filteredItems[mentionHighlight]);
                       return;
                     }
                     if (e.key === "Escape") {
@@ -391,20 +466,24 @@ export function ProofComments({
                 className="flex w-full min-h-9 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               />
 
-              {mentionQuery !== null && filteredMentionables.length > 0 && (
+              {mentionQuery !== null && filteredItems.length > 0 && (
                 <div className="absolute bottom-full left-0 z-10 mb-1 w-72 max-w-full overflow-hidden rounded-md border bg-popover shadow-md">
                   <ul className="max-h-60 overflow-y-auto py-1 text-sm">
-                    {filteredMentionables.map((u, idx) => {
+                    {filteredItems.map((item, idx) => {
                       const active = idx === mentionHighlight;
+                      const key =
+                        item.kind === "user"
+                          ? `u:${item.user.user_id}`
+                          : `g:${item.group.key}`;
                       return (
-                        <li key={u.user_id}>
+                        <li key={key}>
                           <button
                             type="button"
                             onMouseDown={(e) => {
                               // mousedown so the textarea doesn't lose focus
                               // before our click runs.
                               e.preventDefault();
-                              pickMention(u);
+                              pickItem(item);
                             }}
                             onMouseEnter={() => setMentionHighlight(idx)}
                             className={cn(
@@ -412,25 +491,48 @@ export function ProofComments({
                               active ? "bg-accent text-accent-foreground" : "",
                             )}
                           >
-                            <UserAvatar
-                              email={u.email}
-                              name={u.full_name}
-                              avatarUrl={u.avatar_url}
-                              size="sm"
-                            />
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-xs font-semibold">
-                                {u.full_name}
-                                {u.is_manager && (
-                                  <span className="ml-1.5 rounded bg-primary/10 px-1 py-px text-[9px] font-medium uppercase tracking-wider text-primary">
-                                    PM
+                            {item.kind === "user" ? (
+                              <>
+                                <UserAvatar
+                                  email={item.user.email}
+                                  name={item.user.full_name}
+                                  avatarUrl={item.user.avatar_url}
+                                  size="sm"
+                                />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-xs font-semibold">
+                                    {item.user.full_name}
+                                    {item.user.is_manager && (
+                                      <span className="ml-1.5 rounded bg-primary/10 px-1 py-px text-[9px] font-medium uppercase tracking-wider text-primary">
+                                        PM
+                                      </span>
+                                    )}
                                   </span>
-                                )}
-                              </span>
-                              <span className="block truncate text-[10px] text-muted-foreground">
-                                {u.role === "client" ? "Client" : u.email}
-                              </span>
-                            </span>
+                                  <span className="block truncate text-[10px] text-muted-foreground">
+                                    {item.user.role === "client"
+                                      ? "Client"
+                                      : item.user.email}
+                                  </span>
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-[10px] font-semibold uppercase text-primary">
+                                  {item.group.key === "everyone" ? "ALL" : "TM"}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-xs font-semibold">
+                                    @{item.group.label}
+                                    <span className="ml-1.5 rounded bg-muted px-1 py-px text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
+                                      Group
+                                    </span>
+                                  </span>
+                                  <span className="block truncate text-[10px] text-muted-foreground">
+                                    {item.group.sublabel}
+                                  </span>
+                                </span>
+                              </>
+                            )}
                           </button>
                         </li>
                       );
@@ -442,15 +544,27 @@ export function ProofComments({
 
             {effectiveMentions.length > 0 && (
               <p className="text-[10px] text-muted-foreground">
-                Will notify:{" "}
-                {effectiveMentions.map((u, i) => (
-                  <span key={u.user_id}>
+                Will notify{" "}
+                <span className="font-mono">({effectiveMentions.length})</span>:{" "}
+                {activeGroups.map((g, i) => (
+                  <span key={`g:${g.key}`}>
                     {i > 0 ? ", " : ""}
                     <span className="font-medium text-foreground">
-                      {u.full_name}
+                      @{g.label}
                     </span>
                   </span>
                 ))}
+                {activeGroups.length > 0 && taggedUsers.filter((u) => draft.includes(`@${u.full_name}`)).length > 0 && ", "}
+                {taggedUsers
+                  .filter((u) => draft.includes(`@${u.full_name}`))
+                  .map((u, i) => (
+                    <span key={u.user_id}>
+                      {i > 0 ? ", " : ""}
+                      <span className="font-medium text-foreground">
+                        {u.full_name}
+                      </span>
+                    </span>
+                  ))}
               </p>
             )}
 

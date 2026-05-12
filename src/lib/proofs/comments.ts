@@ -218,10 +218,21 @@ export async function addProofComment(
     .eq("user_id", guard.userId)
     .maybeSingle();
 
+  // De-dup, drop self-mentions, and sanity-check the IDs are valid uuids
+  // before writing per-user mention notifications. We use the same
+  // 'proof_mentioned' action for each so the bell can target a single
+  // user via target_user_id.
+  const validMentions = Array.from(new Set(mentionedUserIds))
+    .filter((id) => typeof id === "string" && id.length === 36)
+    .filter((id) => id !== guard.userId);
+
   // Record the comment as a project event so admins/staff get a
   // notification via the existing notifications bell (which reads from
   // activity_log). meta.preview is a short snippet so the bell can show
   // "Jane commented on report.pdf: 'Looks good…'" without an extra fetch.
+  // meta.mentioned_user_ids lets the feed skip the broadcast row for
+  // users who already receive a targeted 'proof_mentioned' entry, so
+  // they don't see two bell items for one comment.
   const preview = body.length > 140 ? `${body.slice(0, 140).trimEnd()}\u2026` : body;
   await sb.from("activity_log").insert({
     project_id: ctx.projectId,
@@ -233,16 +244,10 @@ export async function addProofComment(
       proof_name: ctx.fileName,
       comment_id: data.id,
       preview,
+      mentioned_user_ids: validMentions,
     },
   });
 
-  // De-dup, drop self-mentions, and sanity-check the IDs are valid uuids
-  // before writing per-user mention notifications. We use the same
-  // 'proof_mentioned' action for each so the bell can target a single
-  // user via target_user_id.
-  const validMentions = Array.from(new Set(mentionedUserIds))
-    .filter((id) => typeof id === "string" && id.length === 36)
-    .filter((id) => id !== guard.userId);
   if (validMentions.length > 0) {
     await sb.from("activity_log").insert(
       validMentions.map((targetUserId) => ({

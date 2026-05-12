@@ -1,6 +1,5 @@
 import "server-only";
 import { cache as reactCache } from "react";
-import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { throwIfError } from "@/lib/supabase/errors";
 
@@ -362,13 +361,15 @@ export async function listRecentProjects(limit = 5) {
 }
 
 /**
- * Cross-request cached loader for the admin shell. Bundles counts, the
+ * Per-request memoized loader for the admin shell. Bundles counts, the
  * client + project lists used by the sidebar/search, and the overdue
- * activity count for the greeting subtitle so every navigation can serve
- * the layout from cache instead of issuing fresh Supabase calls.
+ * activity count for the greeting subtitle.
  *
- * Bust via `revalidateTag('admin-layout')` (or the per-user variant) from
- * any server action that mutates clients, projects, users, or activities.
+ * NOTE: This was previously wrapped in `unstable_cache`, but every call
+ * here ultimately goes through `createClient()` which reads `cookies()`
+ * for per-user RLS — that's not allowed inside `unstable_cache` (Next 15+)
+ * and would have produced incorrect results across users anyway. We use
+ * React's `cache()` for per-request deduplication only.
  */
 export type AdminProjectRow = Awaited<ReturnType<typeof listProjects>>[number];
 export type AdminClientRow = Awaited<ReturnType<typeof listClients>>[number];
@@ -380,29 +381,25 @@ export type AdminLayoutData = {
   overdueCount: number;
 };
 
-export function getAdminLayoutData(userId: string): Promise<AdminLayoutData> {
-  return unstable_cache(
-    async (): Promise<AdminLayoutData> => {
-      const today = new Date().toISOString().slice(0, 10);
-      const sb = await createClient();
-      const [counts, clients, projects, overdueRes] = await Promise.all([
-        getAdminCounts(),
-        listClients().catch(() => [] as AdminClientRow[]),
-        listProjects().catch(() => [] as AdminProjectRow[]),
-        sb
-          .from("activities")
-          .select("id", { count: "exact", head: true })
-          .lt("planned_date", today)
-          .neq("status", "done"),
-      ]);
-      return {
-        counts,
-        clients,
-        projects,
-        overdueCount: overdueRes.count ?? 0,
-      };
-    },
-    [`admin-layout-${userId}`],
-    { revalidate: 30, tags: ["admin-layout", `admin-layout-${userId}`] },
-  )();
-}
+export const getAdminLayoutData = reactCache(
+  async (_userId: string): Promise<AdminLayoutData> => {
+    const today = new Date().toISOString().slice(0, 10);
+    const sb = await createClient();
+    const [counts, clients, projects, overdueRes] = await Promise.all([
+      getAdminCounts(),
+      listClients().catch(() => [] as AdminClientRow[]),
+      listProjects().catch(() => [] as AdminProjectRow[]),
+      sb
+        .from("activities")
+        .select("id", { count: "exact", head: true })
+        .lt("planned_date", today)
+        .neq("status", "done"),
+    ]);
+    return {
+      counts,
+      clients,
+      projects,
+      overdueCount: overdueRes.count ?? 0,
+    };
+  },
+);

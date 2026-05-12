@@ -18,6 +18,7 @@ const ACTION_LABELS: Record<string, string> = {
   proof_added: "Proof uploaded",
   proof_deleted: "Proof removed",
   proof_commented: "New comment on proof",
+  proof_mentioned: "You were mentioned",
 };
 
 function formatRelative(iso: string) {
@@ -118,12 +119,15 @@ export function NotificationsBell({
                 // For proof_commented rows we surface the file the comment
                 // is attached to (instead of just the activity name) and
                 // the comment preview, so admins can triage from the bell.
+                const isComment =
+                  entry.action === "proof_commented" ||
+                  entry.action === "proof_mentioned";
                 const proofName =
-                  entry.action === "proof_commented" && entry.meta
+                  isComment && entry.meta
                     ? (entry.meta.proof_name as string | undefined) ?? null
                     : null;
                 const preview =
-                  entry.action === "proof_commented" && entry.meta
+                  isComment && entry.meta
                     ? (entry.meta.preview as string | undefined) ?? null
                     : null;
                 const headlineSuffix =

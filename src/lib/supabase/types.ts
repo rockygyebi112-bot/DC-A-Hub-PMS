@@ -110,6 +110,7 @@ export type Database = {
           id: string
           meta: Json
           project_id: string
+          target_user_id: string | null
         }
         Insert: {
           action: string
@@ -119,6 +120,7 @@ export type Database = {
           id?: string
           meta?: Json
           project_id: string
+          target_user_id?: string | null
         }
         Update: {
           action?: string
@@ -128,6 +130,7 @@ export type Database = {
           id?: string
           meta?: Json
           project_id?: string
+          target_user_id?: string | null
         }
         Relationships: [
           {

@@ -1,7 +1,6 @@
 import "server-only";
 
 import { cache } from "react";
-import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { throwIfError } from "@/lib/supabase/errors";
 
@@ -293,13 +292,12 @@ export type WorkspaceLayoutData = {
   projects: WorkspaceProject[];
 };
 
-export function getWorkspaceLayoutData(userId: string): Promise<WorkspaceLayoutData> {
-  return unstable_cache(
-    async () => {
-      const projects = await listWorkspaceProjects().catch(() => [] as WorkspaceProject[]);
-      return { projects };
-    },
-    [`workspace-layout-${userId}`],
-    { revalidate: 30, tags: ["workspace-layout", `workspace-layout-${userId}`] },
-  )();
-}
+// Previously wrapped in `unstable_cache`, but `listWorkspaceProjects` uses
+// Supabase with `cookies()` for per-user RLS — disallowed inside
+// `unstable_cache`. React's `cache()` still dedupes within a request.
+export const getWorkspaceLayoutData = cache(
+  async (_userId: string): Promise<WorkspaceLayoutData> => {
+    const projects = await listWorkspaceProjects().catch(() => [] as WorkspaceProject[]);
+    return { projects };
+  },
+);

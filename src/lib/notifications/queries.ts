@@ -1,6 +1,6 @@
 import "server-only";
 
-import { unstable_cache } from "next/cache";
+import { cache as reactCache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 export type NotificationEntry = {
@@ -173,18 +173,13 @@ export async function getNotificationFeed(
 }
 
 /**
- * Cross-request cached wrapper around `getNotificationFeed`. The user id is
- * baked into the cache key so each user gets their own bucket. Mutations
- * (mark-as-read, new activity_log inserts) should call
- * `revalidateTag('notifications-<userId>')` to invalidate.
+ * Per-request memoized notification feed loader. Previously wrapped in
+ * `unstable_cache`, but the underlying `getNotificationFeed` calls
+ * `createClient()` which reads `cookies()` — disallowed inside
+ * `unstable_cache` in Next 15+. React's `cache()` still dedupes within a
+ * single request, which is what the layout needs.
  */
-export function getCachedNotificationFeed(
-  userId: string,
-  surface: "portal" | "workspace",
-): Promise<NotificationFeed> {
-  return unstable_cache(
-    () => getNotificationFeed(surface),
-    [`notifications-${surface}-${userId}`],
-    { revalidate: 60, tags: [`notifications-${userId}`] },
-  )();
-}
+export const getCachedNotificationFeed = reactCache(
+  (_userId: string, surface: "portal" | "workspace"): Promise<NotificationFeed> =>
+    getNotificationFeed(surface),
+);

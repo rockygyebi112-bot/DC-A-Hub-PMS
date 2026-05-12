@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { Menu, Sparkles, X } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -92,11 +93,13 @@ export function MobileNav({
           <div className="flex items-center gap-3 px-4 pt-4 pb-3">
             <div className="flex size-10 shrink-0 items-center justify-center">
               {displayLogo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={displayLogo}
                   alt={`${displayBrand} logo`}
+                  width={40}
+                  height={40}
                   className="h-10 w-10 object-contain"
+                  unoptimized={displayLogo.startsWith("http")}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">
@@ -141,11 +144,13 @@ export function MobileNav({
           <div className="flex items-center gap-2 border-t border-white/10 px-4 py-3">
             <div className="flex size-10 shrink-0 items-center justify-center">
               {defaultLogoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={defaultLogoUrl}
                   alt={`${brand} logo`}
+                  width={40}
+                  height={40}
                   className="h-10 w-10 object-contain"
+                  unoptimized={defaultLogoUrl.startsWith("http")}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">

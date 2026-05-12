@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getAppUrl } from "@/lib/app-url";
@@ -96,6 +96,8 @@ export async function inviteUser(
   }
 
   revalidatePath("/admin/users");
+  // KPI count for total users is part of the cached admin layout payload.
+  revalidateTag("admin-layout", "max");
   return {
     ok: true,
     data: { user_id: userId, profile_id: profile.id, delivery },
@@ -135,6 +137,7 @@ export async function setUserRole(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/users");
   revalidatePath(`/admin/users/${profileId}`);
+  revalidateTag("admin-layout", "max");
   return { ok: true };
 }
 

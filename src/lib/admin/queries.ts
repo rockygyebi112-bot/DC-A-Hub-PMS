@@ -1,5 +1,6 @@
 import "server-only";
 import { cache as reactCache } from "react";
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { throwIfError } from "@/lib/supabase/errors";
 
@@ -54,41 +55,51 @@ export type ClientProjectRow = {
 
 export async function listClientProjects(clientId: string): Promise<ClientProjectRow[]> {
   const sb = await createClient();
+  // Pull projects + phases + activities for the client in a single
+  // round-trip via PostgREST nested selects. Previously this issued three
+  // sequential queries; now we compute done/total counts client-side from
+  // the embedded `phases.activities` rows.
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[query] listClientProjects -> projects (joined)");
+  }
   const { data: projects, error } = await sb
     .from("projects")
-    .select("id, name, code, status, archived_at, start_date, end_date")
+    .select(
+      `id, name, code, status, archived_at, start_date, end_date,
+       phases(id, activities(id, phase_id, status))`,
+    )
     .eq("client_id", clientId)
     .order("name", { ascending: true });
   throwIfError(error);
   if (!projects?.length) return [];
 
-  const projectIds = projects.map((project) => project.id);
-  const { data: phases } = await sb
-    .from("phases")
-    .select("id, project_id")
-    .in("project_id", projectIds);
-  const phaseIds = (phases ?? []).map((phase) => phase.id);
-  const { data: activities } = phaseIds.length
-    ? await sb.from("activities").select("id, phase_id, status").in("phase_id", phaseIds)
-    : { data: [] };
+  type Joined = {
+    id: string;
+    name: string;
+    code: string;
+    status: string;
+    archived_at: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    phases:
+      | { id: string; activities: { id: string; phase_id: string; status: string }[] | null }[]
+      | null;
+  };
 
-  const phaseToProject = new Map((phases ?? []).map((phase) => [phase.id, phase.project_id]));
-  const counts = new Map<string, { done: number; total: number }>();
-  for (const activity of activities ?? []) {
-    const projectId = phaseToProject.get(activity.phase_id);
-    if (!projectId) continue;
-    const current = counts.get(projectId) ?? { done: 0, total: 0 };
-    current.total += 1;
-    if (activity.status === "done") current.done += 1;
-    counts.set(projectId, current);
-  }
-
-  return projects.map((project) => {
-    const count = counts.get(project.id) ?? { done: 0, total: 0 };
+  return (projects as unknown as Joined[]).map((project) => {
+    let done = 0;
+    let total = 0;
+    for (const phase of project.phases ?? []) {
+      for (const activity of phase.activities ?? []) {
+        total += 1;
+        if (activity.status === "done") done += 1;
+      }
+    }
+    const { phases: _phases, ...rest } = project;
     return {
-      ...project,
-      doneCount: count.done,
-      totalCount: count.total,
+      ...rest,
+      doneCount: done,
+      totalCount: total,
     };
   });
 }
@@ -348,4 +359,50 @@ export async function listRecentProjects(limit = 5) {
     .limit(limit);
   throwIfError(error);
   return data ?? [];
+}
+
+/**
+ * Cross-request cached loader for the admin shell. Bundles counts, the
+ * client + project lists used by the sidebar/search, and the overdue
+ * activity count for the greeting subtitle so every navigation can serve
+ * the layout from cache instead of issuing fresh Supabase calls.
+ *
+ * Bust via `revalidateTag('admin-layout')` (or the per-user variant) from
+ * any server action that mutates clients, projects, users, or activities.
+ */
+export type AdminProjectRow = Awaited<ReturnType<typeof listProjects>>[number];
+export type AdminClientRow = Awaited<ReturnType<typeof listClients>>[number];
+
+export type AdminLayoutData = {
+  counts: AdminCounts;
+  clients: AdminClientRow[];
+  projects: AdminProjectRow[];
+  overdueCount: number;
+};
+
+export function getAdminLayoutData(userId: string): Promise<AdminLayoutData> {
+  return unstable_cache(
+    async (): Promise<AdminLayoutData> => {
+      const today = new Date().toISOString().slice(0, 10);
+      const sb = await createClient();
+      const [counts, clients, projects, overdueRes] = await Promise.all([
+        getAdminCounts(),
+        listClients().catch(() => [] as AdminClientRow[]),
+        listProjects().catch(() => [] as AdminProjectRow[]),
+        sb
+          .from("activities")
+          .select("id", { count: "exact", head: true })
+          .lt("planned_date", today)
+          .neq("status", "done"),
+      ]);
+      return {
+        counts,
+        clients,
+        projects,
+        overdueCount: overdueRes.count ?? 0,
+      };
+    },
+    [`admin-layout-${userId}`],
+    { revalidate: 30, tags: ["admin-layout", `admin-layout-${userId}`] },
+  )();
 }

@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
-import { listPortalProjects } from "@/lib/portal/queries";
-import { listSearchableActivities } from "@/lib/search";
-import { getNotificationFeed } from "@/lib/notifications/queries";
+import { getWorkspaceLayoutData } from "@/lib/workspace/queries";
+import { getCachedNotificationFeed } from "@/lib/notifications/queries";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 
 export default async function PortalLayout({
@@ -14,15 +13,17 @@ export default async function PortalLayout({
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
-  const [projects, notifications, activities] = await Promise.all([
-    listPortalProjects().catch(() => []),
-    getNotificationFeed("portal").catch(() => ({
+  // Portal data is just the workspace projects filtered by RLS to the
+  // user's own client projects, so we reuse the same cached loader.
+  const [layout, notifications] = await Promise.all([
+    getWorkspaceLayoutData(profile.userId),
+    getCachedNotificationFeed(profile.userId, "portal").catch(() => ({
       entries: [],
       unreadCount: 0,
       lastReadAt: null,
     })),
-    listSearchableActivities().catch(() => []),
   ]);
+  const { projects } = layout;
 
   // Clients only ever care about their own projects, so we don't surface
   // an "All projects" overview link in the portal sidebar — for single-
@@ -48,18 +49,11 @@ export default async function PortalLayout({
   // Search must see EVERY project the user can reach, not just the first
   // 8 we render in the sidebar — otherwise typing the name of project #9
   // returns "no matches".
-  const searchItems = [
-    ...projects.map((p) => ({
-      href: `/portal/projects/${p.id}`,
-      label: p.name,
-      group: "Your projects",
-    })),
-    ...activities.map((a) => ({
-      href: `/portal/projects/${a.project_id}/activities/${a.id}`,
-      label: a.name,
-      group: `Activity · ${a.project_name}`,
-    })),
-  ];
+  const searchItems = projects.map((p) => ({
+    href: `/portal/projects/${p.id}`,
+    label: p.name,
+    group: "Your projects",
+  }));
 
   return (
     <AppShell
@@ -71,6 +65,7 @@ export default async function PortalLayout({
       projectBrands={projectBrands}
       projectPathPrefix="/portal/projects"
       searchItems={searchItems}
+      searchActivityHrefBase="/portal"
       showBreadcrumbs={false}
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
       topbarExtra={

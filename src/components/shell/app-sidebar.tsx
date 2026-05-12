@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -145,11 +146,14 @@ export function AppSidebar({
       >
         <div className="flex size-10 shrink-0 items-center justify-center">
           {displayLogo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={displayLogo}
               alt={`${displayBrand} logo`}
+              width={40}
+              height={40}
               className="h-10 w-10 object-contain"
+              priority
+              unoptimized={displayLogo.startsWith("http")}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">
@@ -207,6 +211,7 @@ export function AppSidebar({
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch
                   className={cn(
                     "flex h-10 items-center gap-3 rounded-[10px] px-3 text-sm transition-colors-smooth",
                     collapsed && "justify-center px-0",
@@ -241,6 +246,7 @@ export function AppSidebar({
                       render={
                         <Link
                           href={item.href}
+                          prefetch
                           className={cn(
                             "flex h-10 items-center justify-center rounded-[10px] px-0 text-sm transition-colors-smooth",
                             active
@@ -280,11 +286,13 @@ export function AppSidebar({
       >
         <div className="flex size-10 shrink-0 items-center justify-center">
           {defaultLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={defaultLogoUrl}
               alt={`${brand} logo`}
+              width={40}
+              height={40}
               className="h-10 w-10 object-contain"
+              unoptimized={defaultLogoUrl.startsWith("http")}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">

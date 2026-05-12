@@ -23,6 +23,7 @@ export function AppShell({
   greetingPath,
   bottomNavItems,
   searchItems,
+  searchActivityHrefBase,
   showBreadcrumbs,
 }: {
   children: ReactNode;
@@ -46,6 +47,10 @@ export function AppShell({
    *  full project list here — the sidebar `groups` are usually truncated
    *  for visual reasons, so falling back to them silently breaks search. */
   searchItems?: SearchItem[];
+  /** Base path used when navigating to activity matches in the search
+   *  dropdown. Workspace + admin shells default to `/workspace`; the
+   *  portal shell overrides this to `/portal`. */
+  searchActivityHrefBase?: "/workspace" | "/portal";
   /** Hide the path-based breadcrumb trail in the topbar. */
   showBreadcrumbs?: boolean;
 }) {
@@ -79,6 +84,7 @@ export function AppShell({
           greetingSubtitle={greetingSubtitle}
           greetingPath={greetingPath}
           searchItems={searchItems}
+          searchActivityHrefBase={searchActivityHrefBase}
           showBreadcrumbs={showBreadcrumbs}
           mobileNav={
             <MobileNav

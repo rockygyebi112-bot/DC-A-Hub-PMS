@@ -68,6 +68,7 @@ export function SidebarNavList({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch
                 onClick={onNavigate}
                 className={cn(
                   // 44px touch target on mobile per Apple HIG / Material;

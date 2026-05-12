@@ -1,4 +1,5 @@
 import "server-only";
+import { cache as reactCache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { throwIfError } from "@/lib/supabase/errors";
 
@@ -260,101 +261,82 @@ export function computeDelta(current: number, previous: number): number {
   return Math.round(((current - previous) / previous) * 100);
 }
 
-export async function getAdminCounts(): Promise<AdminCounts> {
+type AdminCountsRpcRow = {
+  active_clients: number;
+  active_projects: number;
+  total_users: number;
+  pending_invites: number;
+  total_projects_current: number;
+  active_projects_current: number;
+  completed_projects_current: number;
+  paused_projects_current: number;
+  total_users_current: number;
+  total_projects_prev: number;
+  active_projects_prev: number;
+  completed_projects_prev: number;
+  paused_projects_prev: number;
+  total_users_prev: number;
+};
+
+// React.cache so layout + page (both server components in the same render
+// pass) share a single RPC response instead of issuing it twice.
+export const getAdminCounts = reactCache(async (): Promise<AdminCounts> => {
   const sb = await createClient();
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  // Single Postgres function call replaces 14 separate `count: exact` HTTP
+  // round-trips. The function aggregates everything in one scan per table
+  // using `count(*) FILTER (...)` and is locked down to admins via
+  // `security definer` + an `is_admin()` check. Cast to `any` because the
+  // generated supabase-js types don't yet know about `admin_counts`; run
+  // `npm run db:types` after the migration is applied to refresh them.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (sb.rpc as any)("admin_counts");
+  throwIfError(error);
+  // RPC returns a one-row TABLE, surfaced as an array by supabase-js.
+  const row = (Array.isArray(data) ? data[0] : data) as AdminCountsRpcRow | null;
+  const safe = (n: unknown) => (typeof n === "number" ? n : Number(n ?? 0));
 
-  const [
-    clientsRes,
-    projectsRes,
-    usersRes,
-    invitesRes,
-    // Current totals (active = not archived) by status
-    totalProjectsCurrentRes,
-    activeProjectsCurrentRes,
-    completedProjectsCurrentRes,
-    pausedProjectsCurrentRes,
-    totalUsersCurrentRes,
-    // Snapshot 30 days ago (rows that existed then)
-    totalProjectsPrevRes,
-    activeProjectsPrevRes,
-    completedProjectsPrevRes,
-    pausedProjectsPrevRes,
-    totalUsersPrevRes,
-  ] = await Promise.all([
-    sb.from("clients").select("*", { count: "exact", head: true }).is("archived_at", null),
-    sb.from("projects").select("*", { count: "exact", head: true }).is("archived_at", null),
-    sb.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
-    sb
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", sevenDaysAgo),
-    sb.from("projects").select("*", { count: "exact", head: true }).is("archived_at", null),
-    sb
-      .from("projects")
-      .select("*", { count: "exact", head: true })
-      .is("archived_at", null)
-      .eq("status", "active"),
-    sb
-      .from("projects")
-      .select("*", { count: "exact", head: true })
-      .is("archived_at", null)
-      .eq("status", "completed"),
-    sb
-      .from("projects")
-      .select("*", { count: "exact", head: true })
-      .is("archived_at", null)
-      .eq("status", "paused"),
-    sb.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
-    sb
-      .from("projects")
-      .select("*", { count: "exact", head: true })
-      .lt("created_at", thirtyDaysAgo),
-    sb
-      .from("projects")
-      .select("*", { count: "exact", head: true })
-      .lt("created_at", thirtyDaysAgo)
-      .eq("status", "active"),
-    sb
-      .from("projects")
-      .select("*", { count: "exact", head: true })
-      .lt("created_at", thirtyDaysAgo)
-      .eq("status", "completed"),
-    sb
-      .from("projects")
-      .select("*", { count: "exact", head: true })
-      .lt("created_at", thirtyDaysAgo)
-      .eq("status", "paused"),
-    sb
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .lt("created_at", thirtyDaysAgo),
-  ]);
-
-  const totalProjectsCurrent = totalProjectsCurrentRes.count ?? 0;
-  const activeProjectsCurrent = activeProjectsCurrentRes.count ?? 0;
-  const completedProjectsCurrent = completedProjectsCurrentRes.count ?? 0;
-  const pausedProjectsCurrent = pausedProjectsCurrentRes.count ?? 0;
-  const totalUsersCurrent = totalUsersCurrentRes.count ?? 0;
+  if (!row) {
+    return {
+      activeClients: 0,
+      activeProjects: 0,
+      totalUsers: 0,
+      pendingInvites: 0,
+      deltas: {
+        totalProjects: 0,
+        activeProjects: 0,
+        completedProjects: 0,
+        pausedProjects: 0,
+        totalUsers: 0,
+      },
+    };
+  }
 
   return {
-    activeClients: clientsRes.count ?? 0,
-    activeProjects: projectsRes.count ?? 0,
-    totalUsers: usersRes.count ?? 0,
-    pendingInvites: invitesRes.count ?? 0,
+    activeClients: safe(row.active_clients),
+    activeProjects: safe(row.active_projects),
+    totalUsers: safe(row.total_users),
+    pendingInvites: safe(row.pending_invites),
     deltas: {
-      totalProjects: computeDelta(totalProjectsCurrent, totalProjectsPrevRes.count ?? 0),
-      activeProjects: computeDelta(activeProjectsCurrent, activeProjectsPrevRes.count ?? 0),
-      completedProjects: computeDelta(
-        completedProjectsCurrent,
-        completedProjectsPrevRes.count ?? 0,
+      totalProjects: computeDelta(
+        safe(row.total_projects_current),
+        safe(row.total_projects_prev),
       ),
-      pausedProjects: computeDelta(pausedProjectsCurrent, pausedProjectsPrevRes.count ?? 0),
-      totalUsers: computeDelta(totalUsersCurrent, totalUsersPrevRes.count ?? 0),
+      activeProjects: computeDelta(
+        safe(row.active_projects_current),
+        safe(row.active_projects_prev),
+      ),
+      completedProjects: computeDelta(
+        safe(row.completed_projects_current),
+        safe(row.completed_projects_prev),
+      ),
+      pausedProjects: computeDelta(
+        safe(row.paused_projects_current),
+        safe(row.paused_projects_prev),
+      ),
+      totalUsers: computeDelta(safe(row.total_users_current), safe(row.total_users_prev)),
     },
   };
-}
+});
 
 export async function listRecentProjects(limit = 5) {
   const sb = await createClient();

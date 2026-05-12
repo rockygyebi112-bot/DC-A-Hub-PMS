@@ -53,21 +53,46 @@ export function NotificationsBell({
   // itself is server-rendered, so we trigger router.refresh() instead of
   // mutating local state — this lets the server re-apply RLS, join
   // project/profile data, and respect the portal/workspace filter rules
-  // the parent passed in. We debounce with a short timeout so a burst of
-  // events (e.g. project member mass-action) only causes one refetch.
+  // the parent passed in.
+  //
+  // To keep edge requests cheap:
+  //   * Coalesce bursts of events into a single refresh via an 800ms
+  //     debounce (a single comment thread can produce several writes
+  //     when mentions fan out per-recipient).
+  //   * Skip refreshing while the document is hidden — the user can't
+  //     see the bell anyway. We re-arm a single refresh when the tab
+  //     becomes visible again so they see the latest state on return.
   useEffect(() => {
     const sb = createClient();
     let pendingRefresh: ReturnType<typeof setTimeout> | null = null;
+    let hiddenWhileDirty = false;
     let cancelled = false;
     let channel: ReturnType<typeof sb.channel> | null = null;
+
+    const doRefresh = () => {
+      if (cancelled) return;
+      if (typeof document !== "undefined" && document.hidden) {
+        hiddenWhileDirty = true;
+        return;
+      }
+      router.refresh();
+    };
 
     const scheduleRefresh = () => {
       if (cancelled) return;
       if (pendingRefresh) clearTimeout(pendingRefresh);
-      pendingRefresh = setTimeout(() => {
-        if (!cancelled) router.refresh();
-      }, 250);
+      pendingRefresh = setTimeout(doRefresh, 800);
     };
+
+    const onVisibilityChange = () => {
+      if (!document.hidden && hiddenWhileDirty) {
+        hiddenWhileDirty = false;
+        router.refresh();
+      }
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibilityChange);
+    }
 
     (async () => {
       try {
@@ -93,7 +118,6 @@ export function NotificationsBell({
             status === "TIMED_OUT" ||
             status === "CLOSED"
           ) {
-            // eslint-disable-next-line no-console
             console.warn(`[notifications-bell] realtime channel ${status}`);
           }
         });
@@ -102,6 +126,9 @@ export function NotificationsBell({
     return () => {
       cancelled = true;
       if (pendingRefresh) clearTimeout(pendingRefresh);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibilityChange);
+      }
       if (channel) sb.removeChannel(channel);
     };
   }, [router]);

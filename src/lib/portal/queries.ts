@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import {
+  getWorkspaceProject,
   listActivityProofs,
   listProjectPhases,
   listProjectTeam,
@@ -45,8 +46,12 @@ export async function listPortalProjects() {
 }
 
 export async function getPortalProject(projectId: string) {
-  const projects = await listWorkspaceProjects();
-  return projects.find((item) => item.id === projectId) ?? null;
+  // Previously this fanned out to listWorkspaceProjects() (every project
+  // + every phase + every activity in the org) just to locate one row.
+  // getWorkspaceProject fetches the same shape with a single targeted
+  // query, dropping TTFB on /portal/projects/[id] proportionally with
+  // org size.
+  return getWorkspaceProject(projectId);
 }
 
 export async function getPortalProjectDetail(projectId: string) {

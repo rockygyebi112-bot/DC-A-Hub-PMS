@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { throwIfError } from "@/lib/supabase/errors";
 
@@ -57,7 +58,7 @@ export type WorkspaceProof = {
   signedUrl: string | null;
 };
 
-export async function listWorkspaceProjects(): Promise<WorkspaceProject[]> {
+export const listWorkspaceProjects = cache(async (): Promise<WorkspaceProject[]> => {
   const sb = await createClient();
   const { data: projects, error } = await sb
     .from("projects")
@@ -97,11 +98,11 @@ export async function listWorkspaceProjects(): Promise<WorkspaceProject[]> {
       totalCount: count.total,
     };
   });
-}
+});
 
-export async function getWorkspaceProject(
+export const getWorkspaceProject = cache(async (
   projectId: string,
-): Promise<WorkspaceProject | null> {
+): Promise<WorkspaceProject | null> => {
   // Fetch the single project + its phase/activity counts directly. Going via
   // `listWorkspaceProjects()` previously loaded every project + every phase +
   // every activity in the workspace just to find one row, which scaled linearly
@@ -146,9 +147,9 @@ export async function getWorkspaceProject(
     doneCount: done,
     totalCount: total,
   };
-}
+});
 
-export async function listProjectPhases(projectId: string): Promise<WorkspacePhase[]> {
+export const listProjectPhases = cache(async (projectId: string): Promise<WorkspacePhase[]> => {
   const sb = await createClient();
   const { data: phases, error } = await sb
     .from("phases")
@@ -190,7 +191,7 @@ export async function listProjectPhases(projectId: string): Promise<WorkspacePha
     ...phase,
     activities: byPhase.get(phase.id) ?? [],
   }));
-}
+});
 
 export async function getPhase(phaseId: string) {
   const sb = await createClient();
@@ -203,7 +204,7 @@ export async function getPhase(phaseId: string) {
   return data;
 }
 
-export async function getActivity(activityId: string) {
+export const getActivity = cache(async (activityId: string) => {
   const sb = await createClient();
   const { data, error } = await sb
     .from("activities")
@@ -216,7 +217,7 @@ export async function getActivity(activityId: string) {
     status: data.status as WorkspaceActivity["status"],
     phase: Array.isArray(data.phase) ? data.phase[0] ?? null : data.phase,
   };
-}
+});
 
 /**
  * Returns proof metadata only. Signed URLs are intentionally NOT minted here
@@ -224,7 +225,7 @@ export async function getActivity(activityId: string) {
  * page — every access now goes through `requestProofAccess`, which logs the
  * view, re-verifies project membership, and issues a short-lived signed URL.
  */
-export async function listActivityProofs(activityId: string): Promise<WorkspaceProof[]> {
+export const listActivityProofs = cache(async (activityId: string): Promise<WorkspaceProof[]> => {
   const sb = await createClient();
   const { data, error } = await sb
     .from("activity_proofs")
@@ -237,9 +238,9 @@ export async function listActivityProofs(activityId: string): Promise<WorkspaceP
     const kind = (proof.kind === "link" ? "link" : "file") as "file" | "link";
     return { ...proof, kind, signedUrl: null };
   });
-}
+});
 
-export async function listProjectTeam(projectId: string) {
+export const listProjectTeam = cache(async (projectId: string) => {
   const sb = await createClient();
   const { data: members, error } = await sb
     .from("project_members")
@@ -258,5 +259,5 @@ export async function listProjectTeam(projectId: string) {
     ...member,
     profile: byUserId.get(member.user_id) ?? null,
   }));
-}
+});
 

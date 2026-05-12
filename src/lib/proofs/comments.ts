@@ -287,6 +287,72 @@ export async function addProofComment(
 }
 
 /**
+ * Edit an existing comment. Only the author may edit — RLS enforces
+ * this, but we gate at the action layer for a friendlier error. Body is
+ * validated the same way as on insert.
+ */
+export async function updateProofComment(
+  commentId: string,
+  rawBody: string,
+): Promise<{ ok: true; data: ProofComment } | { ok: false; error: string }> {
+  const parsed = bodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid comment" };
+  }
+  const body = parsed.data;
+
+  const auth = await requireAuth();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const sb = await createClient();
+  const { data: existing } = await sb
+    .from("proof_comments")
+    .select("author_user_id, proof_id")
+    .eq("id", commentId)
+    .maybeSingle();
+  if (!existing) return { ok: false, error: "Comment not found" };
+  if (existing.author_user_id !== auth.userId) {
+    return { ok: false, error: "Only the author can edit this comment" };
+  }
+
+  const { data, error } = await sb
+    .from("proof_comments")
+    .update({ body })
+    .eq("id", commentId)
+    .select("id, proof_id, author_user_id, body, created_at, updated_at")
+    .single();
+  if (error || !data) {
+    return { ok: false, error: error?.message ?? "Could not save edit" };
+  }
+
+  const { data: profile } = await sb
+    .from("profiles")
+    .select("full_name, avatar_url")
+    .eq("user_id", auth.userId)
+    .maybeSingle();
+
+  const ctx = await proofContext(existing.proof_id as string);
+  if (ctx) {
+    revalidatePath(`/portal/projects/${ctx.projectId}`);
+    revalidatePath(`/workspace/projects/${ctx.projectId}`);
+  }
+
+  return {
+    ok: true,
+    data: {
+      id: data.id as string,
+      proof_id: data.proof_id as string,
+      author_user_id: data.author_user_id as string,
+      body: data.body as string,
+      created_at: data.created_at as string,
+      updated_at: data.updated_at as string,
+      author_name: (profile?.full_name as string | null) ?? null,
+      author_avatar_url: (profile?.avatar_url as string | null) ?? null,
+    },
+  };
+}
+
+/**
  * Delete a comment. RLS limits this to the author or an admin; we also
  * gate at the action layer for a friendlier error.
  */

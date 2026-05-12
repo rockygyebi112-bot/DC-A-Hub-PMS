@@ -126,10 +126,6 @@ export function NotificationsBell({
                   isComment && entry.meta
                     ? (entry.meta.proof_name as string | undefined) ?? null
                     : null;
-                const preview =
-                  isComment && entry.meta
-                    ? (entry.meta.preview as string | undefined) ?? null
-                    : null;
                 const headlineSuffix =
                   proofName ?? entry.activity_name ?? null;
                 const inner = (
@@ -155,11 +151,6 @@ export function NotificationsBell({
                           </>
                         )}
                       </p>
-                      {preview && (
-                        <p className="mt-0.5 line-clamp-2 text-[11px] italic text-muted-foreground">
-                          “{preview}”
-                        </p>
-                      )}
                       <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
                         {entry.project_name ?? "Project"}
                         {entry.actor_name ? ` · by ${entry.actor_name}` : ""}

@@ -278,23 +278,23 @@ export function AppSidebar({
           collapsed ? "flex flex-col items-center gap-1 py-3" : "flex items-center gap-2 px-4 py-3",
         )}
       >
-        <div className="flex size-7 shrink-0 items-center justify-center">
+        <div className="flex size-10 shrink-0 items-center justify-center">
           {defaultLogoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={defaultLogoUrl}
               alt={`${brand} logo`}
-              className="h-7 w-7 object-contain"
+              className="h-10 w-10 object-contain"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">
-              <Sparkles className="size-3.5" />
+              <Sparkles className="size-4" />
             </div>
           )}
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1 leading-tight">
-            <p className="font-heading truncate text-xs font-semibold text-white">
+            <p className="font-heading truncate text-sm font-semibold text-white">
               {brand}
             </p>
             <p className="text-[10px] text-white/50">Powered by DC&A Hub</p>

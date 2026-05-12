@@ -24,22 +24,37 @@ const bodySchema = z
   .max(4000, "Comment is too long (max 4000 characters)");
 
 /**
- * Resolve the project a proof belongs to. We hop proof → activity → phase
- * → project so we can run the project access guard before any read/write.
+ * Resolve the project + activity a proof belongs to. We hop proof →
+ * activity → phase → project so we can run the project access guard
+ * before any read/write, and so the activity_log entry we record for
+ * comment notifications has the right project_id / activity_id.
  */
-async function projectIdForProof(proofId: string): Promise<string | null> {
+async function proofContext(
+  proofId: string,
+): Promise<{ projectId: string; activityId: string; fileName: string } | null> {
   const sb = await createClient();
   const { data } = await sb
     .from("activity_proofs")
-    .select("activity:activities!inner(phase:phases!inner(project_id))")
+    .select(
+      "file_name, activity:activities!inner(id, phase:phases!inner(project_id))",
+    )
     .eq("id", proofId)
     .maybeSingle();
   // Supabase nested selects return objects, not arrays, when using !inner.
   type Row = {
-    activity: { phase: { project_id: string } } | null;
+    file_name: string;
+    activity: {
+      id: string;
+      phase: { project_id: string };
+    } | null;
   };
   const row = data as Row | null;
-  return row?.activity?.phase?.project_id ?? null;
+  if (!row?.activity?.id || !row.activity.phase?.project_id) return null;
+  return {
+    projectId: row.activity.phase.project_id,
+    activityId: row.activity.id,
+    fileName: row.file_name,
+  };
 }
 
 /**
@@ -50,10 +65,10 @@ async function projectIdForProof(proofId: string): Promise<string | null> {
 export async function listProofComments(
   proofId: string,
 ): Promise<{ ok: true; data: ProofComment[] } | { ok: false; error: string }> {
-  const projectId = await projectIdForProof(proofId);
-  if (!projectId) return { ok: false, error: "Proof not found" };
+  const ctx = await proofContext(proofId);
+  if (!ctx) return { ok: false, error: "Proof not found" };
 
-  const guard = await requireProjectReader(projectId);
+  const guard = await requireProjectReader(ctx.projectId);
   if (!guard.ok) return { ok: false, error: guard.error };
 
   const sb = await createClient();
@@ -108,10 +123,10 @@ export async function addProofComment(
   }
   const body = parsed.data;
 
-  const projectId = await projectIdForProof(proofId);
-  if (!projectId) return { ok: false, error: "Proof not found" };
+  const ctx = await proofContext(proofId);
+  if (!ctx) return { ok: false, error: "Proof not found" };
 
-  const guard = await requireProjectReader(projectId);
+  const guard = await requireProjectReader(ctx.projectId);
   if (!guard.ok) return { ok: false, error: guard.error };
 
   const sb = await createClient();
@@ -130,10 +145,28 @@ export async function addProofComment(
     .eq("user_id", guard.userId)
     .maybeSingle();
 
+  // Record the comment as a project event so admins/staff get a
+  // notification via the existing notifications bell (which reads from
+  // activity_log). meta.preview is a short snippet so the bell can show
+  // "Jane commented on report.pdf: 'Looks good…'" without an extra fetch.
+  const preview = body.length > 140 ? `${body.slice(0, 140).trimEnd()}\u2026` : body;
+  await sb.from("activity_log").insert({
+    project_id: ctx.projectId,
+    activity_id: ctx.activityId,
+    actor_user_id: guard.userId,
+    action: "proof_commented",
+    meta: {
+      proof_id: proofId,
+      proof_name: ctx.fileName,
+      comment_id: data.id,
+      preview,
+    },
+  });
+
   // The proof lives under both surfaces; revalidate both to refresh the
   // comment list wherever it's rendered.
-  revalidatePath(`/portal/projects/${projectId}`);
-  revalidatePath(`/workspace/projects/${projectId}`);
+  revalidatePath(`/portal/projects/${ctx.projectId}`);
+  revalidatePath(`/workspace/projects/${ctx.projectId}`);
 
   return {
     ok: true,
@@ -175,10 +208,10 @@ export async function deleteProofComment(
   const { error } = await sb.from("proof_comments").delete().eq("id", commentId);
   if (error) return { ok: false, error: error.message };
 
-  const projectId = await projectIdForProof(existing.proof_id as string);
-  if (projectId) {
-    revalidatePath(`/portal/projects/${projectId}`);
-    revalidatePath(`/workspace/projects/${projectId}`);
+  const ctx = await proofContext(existing.proof_id as string);
+  if (ctx) {
+    revalidatePath(`/portal/projects/${ctx.projectId}`);
+    revalidatePath(`/workspace/projects/${ctx.projectId}`);
   }
   return { ok: true };
 }

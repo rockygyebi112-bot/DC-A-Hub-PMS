@@ -395,6 +395,7 @@ async function getDashboardData(
     marked_done: "marked done on",
     proof_added: "added proof to",
     proof_deleted: "removed proof from",
+    proof_commented: "commented on a proof in",
   };
   const activityFeed: ActivityFeedRow[] = logRows.map((row) => {
     const actor = (row.actor_user_id && actorById.get(row.actor_user_id)) || "System";

@@ -17,6 +17,7 @@ const ACTION_LABELS: Record<string, string> = {
   marked_done: "Activity completed",
   proof_added: "Proof uploaded",
   proof_deleted: "Proof removed",
+  proof_commented: "New comment on proof",
 };
 
 function formatRelative(iso: string) {
@@ -114,6 +115,19 @@ export function NotificationsBell({
                   ? entry.created_at > lastReadAt
                   : true;
                 const label = ACTION_LABELS[entry.action] ?? entry.action;
+                // For proof_commented rows we surface the file the comment
+                // is attached to (instead of just the activity name) and
+                // the comment preview, so admins can triage from the bell.
+                const proofName =
+                  entry.action === "proof_commented" && entry.meta
+                    ? (entry.meta.proof_name as string | undefined) ?? null
+                    : null;
+                const preview =
+                  entry.action === "proof_commented" && entry.meta
+                    ? (entry.meta.preview as string | undefined) ?? null
+                    : null;
+                const headlineSuffix =
+                  proofName ?? entry.activity_name ?? null;
                 const inner = (
                   <div className="flex items-start gap-2.5 px-3 py-2.5 transition-colors hover:bg-muted/60">
                     <span
@@ -130,13 +144,18 @@ export function NotificationsBell({
                         )}
                       >
                         {label}
-                        {entry.activity_name && (
+                        {headlineSuffix && (
                           <>
                             {": "}
-                            <span className="font-normal">{entry.activity_name}</span>
+                            <span className="font-normal">{headlineSuffix}</span>
                           </>
                         )}
                       </p>
+                      {preview && (
+                        <p className="mt-0.5 line-clamp-2 text-[11px] italic text-muted-foreground">
+                          “{preview}”
+                        </p>
+                      )}
                       <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
                         {entry.project_name ?? "Project"}
                         {entry.actor_name ? ` · by ${entry.actor_name}` : ""}

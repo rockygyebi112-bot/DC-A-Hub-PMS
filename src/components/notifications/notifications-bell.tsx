@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Bell, CheckCheck } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 import { markNotificationsRead } from "@/lib/notifications/actions";
 import type { NotificationEntry } from "@/lib/notifications/queries";
 
@@ -48,6 +49,63 @@ export function NotificationsBell({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
+  // Live-refresh the bell when new activity_log rows arrive. The feed
+  // itself is server-rendered, so we trigger router.refresh() instead of
+  // mutating local state — this lets the server re-apply RLS, join
+  // project/profile data, and respect the portal/workspace filter rules
+  // the parent passed in. We debounce with a short timeout so a burst of
+  // events (e.g. project member mass-action) only causes one refetch.
+  useEffect(() => {
+    const sb = createClient();
+    let pendingRefresh: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+    let channel: ReturnType<typeof sb.channel> | null = null;
+
+    const scheduleRefresh = () => {
+      if (cancelled) return;
+      if (pendingRefresh) clearTimeout(pendingRefresh);
+      pendingRefresh = setTimeout(() => {
+        if (!cancelled) router.refresh();
+      }, 250);
+    };
+
+    (async () => {
+      try {
+        const { data } = await sb.auth.getSession();
+        const token = data.session?.access_token;
+        if (token) {
+          await sb.realtime.setAuth(token);
+        }
+      } catch {
+        // best-effort; the subscription will still be attempted below
+      }
+      if (cancelled) return;
+      channel = sb
+        .channel("notifications-bell")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "activity_log" },
+          scheduleRefresh,
+        )
+        .subscribe((status) => {
+          if (
+            status === "CHANNEL_ERROR" ||
+            status === "TIMED_OUT" ||
+            status === "CLOSED"
+          ) {
+            // eslint-disable-next-line no-console
+            console.warn(`[notifications-bell] realtime channel ${status}`);
+          }
+        });
+    })();
+
+    return () => {
+      cancelled = true;
+      if (pendingRefresh) clearTimeout(pendingRefresh);
+      if (channel) sb.removeChannel(channel);
+    };
+  }, [router]);
+
   function markRead() {
     startTransition(async () => {
       await markNotificationsRead();
@@ -66,7 +124,7 @@ export function NotificationsBell({
           >
             <Bell className="size-4" />
             {unreadCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 inline-flex min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 font-mono text-[9px] font-bold text-destructive-foreground ring-2 ring-background">
+              <span className="absolute -right-1 -top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-1 font-mono text-[10px] font-bold text-white ring-2 ring-background">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}

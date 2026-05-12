@@ -344,8 +344,14 @@ export function ProofComments({
   function saveEdit(id: string) {
     const body = editDraft.trim();
     if (!body) return;
+    // Recompute the mention set from the edited body. We scan the new
+    // text against the known mentionables (longest-name-first to match
+    // the highlight overlay's logic) so the server can diff against the
+    // previously-recorded notifications: stale @mentions get their bell
+    // entries cleaned up, and new ones receive a notification.
+    const mentionedIds = computeMentionIdsFromBody(body, mentionables);
     startEdit(async () => {
-      const res = await updateProofComment(id, body);
+      const res = await updateProofComment(id, body, mentionedIds);
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -629,6 +635,48 @@ function segmentMentions(body: string, knownTokens: string[]) {
     i++;
   }
   return segs;
+}
+
+/**
+ * Resolve the set of user ids @mentioned in an edited comment body. Scans
+ * the body the same way the highlight overlay does — longest known name
+ * first, then group tokens — and returns a unique array of user_ids that
+ * the server can diff against the previously-stored mention list.
+ *
+ * Used on edit so adding / removing tags in the textarea properly creates
+ * or revokes the matching bell notifications.
+ */
+function computeMentionIdsFromBody(
+  body: string,
+  mentionables: MentionableUser[],
+): string[] {
+  // Build the same token list segmentMentions uses, then keep only the
+  // ones that resolve to a real user or to a group we can expand.
+  const names = mentionables.map((u) => u.full_name).filter(Boolean);
+  const groupLabels = GROUPS.map((g) => g.label);
+  const tokens = [...names, ...groupLabels].sort((a, b) => b.length - a.length);
+  const segs = segmentMentions(body, tokens);
+  const ids = new Set<string>();
+  for (const seg of segs) {
+    if (seg.kind !== "mention") continue;
+    const tail = seg.value.slice(1); // drop the '@'
+    // Group expansion: include every user matching the group's filter.
+    const group = GROUPS.find(
+      (g) => g.label.toLowerCase() === tail.toLowerCase(),
+    );
+    if (group) {
+      for (const u of mentionables) {
+        if (group.filter(u)) ids.add(u.user_id);
+      }
+      continue;
+    }
+    // Individual user — match against full_name case-insensitively.
+    const user = mentionables.find(
+      (u) => u.full_name.toLowerCase() === tail.toLowerCase(),
+    );
+    if (user) ids.add(user.user_id);
+  }
+  return Array.from(ids);
 }
 
 /**

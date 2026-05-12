@@ -290,10 +290,22 @@ export async function addProofComment(
  * Edit an existing comment. Only the author may edit — RLS enforces
  * this, but we gate at the action layer for a friendlier error. Body is
  * validated the same way as on insert.
+ *
+ * Mention bookkeeping: an edit can add or remove @mentions. We diff the
+ * incoming `mentionedUserIds` against the broadcast row's stored
+ * `meta.mentioned_user_ids` and:
+ *
+ *   * delete the per-user `proof_mentioned` rows for anyone the author
+ *     un-tagged (so they don't keep seeing a stale bell entry),
+ *   * insert new `proof_mentioned` rows for anyone newly tagged,
+ *   * refresh `meta.mentioned_user_ids` and `meta.preview` on the
+ *     broadcast `proof_commented` row so the bell feed's de-dup filter
+ *     and headline preview stay accurate.
  */
 export async function updateProofComment(
   commentId: string,
   rawBody: string,
+  mentionedUserIds: string[] = [],
 ): Promise<{ ok: true; data: ProofComment } | { ok: false; error: string }> {
   const parsed = bodySchema.safeParse(rawBody);
   if (!parsed.success) {
@@ -332,6 +344,78 @@ export async function updateProofComment(
     .maybeSingle();
 
   const ctx = await proofContext(existing.proof_id as string);
+
+  // -------------------- mention reconciliation --------------------
+  // Validate the proposed mention list the same way addProofComment does
+  // — drop self-mentions, dedupe, sanity-check uuids.
+  const desiredMentions = new Set(
+    Array.from(new Set(mentionedUserIds))
+      .filter((id) => typeof id === "string" && id.length === 36)
+      .filter((id) => id !== auth.userId),
+  );
+  const preview = body.length > 140 ? `${body.slice(0, 140).trimEnd()}\u2026` : body;
+
+  // Pull the existing rows tied to this comment (one broadcast + N
+  // per-user). We index meta->>comment_id so this is cheap.
+  const { data: existingLogRows } = await sb
+    .from("activity_log")
+    .select("id, action, target_user_id, meta")
+    .contains("meta", { comment_id: commentId });
+
+  const broadcastRow =
+    (existingLogRows ?? []).find((r) => r.action === "proof_commented") ?? null;
+  const targetedRows = (existingLogRows ?? []).filter(
+    (r) => r.action === "proof_mentioned" && r.target_user_id,
+  );
+  const previouslyMentioned = new Set(
+    targetedRows.map((r) => r.target_user_id as string),
+  );
+
+  // Compute the diff.
+  const toRemove = [...previouslyMentioned].filter((id) => !desiredMentions.has(id));
+  const toAdd = [...desiredMentions].filter((id) => !previouslyMentioned.has(id));
+
+  if (toRemove.length > 0) {
+    const idsToDelete = targetedRows
+      .filter((r) => toRemove.includes(r.target_user_id as string))
+      .map((r) => r.id);
+    if (idsToDelete.length > 0) {
+      await sb.from("activity_log").delete().in("id", idsToDelete);
+    }
+  }
+
+  if (toAdd.length > 0 && ctx) {
+    await sb.from("activity_log").insert(
+      toAdd.map((targetUserId) => ({
+        project_id: ctx.projectId,
+        activity_id: ctx.activityId,
+        actor_user_id: auth.userId,
+        target_user_id: targetUserId,
+        action: "proof_mentioned",
+        meta: {
+          proof_id: existing.proof_id,
+          proof_name: ctx.fileName,
+          comment_id: commentId,
+          preview,
+        },
+      })),
+    );
+  }
+
+  // Refresh the broadcast row so the feed-level dedup filter
+  // (mentioned_user_ids) and the bell headline preview stay accurate.
+  if (broadcastRow) {
+    const nextMeta = {
+      ...((broadcastRow.meta as Record<string, unknown> | null) ?? {}),
+      mentioned_user_ids: Array.from(desiredMentions),
+      preview,
+    };
+    await sb
+      .from("activity_log")
+      .update({ meta: nextMeta })
+      .eq("id", broadcastRow.id);
+  }
+
   if (ctx) {
     revalidatePath(`/portal/projects/${ctx.projectId}`);
     revalidatePath(`/workspace/projects/${ctx.projectId}`);
@@ -376,6 +460,18 @@ export async function deleteProofComment(
 
   const { error } = await sb.from("proof_comments").delete().eq("id", commentId);
   if (error) return { ok: false, error: error.message };
+
+  // Cascade the delete to the bell feed: every activity_log row tagged
+  // with this comment_id in meta needs to go too, otherwise users keep
+  // seeing notifications pointing at a comment that no longer exists.
+  // RLS allows the actor (and admins) to delete their own
+  // proof_commented / proof_mentioned rows via the policy added in
+  // migration 0019.
+  await sb
+    .from("activity_log")
+    .delete()
+    .in("action", ["proof_commented", "proof_mentioned"])
+    .contains("meta", { comment_id: commentId });
 
   const ctx = await proofContext(existing.proof_id as string);
   if (ctx) {

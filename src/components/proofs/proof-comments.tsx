@@ -161,30 +161,66 @@ export function ProofComments({
     });
 
     const sb = createClient();
-    const channel = sb
-      .channel(`proof-comments-${proofId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "proof_comments",
-          filter: `proof_id=eq.${proofId}`,
-        },
-        () => {
-          // Refetch rather than reconstruct — the realtime payload
-          // doesn't include joined profile data, and a small fetch keeps
-          // author names accurate.
-          listProofComments(proofId).then((res) => {
-            if (!cancelled && res.ok) setComments(res.data);
-          });
-        },
-      )
-      .subscribe();
+    // Supabase Realtime enforces RLS using the JWT bound to the
+    // WebSocket. With the SSR browser client the token is normally
+    // applied via the auth state listener, but on first load (and
+    // especially on Vercel where the session is restored from cookies)
+    // .subscribe() can fire before the listener has propagated the
+    // token. Without a JWT the channel is treated as anonymous, RLS
+    // blocks proof_comments selects, and inserts silently never reach
+    // the client. We explicitly fetch the session and pass the access
+    // token to realtime before subscribing to close that race.
+    let channel: ReturnType<typeof sb.channel> | null = null;
+    (async () => {
+      try {
+        const { data } = await sb.auth.getSession();
+        const token = data.session?.access_token;
+        if (token) {
+          await sb.realtime.setAuth(token);
+        }
+      } catch {
+        // best-effort; subscription will still be attempted below
+      }
+      if (cancelled) return;
+      channel = sb
+        .channel(`proof-comments-${proofId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "proof_comments",
+            filter: `proof_id=eq.${proofId}`,
+          },
+          () => {
+            // Refetch rather than reconstruct — the realtime payload
+            // doesn't include joined profile data, and a small fetch
+            // keeps author names accurate.
+            listProofComments(proofId).then((res) => {
+              if (!cancelled && res.ok) setComments(res.data);
+            });
+          },
+        )
+        .subscribe((status) => {
+          // Surface channel-level failures during development so we can
+          // tell a "no events" symptom apart from a quiet successful
+          // subscription. Production logs can be pruned later.
+          if (
+            status === "CHANNEL_ERROR" ||
+            status === "TIMED_OUT" ||
+            status === "CLOSED"
+          ) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[proof-comments] realtime channel ${status} for proof ${proofId}`,
+            );
+          }
+        });
+    })();
 
     return () => {
       cancelled = true;
-      sb.removeChannel(channel);
+      if (channel) sb.removeChannel(channel);
     };
   }, [proofId]);
 

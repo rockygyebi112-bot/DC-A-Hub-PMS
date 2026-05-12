@@ -8,6 +8,8 @@ import { SectionCard } from "@/components/admin/ui/section-card";
 import { ActivityStatus } from "@/components/workspace/status-badge";
 import { DeleteConfirm } from "@/components/workspace/delete-confirm";
 import { ProofAccessButton } from "@/components/workspace/proof-access-button";
+import { ProofComments } from "@/components/proofs/proof-comments";
+import { notFound } from "next/navigation";
 import {
   addProofLink,
   deleteActivity,
@@ -19,6 +21,7 @@ import {
   listActivityProofs,
   listProjectPhases,
 } from "@/lib/workspace/queries";
+import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
 export default async function WorkspaceActivityPage({
   params,
@@ -26,11 +29,13 @@ export default async function WorkspaceActivityPage({
   params: Promise<{ id: string; activityId: string }>;
 }) {
   const { id, activityId } = await params;
-  const [activity, phases, proofs] = await Promise.all([
+  const [profile, activity, phases, proofs] = await Promise.all([
+    getCurrentProfile(),
     getActivity(activityId),
     listProjectPhases(id),
     listActivityProofs(activityId),
   ]);
+  if (!profile) notFound();
 
   async function save(formData: FormData) {
     "use server";
@@ -186,16 +191,22 @@ export default async function WorkspaceActivityPage({
                 description="Upload files or add links to share evidence of completion."
               />
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {proofs.map((proof) => (
-                  <ProofAccessButton
-                    key={proof.id}
-                    proofId={proof.id}
-                    fileName={proof.file_name}
-                    caption={proof.caption}
-                    kind={proof.kind}
-                    hint={proof.kind === "link" ? proof.url : proof.mime_type}
-                  />
+                  <div key={proof.id} className="space-y-2">
+                    <ProofAccessButton
+                      proofId={proof.id}
+                      fileName={proof.file_name}
+                      caption={proof.caption}
+                      kind={proof.kind}
+                      hint={proof.kind === "link" ? proof.url : proof.mime_type}
+                    />
+                    <ProofComments
+                      proofId={proof.id}
+                      currentUserId={profile.userId}
+                      isAdmin={profile.role === "admin"}
+                    />
+                  </div>
                 ))}
               </div>
             )}

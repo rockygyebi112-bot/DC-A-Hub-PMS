@@ -159,11 +159,19 @@ export function AppSidebar({
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="font-heading truncate text-base font-bold tracking-tight leading-tight text-white">
+            {/* Long client names (e.g. "Absa Bank Ghana Limited") should be
+                fully readable in the rail. We allow wrapping and clamp to
+                two lines so a very long name doesn't push the rest of the
+                nav off-screen. `break-words` lets it break mid-word if a
+                single token is wider than the rail. */}
+            <p
+              className="font-heading text-sm font-bold tracking-tight leading-tight text-white break-words [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical] overflow-hidden"
+              title={displayBrand}
+            >
               {displayBrand}
             </p>
             {displaySubtitle && (
-              <p className="truncate text-[10px] font-medium tracking-wide text-white/60">{displaySubtitle}</p>
+              <p className="mt-0.5 truncate text-[10px] font-medium tracking-wide text-white/60">{displaySubtitle}</p>
             )}
           </div>
         )}
@@ -260,6 +268,39 @@ export function AppSidebar({
       </nav>
 
       {!collapsed && footer && <div className="mx-3 mb-3 mt-4">{footer}</div>}
+
+      {/* Bottom brand chip — always shows the workspace owner (DC&A Hub) so
+          clients still see who's powering the portal even when the top of
+          the rail has switched to their own organisation's logo + name. */}
+      <div
+        className={cn(
+          "mt-auto border-t border-white/10",
+          collapsed ? "flex flex-col items-center gap-1 py-3" : "flex items-center gap-2 px-4 py-3",
+        )}
+      >
+        <div className="flex size-7 shrink-0 items-center justify-center">
+          {defaultLogoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={defaultLogoUrl}
+              alt={`${brand} logo`}
+              className="h-7 w-7 object-contain"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">
+              <Sparkles className="size-3.5" />
+            </div>
+          )}
+        </div>
+        {!collapsed && (
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="font-heading truncate text-xs font-semibold text-white">
+              {brand}
+            </p>
+            <p className="text-[10px] text-white/50">Powered by DC&A Hub</p>
+          </div>
+        )}
+      </div>
     </aside>
     </TooltipProvider>
   );

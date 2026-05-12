@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { CalendarDays, FileCheck2 } from "lucide-react";
 import { ActivityStatus } from "@/components/workspace/status-badge";
-import { cn } from "@/lib/utils";
 
 type Activity = {
   id: string;
@@ -14,13 +12,6 @@ type Activity = {
   location: string | null;
   proofCount: number;
 };
-
-const FILTERS: { key: "all" | Activity["status"]; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "not_started", label: "Not started" },
-  { key: "in_progress", label: "In progress" },
-  { key: "done", label: "Done" },
-];
 
 function formatDate(value: string | null) {
   if (!value) return null;
@@ -34,77 +25,32 @@ function formatDate(value: string | null) {
 }
 
 /**
- * Filterable list of activities for a single phase. Counts adjust live so
- * the user can see how many activities sit in each status before clicking
- * the chip. When a filter is empty we explain why instead of showing a
- * blank space.
+ * Presentational list of activities for a single phase. The filter UI lives
+ * in the parent phase header (clickable stat pills) so we just render
+ * whatever list of activities we're handed. `emptyHint` lets the caller
+ * customise the message when a filter narrows the list to zero results.
  */
 export function PhaseActivities({
   projectId,
   activities,
+  emptyHint,
 }: {
   projectId: string;
   activities: Activity[];
+  emptyHint?: string;
 }) {
-  const [filter, setFilter] = useState<"all" | Activity["status"]>("all");
-
-  const counts = {
-    all: activities.length,
-    not_started: activities.filter((a) => a.status === "not_started").length,
-    in_progress: activities.filter((a) => a.status === "in_progress").length,
-    done: activities.filter((a) => a.status === "done").length,
-  };
-
-  const visible =
-    filter === "all" ? activities : activities.filter((a) => a.status === filter);
-
   if (activities.length === 0) {
     return (
       <p className="rounded-lg border border-dashed bg-muted/40 px-3 py-6 text-center text-xs text-muted-foreground">
-        No activities in this phase yet.
+        {emptyHint ?? "No activities in this phase yet."}
       </p>
     );
   }
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-1.5">
-        {FILTERS.map((f) => {
-          const count = counts[f.key];
-          const active = filter === f.key;
-          return (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => setFilter(f.key)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-                active
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {f.label}
-              <span
-                className={cn(
-                  "rounded-full px-1.5 py-px font-mono text-[10px]",
-                  active ? "bg-primary-foreground/20" : "bg-muted",
-                )}
-              >
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {visible.length === 0 ? (
-        <p className="rounded-lg border border-dashed bg-muted/40 px-3 py-6 text-center text-xs text-muted-foreground">
-          No activities match this filter.
-        </p>
-      ) : (
-        <ul className="divide-y">
-          {visible.map((activity) => (
+      <ul className="divide-y">
+        {activities.map((activity) => (
             <li
               key={activity.id}
               className="flex flex-wrap items-center gap-3 py-2.5"
@@ -136,8 +82,7 @@ export function PhaseActivities({
               <ActivityStatus status={activity.status} />
             </li>
           ))}
-        </ul>
-      )}
+      </ul>
     </div>
   );
 }

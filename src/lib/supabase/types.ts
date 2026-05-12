@@ -448,54 +448,6 @@ export type Database = {
           },
         ]
       }
-      proof_access_log: {
-        Row: {
-          accessed_at: string
-          id: string
-          ip_address: string | null
-          project_id: string
-          proof_id: string
-          purpose: string | null
-          user_agent: string | null
-          user_id: string
-        }
-        Insert: {
-          accessed_at?: string
-          id?: string
-          ip_address?: string | null
-          project_id: string
-          proof_id: string
-          purpose?: string | null
-          user_agent?: string | null
-          user_id: string
-        }
-        Update: {
-          accessed_at?: string
-          id?: string
-          ip_address?: string | null
-          project_id?: string
-          proof_id?: string
-          purpose?: string | null
-          user_agent?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "proof_access_log_proof_id_fkey"
-            columns: ["proof_id"]
-            isOneToOne: false
-            referencedRelation: "activity_proofs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proof_access_log_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       project_members: {
         Row: {
           created_at: string
@@ -581,6 +533,72 @@ export type Database = {
           },
         ]
       }
+      proof_access_log: {
+        Row: {
+          accessed_at: string
+          id: string
+          ip_address: unknown
+          project_id: string
+          proof_id: string
+          purpose: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accessed_at?: string
+          id?: string
+          ip_address?: unknown
+          project_id: string
+          proof_id: string
+          purpose?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accessed_at?: string
+          id?: string
+          ip_address?: unknown
+          project_id?: string
+          proof_id?: string
+          purpose?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proof_access_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proof_access_log_proof_id_fkey"
+            columns: ["proof_id"]
+            isOneToOne: false
+            referencedRelation: "activity_proofs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_notification_reads: {
+        Row: {
+          last_read_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          last_read_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          last_read_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -590,6 +608,7 @@ export type Database = {
       can_write_project: { Args: { p_project_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       project_id_from_path: { Args: { object_name: string }; Returns: string }
+      receipt_project_id: { Args: { object_name: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never

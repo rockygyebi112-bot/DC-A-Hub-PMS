@@ -50,9 +50,13 @@ export function UserDropdown({
           <span className="text-sm font-medium">{name}</span>
           <span className="text-xs text-muted-foreground">{email}</span>
         </div>
-        <DropdownMenuItem render={<Link href="/account" />}>
-          <User className="mr-2 size-4" /> Account
-        </DropdownMenuItem>
+        <DropdownMenuItem
+          render={
+            <Link href="/account">
+              <User className="mr-2 size-4" /> Account
+            </Link>
+          }
+        />
         <div className="my-1 border-t" />
         <DropdownMenuItem onClick={signOut} disabled={pending}>
           <LogOut className="mr-2 size-4" />

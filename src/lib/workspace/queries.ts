@@ -247,6 +247,49 @@ export const getActivity = cache(async (activityId: string) => {
  * page — every access now goes through `requestProofAccess`, which logs the
  * view, re-verifies project membership, and issues a short-lived signed URL.
  */
+export type ActivityTimelineEvent = {
+  id: string;
+  action: string;
+  created_at: string;
+  actor_name: string | null;
+  meta: Record<string, unknown>;
+};
+
+/**
+ * Lifecycle log for a single activity, surfaced as a vertical timeline on the
+ * activity detail page. Pulls from `activity_log` (rows we already write on
+ * create/start/done/proof events) and joins actor profiles in a second
+ * round-trip — same pattern used by the portal announcements feed.
+ */
+export const listActivityTimeline = cache(async (
+  activityId: string,
+): Promise<ActivityTimelineEvent[]> => {
+  const sb = await createClient();
+  const { data: rows, error } = await sb
+    .from("activity_log")
+    .select("id, action, created_at, actor_user_id, meta")
+    .eq("activity_id", activityId)
+    .order("created_at", { ascending: true });
+  throwIfError(error);
+  if (!rows?.length) return [];
+
+  const actorIds = Array.from(
+    new Set(rows.map((row) => row.actor_user_id).filter((value): value is string => !!value)),
+  );
+  const { data: profiles } = actorIds.length
+    ? await sb.from("profiles").select("user_id, full_name").in("user_id", actorIds)
+    : { data: [] as { user_id: string; full_name: string }[] };
+  const nameById = new Map((profiles ?? []).map((p) => [p.user_id, p.full_name]));
+
+  return rows.map((row) => ({
+    id: row.id,
+    action: row.action,
+    created_at: row.created_at,
+    actor_name: row.actor_user_id ? nameById.get(row.actor_user_id) ?? null : null,
+    meta: (row.meta ?? {}) as Record<string, unknown>,
+  }));
+});
+
 export const listActivityProofs = cache(async (activityId: string): Promise<WorkspaceProof[]> => {
   const sb = await createClient();
   const { data, error } = await sb

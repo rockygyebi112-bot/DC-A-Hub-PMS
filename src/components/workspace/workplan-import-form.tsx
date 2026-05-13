@@ -280,10 +280,10 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
                     ) : null}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-foreground">
+                    <span className="block text-foreground">
                       {step.label}
                     </span>
-                    <span className="block truncate text-[10px] text-muted-foreground">
+                    <span className="block text-[10px] leading-tight text-muted-foreground">
                       {step.caption}
                     </span>
                   </span>

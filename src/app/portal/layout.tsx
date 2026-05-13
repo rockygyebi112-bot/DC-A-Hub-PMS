@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { getWorkspaceLayoutData } from "@/lib/workspace/queries";
-import { getCachedNotificationFeed } from "@/lib/notifications/queries";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 
 export default async function PortalLayout({
@@ -10,19 +9,15 @@ export default async function PortalLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // PERF: profile + layout + notifications all hit Supabase
-  // independently. Running them in parallel cuts ~2 sequential
-  // round-trips from the TTFB critical path on every portal navigation.
+  // PERF: profile + layout fan out in parallel. Notifications used to be
+  // fetched here too (~5 supabase round-trips on every page navigation);
+  // the bell is now a self-loading client component, so the layout no
+  // longer pays that cost on the SSR critical path.
   // Portal data is just the workspace projects filtered by RLS to the
   // user's own client projects, so we reuse the same cached loader.
-  const [profile, layoutResult, notifications] = await Promise.all([
+  const [profile, layoutResult] = await Promise.all([
     getCurrentProfile(),
     getWorkspaceLayoutData("").catch(() => null),
-    getCachedNotificationFeed("", "portal").catch(() => ({
-      entries: [],
-      unreadCount: 0,
-      lastReadAt: null,
-    })),
   ]);
   if (!profile) redirect("/login");
   const layout = layoutResult ?? { projects: [] };
@@ -71,13 +66,7 @@ export default async function PortalLayout({
       searchActivityHrefBase="/portal"
       showBreadcrumbs={false}
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
-      topbarExtra={
-        <NotificationsBell
-          entries={notifications.entries}
-          unreadCount={notifications.unreadCount}
-          lastReadAt={notifications.lastReadAt}
-        />
-      }
+      topbarExtra={<NotificationsBell surface="portal" />}
     >
       {children}
     </AppShell>

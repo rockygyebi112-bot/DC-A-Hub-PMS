@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Bell, CheckCheck } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { markNotificationsRead } from "@/lib/notifications/actions";
-import type { NotificationEntry } from "@/lib/notifications/queries";
+import type { NotificationFeed } from "@/lib/notifications/queries";
 
 const ACTION_LABELS: Record<string, string> = {
   created: "New activity created",
@@ -36,33 +35,71 @@ function formatRelative(iso: string) {
   return new Date(iso).toLocaleDateString();
 }
 
+/**
+ * Self-loading notifications bell.
+ *
+ * PERF: this used to receive its data via SSR props from each protected
+ * layout — `getCachedNotificationFeed()` issued ~5 supabase round-trips on
+ * every page navigation, on the critical render path. The bell is now a
+ * pure client-side component that fetches `/api/notifications/feed` once
+ * on mount, keeps the result hot via realtime + a sessionStorage hint,
+ * and never blocks SSR. Edge cost per page navigation: zero.
+ */
 export function NotificationsBell({
-  entries,
-  unreadCount,
-  lastReadAt,
+  surface,
 }: {
-  entries: NotificationEntry[];
-  unreadCount: number;
-  lastReadAt: string | null;
+  surface: "workspace" | "portal";
 }) {
-  const router = useRouter();
+  const cacheKey = `notifications-bell:${surface}`;
+  // Hydrate from sessionStorage so the badge doesn't flash empty between
+  // navigations. The fetch below still runs to refresh.
+  const [feed, setFeed] = useState<NotificationFeed>(() => {
+    if (typeof window === "undefined") {
+      return { entries: [], unreadCount: 0, lastReadAt: null };
+    }
+    try {
+      const raw = window.sessionStorage.getItem(cacheKey);
+      if (raw) return JSON.parse(raw) as NotificationFeed;
+    } catch {
+      // ignore
+    }
+    return { entries: [], unreadCount: 0, lastReadAt: null };
+  });
+  const { entries, unreadCount, lastReadAt } = feed;
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const inFlight = useRef(false);
 
-  // Live-refresh the bell when new activity_log rows arrive. The feed
-  // itself is server-rendered, so we trigger router.refresh() instead of
-  // mutating local state — this lets the server re-apply RLS, join
-  // project/profile data, and respect the portal/workspace filter rules
-  // the parent passed in.
-  //
-  // To keep edge requests cheap:
-  //   * Coalesce bursts of events into a single refresh via an 800ms
-  //     debounce (a single comment thread can produce several writes
-  //     when mentions fan out per-recipient).
-  //   * Skip refreshing while the document is hidden — the user can't
-  //     see the bell anyway. We re-arm a single refresh when the tab
-  //     becomes visible again so they see the latest state on return.
+  const refresh = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    try {
+      const res = await fetch(
+        `/api/notifications/feed?surface=${surface}`,
+        { cache: "no-store" },
+      );
+      if (!res.ok) return;
+      const data = (await res.json()) as NotificationFeed;
+      setFeed(data);
+      try {
+        window.sessionStorage.setItem(cacheKey, JSON.stringify(data));
+      } catch {
+        // sessionStorage may be unavailable (private mode, quota) — non-fatal.
+      }
+    } catch {
+      // best-effort; keep the cached feed
+    } finally {
+      inFlight.current = false;
+    }
+  }, [surface, cacheKey]);
+
+  // Initial load + realtime live-refresh. Bursts of activity_log inserts
+  // are coalesced into one refresh via an 800ms debounce, and we skip
+  // refreshing while the tab is hidden, re-arming a single refresh when
+  // it becomes visible again.
   useEffect(() => {
+    void refresh();
+
     const sb = createClient();
     let pendingRefresh: ReturnType<typeof setTimeout> | null = null;
     let hiddenWhileDirty = false;
@@ -75,7 +112,7 @@ export function NotificationsBell({
         hiddenWhileDirty = true;
         return;
       }
-      router.refresh();
+      void refresh();
     };
 
     const scheduleRefresh = () => {
@@ -87,7 +124,7 @@ export function NotificationsBell({
     const onVisibilityChange = () => {
       if (!document.hidden && hiddenWhileDirty) {
         hiddenWhileDirty = false;
-        router.refresh();
+        void refresh();
       }
     };
     if (typeof document !== "undefined") {
@@ -106,7 +143,7 @@ export function NotificationsBell({
       }
       if (cancelled) return;
       channel = sb
-        .channel("notifications-bell")
+        .channel(`notifications-bell-${surface}`)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "activity_log" },
@@ -131,12 +168,12 @@ export function NotificationsBell({
       }
       if (channel) sb.removeChannel(channel);
     };
-  }, [router]);
+  }, [refresh, surface]);
 
   function markRead() {
     startTransition(async () => {
       await markNotificationsRead();
-      router.refresh();
+      await refresh();
     });
   }
 
@@ -257,7 +294,7 @@ export function NotificationsBell({
                           if (isUnread) {
                             startTransition(async () => {
                               await markNotificationsRead();
-                              router.refresh();
+                              await refresh();
                             });
                           }
                         }}
@@ -272,7 +309,7 @@ export function NotificationsBell({
                           if (isUnread) {
                             startTransition(async () => {
                               await markNotificationsRead();
-                              router.refresh();
+                              await refresh();
                             });
                           }
                         }}

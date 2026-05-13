@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { getWorkspaceLayoutData } from "@/lib/workspace/queries";
-import { getCachedNotificationFeed } from "@/lib/notifications/queries";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 
 export default async function WorkspaceLayout({
@@ -10,17 +9,13 @@ export default async function WorkspaceLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // PERF: profile + layout + notifications all hit Supabase
-  // independently. Running them in parallel cuts ~2 sequential
-  // round-trips from the TTFB critical path on every page navigation.
-  const [profile, layoutResult, notifications] = await Promise.all([
+  // PERF: profile + layout fan out in parallel. Notifications used to be
+  // fetched here too (~5 supabase round-trips on every page navigation);
+  // the bell is now a self-loading client component, so the layout no
+  // longer pays that cost on the SSR critical path.
+  const [profile, layoutResult] = await Promise.all([
     getCurrentProfile(),
     getWorkspaceLayoutData("").catch(() => null),
-    getCachedNotificationFeed("", "workspace").catch(() => ({
-      entries: [],
-      unreadCount: 0,
-      lastReadAt: null,
-    })),
   ]);
   if (!profile) redirect("/login");
   if (profile.role !== "admin" && profile.role !== "staff") redirect("/portal");
@@ -78,13 +73,7 @@ export default async function WorkspaceLayout({
         group: "Projects",
       }))}
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
-      topbarExtra={
-        <NotificationsBell
-          entries={notifications.entries}
-          unreadCount={notifications.unreadCount}
-          lastReadAt={notifications.lastReadAt}
-        />
-      }
+      topbarExtra={<NotificationsBell surface="workspace" />}
     >
       {children}
     </AppShell>

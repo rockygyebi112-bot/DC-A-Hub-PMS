@@ -1,9 +1,11 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { AppSidebar, type NavGroup, type NavItem, type ProjectBrand } from "./app-sidebar";
 import { AppTopbar } from "./app-topbar";
 import type { SearchItem } from "./topbar-search";
 import { MobileNav } from "./mobile-nav";
 import { BottomNav } from "./bottom-nav";
+import { CommandPalette } from "./command-palette";
+import { NavProgress } from "./nav-progress";
 import { cn } from "@/lib/utils";
 
 export function AppShell({
@@ -64,6 +66,15 @@ export function AppShell({
     // that genuinely need horizontal scroll still scroll within their own
     // overflow-x-auto container.
     <div className="flex min-h-screen overflow-x-clip bg-background text-foreground">
+      {/* Global route-change progress bar (top of viewport). */}
+      <Suspense fallback={null}>
+        <NavProgress />
+      </Suspense>
+      {/* Global command palette — Cmd/Ctrl+K opens it from anywhere. */}
+      <CommandPalette
+        items={searchItems ?? []}
+        activityHrefBase={searchActivityHrefBase}
+      />
       <AppSidebar
         brand={brand}
         subtitle={subtitle}

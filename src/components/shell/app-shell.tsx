@@ -4,7 +4,6 @@ import { AppTopbar } from "./app-topbar";
 import type { SearchItem } from "./topbar-search";
 import { MobileNav } from "./mobile-nav";
 import { BottomNav } from "./bottom-nav";
-import { CommandPalette } from "./command-palette";
 import { NavProgress } from "./nav-progress";
 import { cn } from "@/lib/utils";
 
@@ -70,11 +69,6 @@ export function AppShell({
       <Suspense fallback={null}>
         <NavProgress />
       </Suspense>
-      {/* Global command palette — Cmd/Ctrl+K opens it from anywhere. */}
-      <CommandPalette
-        items={searchItems ?? []}
-        activityHrefBase={searchActivityHrefBase}
-      />
       <AppSidebar
         brand={brand}
         subtitle={subtitle}

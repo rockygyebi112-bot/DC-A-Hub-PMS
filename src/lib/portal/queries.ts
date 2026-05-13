@@ -99,12 +99,17 @@ export async function getPortalProjectDetail(projectId: string) {
 }
 
 export async function getPortalActivity(activityId: string) {
-  const { getActivity } = await import("@/lib/workspace/queries");
-  const [activity, proofs] = await Promise.all([
-    getActivity(activityId),
+  const { getActivity, listActivityTimeline, listProjectTeam } = await import(
+    "@/lib/workspace/queries"
+  );
+  const activity = await getActivity(activityId);
+  const projectId = activity.phase?.project_id;
+  const [proofs, timeline, team] = await Promise.all([
     listActivityProofs(activityId),
+    listActivityTimeline(activityId),
+    projectId ? listProjectTeam(projectId) : Promise.resolve([]),
   ]);
-  return { activity, proofs };
+  return { activity, proofs, timeline, team };
 }
 
 /* -------------------- helpers -------------------- */

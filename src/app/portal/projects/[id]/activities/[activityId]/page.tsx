@@ -50,6 +50,8 @@ export default async function PortalActivityPage({
       backLabel="Back to project"
       postUpdate={postUpdate}
       upload={upload}
+      showNotes={false}
+      showTimeline={false}
     />
   );
 }

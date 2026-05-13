@@ -15,6 +15,18 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
   const [pending, startTransition] = useTransition();
 
   function submit(formData: FormData) {
+    // Validate in JS rather than relying on the input's `required` attribute.
+    // The file <input> is visually hidden inside the dropzone label, so the
+    // browser's native "Please fill out this field" popup gets anchored to an
+    // off-screen 1x1 element and ends up scroll-shifting the whole page
+    // horizontally when the user submits with no file selected.
+    const file = formData.get("workplan");
+    const hasFile =
+      file instanceof File ? file.size > 0 : typeof file === "string" && file.length > 0;
+    if (!hasFile) {
+      toast.error("Choose an Excel file before importing.");
+      return;
+    }
     startTransition(async () => {
       const result = await importWorkplanSheet(projectId, formData);
       if (!result.ok) {
@@ -61,7 +73,6 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
           name="workplan"
           type="file"
           accept=".xlsx,.xls,.csv"
-          required
           className="sr-only"
           onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")}
         />

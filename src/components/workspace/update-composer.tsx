@@ -90,28 +90,24 @@ export function UpdateComposer({ action, upload, user }: Props) {
         disabled={pending}
       />
       <div className="flex items-center gap-1">
-        {upload && (
-          <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="sr-only"
-              onChange={(e) => handleFiles(e.currentTarget.files)}
-              disabled={uploading}
-            />
-            <button
-              type="button"
-              aria-label="Attach files"
-              title={uploading ? "Uploading…" : "Attach files"}
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
-            >
-              <Paperclip className="size-4" />
-            </button>
-          </>
-        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="sr-only"
+          onChange={(e) => handleFiles(e.currentTarget.files)}
+          disabled={uploading || !upload}
+        />
+        <button
+          type="button"
+          aria-label="Attach files"
+          title={uploading ? "Uploading…" : "Attach files"}
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading || !upload}
+          className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+        >
+          <Paperclip className="size-4" />
+        </button>
         <button
           type="submit"
           disabled={pending}

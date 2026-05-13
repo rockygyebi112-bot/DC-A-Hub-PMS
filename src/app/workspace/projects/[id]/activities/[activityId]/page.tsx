@@ -629,7 +629,7 @@ function UploadsCard({ proofs }: { proofs: WorkspaceProof[] }) {
       <div className="px-5 py-4">
         {proofs.length === 0 ? (
           <p className="rounded-lg border border-dashed bg-muted/30 p-5 text-center text-xs text-muted-foreground">
-            No uploads yet. Use the attachment icon in Updates to add files.
+            No uploads yet.
           </p>
         ) : (
           <ul className="space-y-2">

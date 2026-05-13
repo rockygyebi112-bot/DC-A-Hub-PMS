@@ -3,15 +3,9 @@ import {
   Activity,
   CheckCircle2,
   FolderKanban,
-  Leaf,
   PauseCircle,
-  Sprout,
-  Tractor,
   Users,
-  Waves,
-  Wheat,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { KpiCard } from "@/components/admin/dashboard/kpi-card";
 import {
   ProjectOverviewDonut,
@@ -54,6 +48,7 @@ type ProjectRow = {
   start_date: string | null;
   end_date: string | null;
   archived_at: string | null;
+  client: { name: string; logo_url: string | null } | null;
 };
 
 type ActivityRow = {
@@ -92,7 +87,6 @@ type DashboardData = {
 // Visual mapping helpers (deterministic by name → palette/icon)
 // ---------------------------------------------------------------------------
 
-const PROJECT_ICONS: LucideIcon[] = [Sprout, Tractor, Waves, Leaf, Wheat, FolderKanban];
 const PROJECT_ACCENTS: RecentProjectRow["accent"][] = [
   "green",
   "blue",
@@ -112,7 +106,6 @@ function hashString(value: string) {
 function visualForProject(name: string) {
   const h = hashString(name);
   return {
-    icon: PROJECT_ICONS[h % PROJECT_ICONS.length],
     accent: PROJECT_ACCENTS[h % PROJECT_ACCENTS.length],
   };
 }
@@ -185,7 +178,7 @@ async function getDashboardData(
   const [{ data: projectsRaw }, logRes] = await Promise.all([
     sb
       .from("projects")
-      .select("id, name, code, status, start_date, end_date, archived_at")
+      .select("id, name, code, status, start_date, end_date, archived_at, client:clients(name, logo_url)")
       .is("archived_at", null)
       .gte("created_at", periodStart)
       .order("created_at", { ascending: false }),
@@ -355,7 +348,8 @@ async function getDashboardData(
       category: categoryFor(p.name),
       progress: completion,
       health: classifyHealth(p, today),
-      icon: visual.icon,
+      clientName: p.client?.name ?? null,
+      clientLogoUrl: p.client?.logo_url ?? null,
       accent: visual.accent,
     };
   });

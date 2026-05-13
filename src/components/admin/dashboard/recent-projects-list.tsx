@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export type RecentProjectRow = {
@@ -8,7 +8,8 @@ export type RecentProjectRow = {
   category: string;
   progress: number; // 0-100
   health: "on_track" | "at_risk" | "delayed" | "not_started";
-  icon: LucideIcon;
+  clientName: string | null;
+  clientLogoUrl: string | null;
   accent: "blue" | "green" | "amber" | "cyan" | "purple";
 };
 
@@ -26,6 +27,14 @@ const FILL: Record<RecentProjectRow["health"], string> = {
   delayed: "progress-bar-fill-delayed",
   not_started: "progress-bar-fill-not-started",
 };
+
+function initialsOf(name: string) {
+  const parts = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+  return parts.map((part) => part[0]?.toUpperCase()).join("") || "CL";
+}
 
 export function RecentProjectsList({
   projects,
@@ -56,7 +65,7 @@ export function RecentProjectsList({
           </li>
         ) : (
           projects.map((p) => {
-            const Icon = p.icon;
+            const logoLabel = p.clientName ?? p.name;
             return (
               <li key={p.id} className="px-4 py-3.5 sm:px-5">
                 <Link
@@ -70,7 +79,20 @@ export function RecentProjectsList({
                         TILE[p.accent],
                       )}
                     >
-                      <Icon className="size-4" strokeWidth={1.75} />
+                      {p.clientLogoUrl ? (
+                        <Image
+                          src={p.clientLogoUrl}
+                          alt={`${logoLabel} logo`}
+                          width={28}
+                          height={24}
+                          className="max-h-6 w-auto max-w-7 object-contain"
+                          unoptimized={p.clientLogoUrl.startsWith("http")}
+                        />
+                      ) : (
+                        <span className="text-[10px] font-semibold tracking-tight">
+                          {initialsOf(logoLabel)}
+                        </span>
+                      )}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{p.name}</p>

@@ -17,6 +17,10 @@ import {
   type TasksByFilter,
 } from "@/components/admin/dashboard/tasks-overview";
 import {
+  NeedsAttentionCard,
+  type AttentionItem,
+} from "@/components/admin/dashboard/needs-attention-card";
+import {
   ProjectHealthSummary,
   type HealthBucket,
 } from "@/components/admin/dashboard/project-health-summary";
@@ -77,6 +81,10 @@ type DashboardData = {
   tasks: {
     byFilter: TasksByFilter;
     counts: { all: number; overdue: number; due_week: number; completed: number };
+  };
+  attention: {
+    items: AttentionItem[];
+    counts: { overdue: number; due_week: number };
   };
   recentProjects: RecentProjectRow[];
   milestones: MilestoneRow[];
@@ -337,6 +345,16 @@ async function getDashboardData(
     due_week: dueWeekRows.length,
     completed: completedRows.length,
   };
+  const attentionItems: AttentionItem[] = [
+    ...overdueSorted.slice(0, 4).map((r) => ({
+      ...toTaskRow(r, false),
+      reason: "overdue" as const,
+    })),
+    ...dueWeekSorted.slice(0, 4).map((r) => ({
+      ...toTaskRow(r, false),
+      reason: "due_soon" as const,
+    })),
+  ].slice(0, 6);
 
   // Recent projects with progress
   const recentProjects: RecentProjectRow[] = projects.slice(0, 5).map((p) => {
@@ -410,6 +428,10 @@ async function getDashboardData(
     totals,
     health,
     tasks: { byFilter: tasksByFilter, counts: taskCounts },
+    attention: {
+      items: attentionItems,
+      counts: { overdue: taskCounts.overdue, due_week: taskCounts.due_week },
+    },
     recentProjects,
     milestones,
     activity: activityFeed,
@@ -532,6 +554,12 @@ async function DashboardBody({ period }: { period: DashboardPeriod }) {
           delta={counts.deltas.totalUsers}
         />
       </div>
+
+      <NeedsAttentionCard
+        items={data.attention.items}
+        counts={data.attention.counts}
+        viewAllHref="/admin/projects"
+      />
 
       {/* Main 2-column grid */}
       <div className="grid gap-5 xl:grid-cols-2">

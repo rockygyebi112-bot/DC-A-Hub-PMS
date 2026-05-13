@@ -4,7 +4,6 @@ import { NotificationsBell } from "@/components/notifications/notifications-bell
 import { SidebarBrandCard } from "@/components/admin/ui/sidebar-brand-card";
 import { getAdminLayoutData } from "@/lib/admin/queries";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
-import { getCachedNotificationFeed } from "@/lib/notifications/queries";
 
 function timeBasedGreeting(date = new Date()) {
   const h = date.getHours();
@@ -18,19 +17,14 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // PERF: profile + layout + notifications all read from Supabase
-  // independently. Running them in parallel removes ~2 sequential
-  // round-trips from the TTFB critical path on every page navigation.
-  // The loaders are wrapped in React `cache()` so any duplicate calls
-  // from nested pages are still deduped within the same request.
-  const [profile, layout, notifications] = await Promise.all([
+  // PERF: profile + layout fan out in parallel. Notifications used to be
+  // fetched here too (~5 supabase round-trips on every page navigation);
+  // the bell is now a self-loading client component that hits
+  // /api/notifications/feed once on mount, so the layout no longer pays
+  // that cost on the SSR critical path.
+  const [profile, layout] = await Promise.all([
     getCurrentProfile(),
     getAdminLayoutData("").catch(() => null),
-    getCachedNotificationFeed("", "workspace").catch(() => ({
-      entries: [],
-      unreadCount: 0,
-      lastReadAt: null,
-    })),
   ]);
   if (!profile) redirect("/login");
   if (profile.role !== "admin") redirect("/");
@@ -119,13 +113,7 @@ export default async function AdminLayout({
       greeting={greeting}
       greetingSubtitle={greetingSubtitle}
       greetingPath="/admin"
-      topbarExtra={
-        <NotificationsBell
-          entries={notifications.entries}
-          unreadCount={notifications.unreadCount}
-          lastReadAt={notifications.lastReadAt}
-        />
-      }
+      topbarExtra={<NotificationsBell surface="workspace" />}
     >
       {children}
     </AppShell>

@@ -9,7 +9,7 @@ type Activity = {
   name: string;
   status: "not_started" | "in_progress" | "done";
   planned_date: string | null;
-  location: string | null;
+  responsible: string | null;
   proofCount: number;
 };
 
@@ -69,7 +69,7 @@ export function PhaseActivities({
                       {formatDate(activity.planned_date)}
                     </span>
                   )}
-                  {activity.location && <span>· {activity.location}</span>}
+                  {activity.responsible && <span>· {activity.responsible}</span>}
                   {activity.proofCount > 0 && (
                     <span className="inline-flex items-center gap-1">
                       · <FileCheck2 className="size-3" />

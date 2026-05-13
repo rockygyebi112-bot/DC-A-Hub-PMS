@@ -369,7 +369,7 @@ function ProjectPhases({
                         </p>
                         <p className="mt-0.5 flex flex-wrap gap-2 text-xs text-muted-foreground">
                           <span>{activity.planned_date ?? "No date"}</span>
-                          {activity.location && <span>· {activity.location}</span>}
+                          {activity.responsible && <span>· {activity.responsible}</span>}
                           {activity.proofCount > 0 && (
                             <span>· {activity.proofCount} proofs</span>
                           )}
@@ -466,7 +466,7 @@ function ActivityCard({
       <div className="mt-3 flex items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           <span>{activity.planned_date ?? "No date"}</span>
-          {activity.location && <span>· {activity.location}</span>}
+          {activity.responsible && <span>· {activity.responsible}</span>}
           {activity.proofCount > 0 && <span>· {activity.proofCount} proofs</span>}
         </div>
         <DeleteConfirm
@@ -561,8 +561,8 @@ function ProjectList({
                 <TableHead>Activity</TableHead>
                 <TableHead>Phase</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Planned</TableHead>
-                <TableHead>Location</TableHead>
+                <TableHead>Start date</TableHead>
+                <TableHead>End date</TableHead>
                 <TableHead>Proofs</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
@@ -583,7 +583,7 @@ function ProjectList({
                     <ActivityStatus status={activity.status} />
                   </TableCell>
                   <TableCell>{activity.planned_date ?? "—"}</TableCell>
-                  <TableCell>{activity.location ?? "—"}</TableCell>
+                  <TableCell>{activity.completed_date ?? "—"}</TableCell>
                   <TableCell>{activity.proofCount}</TableCell>
                   <TableCell className="text-right">
                     <DeleteConfirm

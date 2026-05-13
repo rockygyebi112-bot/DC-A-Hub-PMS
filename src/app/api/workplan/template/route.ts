@@ -8,13 +8,14 @@ import { requireAuth } from "@/lib/auth/guards";
  * `importWorkplanSheet` in `@/lib/workspace/actions` recognises, plus a few
  * example rows that demonstrate the supported patterns:
  *
- *  - `Category` may be left blank on subsequent rows; the importer carries
+ *  - `Phase` may be left blank on subsequent rows; the importer carries
  *    the most recent value forward, so each phase only needs to be named
- *    once on its first row.
+ *    once on its first row. Legacy "Category" is also accepted.
  *  - `Activity` is required and uniquely identifies a task within its phase.
- *  - `Deliverable` and `Notes/Dependencies` get concatenated into the
- *    activity description on import.
- *  - `Responsible Team Member/Team` populates the assignee field.
+ *  - `Deliverable` populates its own column on the activity (no longer
+ *    folded into the description blob).
+ *  - `Notes/Dependencies` becomes the activity's plain notes/description.
+ *  - `Responsible Team Member/Team` populates the responsible-team field.
  *  - `Status` accepts: not_started, in_progress (or "ongoing"/"started"),
  *    done (or "complete"/"completed"/"closed"). Anything else falls back to
  *    "not_started".
@@ -32,13 +33,17 @@ export async function GET() {
 
   // Header uses "Phase" to match the in-app terminology. The importer also
   // accepts the legacy "Category" header for back-compat with older sheets.
+  // Column order mirrors the in-app activity form so what an admin sees on
+  // the activity page lines up 1:1 with what they edit in the spreadsheet.
   const headerRow = [
     "Phase",
     "Activity",
     "Deliverable",
-    "Notes/Dependencies",
     "Responsible Team Member/Team",
+    "Start Date",
+    "End Date",
     "Status",
+    "Notes/Dependencies",
   ];
 
   // Header-only blank template. We deliberately do NOT ship example rows so
@@ -49,12 +54,14 @@ export async function GET() {
   const sheet = XLSX.utils.aoa_to_sheet(aoa);
   // Reasonable column widths so the file opens with all headers visible.
   sheet["!cols"] = [
-    { wch: 18 }, // Category
+    { wch: 18 }, // Phase
     { wch: 32 }, // Activity
     { wch: 36 }, // Deliverable
-    { wch: 36 }, // Notes/Dependencies
     { wch: 28 }, // Responsible
+    { wch: 14 }, // Start Date
+    { wch: 14 }, // End Date
     { wch: 14 }, // Status
+    { wch: 36 }, // Notes/Dependencies
   ];
   // Freeze the header row for easier editing.
   sheet["!freeze"] = { xSplit: 0, ySplit: 1 } as unknown as never;

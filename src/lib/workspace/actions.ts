@@ -15,7 +15,6 @@ import {
   activitySchema,
   activityUpdateSchema,
   phaseSchema,
-  proofLinkSchema,
 } from "@/lib/workspace/schemas";
 import { notifyClientViewersActivityDone } from "@/lib/workspace/notifications";
 
@@ -554,65 +553,6 @@ export async function uploadProofs(activityId: string, formData: FormData): Prom
   return { ok: true };
 }
 
-export async function addProofLink(
-  activityId: string,
-  formData: FormData,
-): Promise<ActionResult> {
-  const parsed = proofLinkSchema.safeParse({
-    url: formValue(formData, "url"),
-    file_name: formValue(formData, "file_name"),
-    caption: formValue(formData, "caption"),
-  });
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
-
-  const sb = await createClient();
-  const userId = await currentUserId();
-  const { data: activity } = await sb
-    .from("activities")
-    .select("phase:phases(project_id)")
-    .eq("id", activityId)
-    .single();
-  const phase = Array.isArray(activity?.phase) ? activity?.phase[0] : activity?.phase;
-  const projectId = phase?.project_id;
-  if (!projectId) return { ok: false, error: "Project not found" };
-
-  const authz = await requireProjectWriter(projectId);
-  if (!authz.ok) return authz;
-
-  // Default the displayed name to the URL hostname when none is provided.
-  let displayName = parsed.data.file_name?.trim() || "";
-  if (!displayName) {
-    try {
-      displayName = new URL(parsed.data.url).hostname;
-    } catch {
-      displayName = parsed.data.url;
-    }
-  }
-
-  const { error: insertError } = await sb.from("activity_proofs").insert({
-    activity_id: activityId,
-    kind: "link",
-    url: parsed.data.url,
-    file_name: displayName,
-    caption: parsed.data.caption || null,
-    uploaded_by: userId,
-  });
-  if (insertError) return { ok: false, error: insertError.message };
-
-  await sb.from("activity_log").insert({
-    project_id: projectId,
-    activity_id: activityId,
-    actor_user_id: userId,
-    action: "proof_added",
-    meta: { kind: "link" },
-  });
-
-  revalidatePath(`/workspace/projects/${projectId}/activities/${activityId}`);
-  revalidatePath(`/portal/projects/${projectId}/activities/${activityId}`);
-  revalidatePath(`/admin/projects/${projectId}`);
-  return { ok: true };
-}
-
 /**
  * Resolve an attached proof (file or link) into an actual URL that the
  * caller can open, but only after re-verifying project access and writing
@@ -682,8 +622,7 @@ export async function requestProofAccess(
   if (!authz.ok) return { ok: false, error: "Not authorized to view this document" };
 
   // Mint the URL. Files get a 5-minute signed URL so a leaked link expires
-  // quickly. Links are passed through unchanged (we already validated the
-  // scheme at insert time in `proofLinkSchema`).
+  // quickly. Links are passed through unchanged.
   let url: string | null = null;
   const kind: "file" | "link" = proof.kind === "link" ? "link" : "file";
   if (kind === "link") {

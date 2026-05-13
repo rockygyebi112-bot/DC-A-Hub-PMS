@@ -523,35 +523,30 @@ async function DashboardBody({ period }: { period: DashboardPeriod }) {
           value={data.totals.total}
           icon={FolderKanban}
           accent="blue"
-          delta={counts.deltas.totalProjects}
         />
         <KpiCard
           label="Active Projects"
           value={data.totals.active}
           icon={Activity}
           accent="green"
-          delta={counts.deltas.activeProjects}
         />
         <KpiCard
           label="Completed Projects"
           value={data.totals.completed}
           icon={CheckCircle2}
           accent="purple"
-          delta={counts.deltas.completedProjects}
         />
         <KpiCard
           label="On Hold Projects"
           value={data.totals.paused}
           icon={PauseCircle}
           accent="amber"
-          delta={counts.deltas.pausedProjects}
         />
         <KpiCard
           label="Total Users"
           value={counts.totalUsers}
           icon={Users}
           accent="cyan"
-          delta={counts.deltas.totalUsers}
         />
       </div>
 

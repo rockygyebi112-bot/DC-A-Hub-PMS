@@ -16,9 +16,9 @@ const ACTION_LABELS: Record<string, string> = {
   updated: "Activity updated",
   started: "Activity in progress",
   marked_done: "Activity completed",
-  proof_added: "Proof uploaded",
-  proof_deleted: "Proof removed",
-  proof_commented: "New comment on proof",
+  proof_added: "Document uploaded",
+  proof_deleted: "Document removed",
+  proof_commented: "New comment on document",
   proof_mentioned: "You were mentioned",
 };
 

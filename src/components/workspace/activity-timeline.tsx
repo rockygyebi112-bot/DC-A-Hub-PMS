@@ -21,7 +21,7 @@ const eventStyles: Record<
   started: { label: "Marked in progress", icon: CirclePlay, tone: "text-amber-600 dark:text-amber-400" },
   marked_done: { label: "Marked complete", icon: CircleCheck, tone: "text-emerald-600 dark:text-emerald-400" },
   updated: { label: "Updated", icon: Pencil, tone: "text-muted-foreground" },
-  proof_added: { label: "Proof uploaded", icon: FileUp, tone: "text-violet-600 dark:text-violet-400" },
+  proof_added: { label: "Document uploaded", icon: FileUp, tone: "text-violet-600 dark:text-violet-400" },
   proof_commented: { label: "Comment added", icon: MessageSquare, tone: "text-muted-foreground" },
   proof_mentioned: { label: "Mention", icon: MessageSquare, tone: "text-muted-foreground" },
 };
@@ -42,7 +42,7 @@ export function ActivityTimeline({ events }: { events: ActivityTimelineEvent[] }
   if (events.length === 0) {
     return (
       <p className="text-xs text-muted-foreground">
-        No activity yet. Updates, proofs, and status changes will appear here.
+        No activity yet. Updates, documents, and status changes will appear here.
       </p>
     );
   }

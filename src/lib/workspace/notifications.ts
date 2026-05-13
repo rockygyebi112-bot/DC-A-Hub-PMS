@@ -54,7 +54,7 @@ export async function notifyClientViewersActivityDone({
           <p><strong>Project:</strong> ${project.name}</p>
           <p><strong>Completed:</strong> ${activity.completed_date ?? "Today"}</p>
           <p>${activity.narrative_note ?? "A project activity has been marked complete."}</p>
-          <p><a href="${portalUrl}">Open activity proof</a></p>
+          <p><a href="${portalUrl}">Open activity document</a></p>
         </div>
       `,
     }),

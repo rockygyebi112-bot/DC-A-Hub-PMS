@@ -93,7 +93,7 @@ const ANNOUNCEMENT_STYLES: Record<
   proof_added: {
     tone: "bg-blue-50 text-blue-700",
     icon: Paperclip,
-    label: "Proof uploaded",
+    label: "Document uploaded",
   },
   started: {
     tone: "bg-amber-50 text-amber-700",
@@ -114,8 +114,8 @@ function announcementCopy(item: PortalAnnouncement) {
     title = `${item.activity_name} completed`;
     description = item.phase_name ? `Phase: ${item.phase_name}` : "Activity completed";
   } else if (item.action === "proof_added" && item.activity_name) {
-    title = `New proof: ${item.activity_name}`;
-    description = "A new file was attached as evidence.";
+    title = `New document: ${item.activity_name}`;
+    description = "A new document was attached.";
   } else if (item.action === "started" && item.activity_name) {
     title = `${item.activity_name} started`;
     description = item.phase_name ? `Phase: ${item.phase_name}` : "Work in progress";
@@ -300,7 +300,7 @@ function recentActivityCopy(item: PortalActivityFeedItem) {
     return `${actor} started ${item.activity_name}`;
   }
   if (item.action === "proof_added" && item.activity_name) {
-    return `${actor} uploaded proof for ${item.activity_name}`;
+    return `${actor} uploaded a document for ${item.activity_name}`;
   }
   return `${actor} updated the project`;
 }

@@ -73,7 +73,7 @@ export function PhaseActivities({
                   {activity.proofCount > 0 && (
                     <span className="inline-flex items-center gap-1">
                       · <FileCheck2 className="size-3" />
-                      {activity.proofCount} proof
+                      {activity.proofCount} document
                       {activity.proofCount === 1 ? "" : "s"}
                     </span>
                   )}

@@ -66,9 +66,9 @@ export default async function PortalActivityPage({
           </div>
         </SectionCard>
 
-        <SectionCard title="Proofs">
+        <SectionCard title="Documents">
           {proofs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No proofs uploaded yet.</p>
+            <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
           ) : (
             <div className="space-y-4">
               {proofs.map((proof) => (

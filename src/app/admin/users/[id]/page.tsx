@@ -101,7 +101,7 @@ export default async function UserDetailPage({
               <>
                 This will permanently delete <strong>{user.full_name}</strong>{" "}
                 ({user.email}) from authentication and remove their profile.
-                Their authored history (activities, proofs, comments) will be
+                Their authored history (activities, documents, comments) will be
                 preserved but unattributed. This cannot be undone.
               </>
             }

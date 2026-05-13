@@ -46,7 +46,7 @@ export default async function AdminLayout({
     if (c?.id) projectClientMap[p.id] = c.id;
   }
   const firstName = profile.fullName.trim().split(/\s+/)[0] || "Admin";
-  const greeting = `${timeBasedGreeting()}, ${firstName}! 👋`;
+  const greeting = `${timeBasedGreeting()}, ${firstName}`;
   const greetingSubtitle =
     overdueCount > 0
       ? `${overdueCount} ${overdueCount === 1 ? "activity" : "activities"} overdue across your projects.`

@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import {
   ChevronsLeft,
   ChevronsRight,
-  Sparkles,
   LayoutDashboard,
   FolderKanban,
   ListChecks,
@@ -157,7 +156,7 @@ export function AppSidebar({
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">
-              <Sparkles className="size-4" />
+              <Building2 className="size-4" />
             </div>
           )}
         </div>
@@ -296,7 +295,7 @@ export function AppSidebar({
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">
-              <Sparkles className="size-4" />
+              <Building2 className="size-4" />
             </div>
           )}
         </div>

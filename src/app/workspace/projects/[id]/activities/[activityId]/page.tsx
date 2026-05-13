@@ -29,6 +29,7 @@ import { ActivityStatus } from "@/components/workspace/status-badge";
 import { DeleteConfirm } from "@/components/workspace/delete-confirm";
 import { ProofAccessButton } from "@/components/workspace/proof-access-button";
 import { UpdateComposer } from "@/components/workspace/update-composer";
+import { ProofUploadZone } from "@/components/workspace/proof-upload-zone";
 import {
   addProofLink,
   deleteActivity,
@@ -744,22 +745,10 @@ function EvidenceCard({
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Evidence &amp; proofs
         </h2>
-        <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted">
+        <span className="inline-flex items-center gap-1 rounded-md border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground">
           <Upload className="size-3.5" />
           Upload files
-          <form action={upload} className="hidden">
-            <input
-              type="file"
-              name="proofs"
-              multiple
-              onChange={(e) => {
-                if (e.currentTarget.files?.length) {
-                  e.currentTarget.form?.requestSubmit();
-                }
-              }}
-            />
-          </form>
-        </label>
+        </span>
       </header>
       <div className="px-5 pb-5">
         {/* Tabs row */}
@@ -778,29 +767,7 @@ function EvidenceCard({
           </span>
         </div>
 
-        {/* Upload zone — functional form with styled dashed label */}
-        <form action={upload} className="mt-4">
-          <label className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed bg-muted/30 px-4 py-5 text-center transition-colors hover:border-primary/50 hover:bg-primary/5">
-            <Upload className="size-5 text-muted-foreground" />
-            <p className="text-xs font-medium text-foreground">
-              Drag &amp; drop files here or click to upload
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              PDF, DOC, XLS, PNG, JPG (Max 50MB)
-            </p>
-            <input
-              type="file"
-              name="proofs"
-              multiple
-              className="sr-only"
-              onChange={(e) => {
-                if (e.currentTarget.files?.length) {
-                  e.currentTarget.form?.requestSubmit();
-                }
-              }}
-            />
-          </label>
-        </form>
+        <ProofUploadZone action={upload} />
 
         {/* Files list */}
         {files.length > 0 && (

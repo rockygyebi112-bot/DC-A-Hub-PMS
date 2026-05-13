@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, FileSpreadsheet, Upload } from "lucide-react";
+import { Check, Download, FileSpreadsheet, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -160,18 +160,26 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
         />
       </label>
 
-      {pending && (
+      {phase !== "idle" && (
         <div
-          className="space-y-1.5 rounded-lg border bg-muted/40 px-3 py-2.5"
+          className="space-y-3 rounded-lg border bg-muted/40 px-3 py-3"
           role="status"
           aria-live="polite"
         >
           <div className="flex items-center justify-between gap-2 text-xs font-medium">
             <span className="text-foreground">
-              {phase === "uploading" ? "Uploading workplan..." : "Processing workplan..."}
+              {phase === "uploading"
+                ? "Uploading workplan"
+                : phase === "processing"
+                  ? "Processing workplan"
+                  : "Workplan imported"}
             </span>
             <span className="font-mono tabular-nums text-muted-foreground">
-              {phase === "uploading" ? `${progress}%` : "Finalising"}
+              {phase === "uploading"
+                ? `${progress}%`
+                : phase === "processing"
+                  ? "Step 2 of 3"
+                  : "Done"}
             </span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
@@ -180,14 +188,109 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
                 "h-full rounded-full bg-primary transition-[width] duration-200",
                 phase === "processing" && "animate-pulse",
               )}
-              style={{ width: `${phase === "processing" ? 100 : progress}%` }}
+              style={{
+                width:
+                  phase === "uploading"
+                    ? `${progress}%`
+                    : phase === "processing"
+                      ? "66%"
+                      : "100%",
+              }}
             />
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            {phase === "uploading" && fileSize > 0
-              ? `${formatBytes(uploadedBytes)} of ${formatBytes(fileSize)}`
-              : "Parsing phases and activities on the server."}
-          </p>
+
+          <ol className="grid grid-cols-3 gap-2 text-[11px] font-medium">
+            {(
+              [
+                {
+                  key: "upload",
+                  label: "Upload",
+                  caption:
+                    phase === "uploading" && fileSize > 0
+                      ? `${formatBytes(uploadedBytes)} of ${formatBytes(fileSize)}`
+                      : phase === "uploading"
+                        ? `${progress}%`
+                        : "Complete",
+                  state:
+                    phase === "uploading"
+                      ? ("active" as const)
+                      : ("done" as const),
+                },
+                {
+                  key: "process",
+                  label: "Process",
+                  caption:
+                    phase === "uploading"
+                      ? "Waiting"
+                      : phase === "processing"
+                        ? "Parsing rows"
+                        : "Complete",
+                  state:
+                    phase === "uploading"
+                      ? ("pending" as const)
+                      : phase === "processing"
+                        ? ("active" as const)
+                        : ("done" as const),
+                },
+                {
+                  key: "finish",
+                  label: "Finish",
+                  caption:
+                    phase === "done" ? "Imported" : "Pending",
+                  state:
+                    phase === "done"
+                      ? ("done" as const)
+                      : ("pending" as const),
+                },
+              ] as const
+            ).map((step) => {
+              const Icon =
+                step.state === "active"
+                  ? Loader2
+                  : step.state === "done"
+                    ? Check
+                    : null;
+              return (
+                <li
+                  key={step.key}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md border bg-background px-2 py-1.5",
+                    step.state === "active" && "border-primary/40",
+                    step.state === "pending" && "opacity-60",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px]",
+                      step.state === "done" &&
+                        "border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
+                      step.state === "active" &&
+                        "border-primary/40 bg-primary/10 text-primary",
+                      step.state === "pending" &&
+                        "border-border bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {Icon ? (
+                      <Icon
+                        className={cn(
+                          "size-3",
+                          step.state === "active" && "animate-spin",
+                        )}
+                      />
+                    ) : null}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-foreground">
+                      {step.label}
+                    </span>
+                    <span className="block truncate text-[10px] text-muted-foreground">
+                      {step.caption}
+                    </span>
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
         </div>
       )}
 

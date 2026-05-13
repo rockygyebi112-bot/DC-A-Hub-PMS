@@ -1,12 +1,13 @@
 "use client";
 
 import { useRef, useTransition } from "react";
-import { Send } from "lucide-react";
+import { Paperclip, Send } from "lucide-react";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
 
 type Props = {
   action: (formData: FormData) => Promise<{ ok: boolean; error?: string }>;
+  upload?: (formData: FormData) => void | Promise<void>;
   user: { name: string; email: string; avatarUrl: string | null };
 };
 
@@ -15,10 +16,30 @@ type Props = {
  * Posts a free-text note as an `activity_log` row; the page re-renders the
  * feed via revalidatePath in the server action.
  */
-export function UpdateComposer({ action, user }: Props) {
+export function UpdateComposer({ action, upload, user }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
+  const [uploading, startUpload] = useTransition();
+
+  function handleFiles(files: FileList | null) {
+    if (!upload || !files || files.length === 0) return;
+    const fd = new FormData();
+    Array.from(files).forEach((f) => fd.append("proofs", f));
+    startUpload(async () => {
+      try {
+        await upload(fd);
+        toast.success(
+          files.length === 1 ? "File attached" : `${files.length} files attached`,
+        );
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Upload failed");
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    });
+  }
 
   function submit(formData: FormData) {
     const note = String(formData.get("note") ?? "").trim();
@@ -69,6 +90,28 @@ export function UpdateComposer({ action, user }: Props) {
         disabled={pending}
       />
       <div className="flex items-center gap-1">
+        {upload && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="sr-only"
+              onChange={(e) => handleFiles(e.currentTarget.files)}
+              disabled={uploading}
+            />
+            <button
+              type="button"
+              aria-label="Attach files"
+              title={uploading ? "Uploading…" : "Attach files"}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+            >
+              <Paperclip className="size-4" />
+            </button>
+          </>
+        )}
         <button
           type="submit"
           disabled={pending}

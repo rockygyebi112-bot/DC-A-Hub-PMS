@@ -8,7 +8,6 @@ import {
   FileText,
   GitBranch,
   Image as ImageIcon,
-  Link2,
   MessageSquare,
   MoreHorizontal,
   Pencil,
@@ -23,9 +22,7 @@ import { ActivityStatus } from "@/components/workspace/status-badge";
 import { DeleteConfirm } from "@/components/workspace/delete-confirm";
 import { ProofAccessButton } from "@/components/workspace/proof-access-button";
 import { UpdateComposer } from "@/components/workspace/update-composer";
-import { ProofUploadZone } from "@/components/workspace/proof-upload-zone";
 import {
-  addProofLink,
   deleteActivity,
   updateActivity,
   uploadProofs,
@@ -96,11 +93,6 @@ export default async function WorkspaceActivityPage({
   async function upload(formData: FormData) {
     "use server";
     await uploadProofs(activityId, formData);
-  }
-
-  async function addLink(formData: FormData) {
-    "use server";
-    await addProofLink(activityId, formData);
   }
 
   // Mark-complete reuses `updateActivity` so we keep the existing
@@ -230,7 +222,7 @@ export default async function WorkspaceActivityPage({
       </div>
 
       {/* STATUS STRIP ------------------------------------------------ */}
-      <section className="mb-6 grid gap-5 rounded-2xl border bg-card p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-5">
+      <section className="mb-6 grid divide-y divide-border rounded-2xl border bg-card shadow-sm sm:grid-cols-2 sm:divide-y-0 sm:[&>*:nth-child(n+3)]:border-t sm:[&>*:nth-child(even)]:border-l sm:divide-border lg:grid-cols-5 lg:[&>*]:border-t-0 lg:[&>*:not(:first-child)]:border-l">
         <StripCell label="Status">
           <ActivityStatus status={activity.status} />
         </StripCell>
@@ -317,6 +309,7 @@ export default async function WorkspaceActivityPage({
                 composer={
                   <UpdateComposer
                     action={postUpdate}
+                    upload={upload}
                     user={{
                       name: profile.fullName,
                       email: profile.email,
@@ -332,13 +325,7 @@ export default async function WorkspaceActivityPage({
         {/* RIGHT SIDEBAR */}
         <aside className="space-y-5 lg:sticky lg:top-4 lg:self-start">
           <TimelineCard events={timeline} status={activity.status} />
-          <EvidenceCard
-            proofs={proofs}
-            upload={upload}
-            addLink={addLink}
-            isAdmin={profile.role === "admin"}
-            currentUserId={profile.userId}
-          />
+          <UploadsCard proofs={proofs} />
         </aside>
       </div>
     </div>
@@ -350,7 +337,7 @@ export default async function WorkspaceActivityPage({
    ──────────────────────────────────────────────────────────────────── */
 function StripCell({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0 space-y-1.5">
+    <div className="min-w-0 space-y-1.5 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         {label}
       </p>
@@ -406,7 +393,7 @@ function DetailsCard({
       icon={<FileText className="size-4" />}
       title="Activity details"
     >
-      <dl className="grid gap-6 sm:grid-cols-2">
+      <dl className="-mx-5 -my-4 grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0">
         <Field label="Deliverable">
           {activity.deliverable ?? <Muted text="Not specified" />}
         </Field>
@@ -420,7 +407,7 @@ function DetailsCard({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
+    <div className="px-5 py-4">
       <dt className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         {label}
       </dt>
@@ -440,12 +427,12 @@ function DependenciesCard({
   return (
     <Card
       icon={<GitBranch className="size-4" />}
-      title="Dependencies"
+      title="Notes"
     >
       {description ? (
         <p className="whitespace-pre-wrap text-sm text-foreground">{description}</p>
       ) : (
-        <Muted text="No dependencies recorded." />
+        <Muted text="No notes yet." />
       )}
     </Card>
   );
@@ -626,77 +613,27 @@ function TimelineCard({
 }
 
 /* ──────────────────────────────────────────────────────────────────────
-   RIGHT: EVIDENCE & PROOFS
+   RIGHT: UPLOADS (read-only list)
    ──────────────────────────────────────────────────────────────────── */
-function EvidenceCard({
-  proofs,
-  upload,
-  addLink,
-}: {
-  proofs: WorkspaceProof[];
-  upload: (fd: FormData) => void | Promise<void>;
-  addLink: (fd: FormData) => void | Promise<void>;
-  isAdmin: boolean;
-  currentUserId: string;
-}) {
-  const files = proofs.filter((p) => p.kind === "file");
-  const links = proofs.filter((p) => p.kind === "link");
+function UploadsCard({ proofs }: { proofs: WorkspaceProof[] }) {
   return (
     <section className="rounded-2xl border bg-card shadow-sm">
       <header className="flex items-center justify-between border-b border-border/60 px-5 py-3">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
-          Evidence &amp; proofs
+          Uploads
         </h2>
+        <span className="text-[11px] text-muted-foreground">
+          {proofs.length} {proofs.length === 1 ? "item" : "items"}
+        </span>
       </header>
       <div className="px-5 py-4">
-        {/* Tabs row */}
-        <div className="flex items-center gap-4 border-b text-xs font-medium">
-          <span className="relative -mb-px border-b-2 border-primary pb-2 text-primary">
-            Files
-            <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
-              {files.length}
-            </span>
-          </span>
-          <span className="relative -mb-px pb-2 text-muted-foreground">
-            Links
-            <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px]">
-              {links.length}
-            </span>
-          </span>
-        </div>
-
-        <ProofUploadZone action={upload} />
-
-        {/* Files list */}
-        {files.length > 0 && (
-          <ul className="mt-4 space-y-2">
-            {files.map((proof) => (
-              <li key={proof.id}>
-                <FileRow proof={proof} />
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* Add link inline form (kept for parity with previous UX) */}
-        <details className="mt-4 group">
-          <summary className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-primary hover:underline">
-            <Link2 className="size-3.5" />
-            Add an external link instead
-          </summary>
-          <form action={addLink} className="mt-3 space-y-2">
-            <Input name="url" type="url" placeholder="https://…" required />
-            <Input name="file_name" placeholder="Display name (optional)" />
-            <Textarea name="caption" placeholder="Optional caption" rows={2} />
-            <Button type="submit" variant="outline" size="sm" className="w-full">
-              Save link
-            </Button>
-          </form>
-        </details>
-
-        {links.length > 0 && (
-          <ul className="mt-4 space-y-2">
-            {links.map((proof) => (
+        {proofs.length === 0 ? (
+          <p className="rounded-lg border border-dashed bg-muted/30 p-5 text-center text-xs text-muted-foreground">
+            No uploads yet. Use the attachment icon in Updates to add files.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {proofs.map((proof) => (
               <li key={proof.id}>
                 <FileRow proof={proof} />
               </li>

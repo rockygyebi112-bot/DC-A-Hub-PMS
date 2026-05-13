@@ -26,23 +26,6 @@ export const activitySchema = z.object({
   responsible: z.string().trim().max(200).optional(),
 });
 
-export const proofLinkSchema = z.object({
-  url: z
-    .string()
-    .trim()
-    .min(1, "Link URL is required")
-    .url("Enter a valid URL (https://…)")
-    // Reject javascript:, data:, file:, vbscript:, etc. which would otherwise
-    // execute in the viewer's browser when rendered as an <a href>.
-    .refine(
-      (value) => /^https?:\/\//i.test(value),
-      "Only http(s) links are allowed",
-    )
-    .refine((value) => value.length <= 2048, "URL is too long"),
-  file_name: z.string().trim().max(200).optional(),
-  caption: z.string().trim().max(500).optional(),
-});
-export type ProofLinkInput = z.input<typeof proofLinkSchema>;
 export type ActivityInput = z.input<typeof activitySchema>;
 export type ActivityParsed = z.output<typeof activitySchema>;
 

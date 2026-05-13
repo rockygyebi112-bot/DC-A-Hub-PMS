@@ -2,7 +2,16 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Download, FileSpreadsheet, Loader2, Upload } from "lucide-react";
+import {
+  Check,
+  CloudUpload,
+  Cog,
+  Database,
+  Download,
+  FileSpreadsheet,
+  Loader2,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -160,139 +169,176 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
         />
       </label>
 
-      {phase !== "idle" && (
-        <div
-          className="space-y-3 rounded-lg border bg-muted/40 px-3 py-3"
-          role="status"
-          aria-live="polite"
-        >
-          <div className="flex items-center justify-between gap-2 text-xs font-medium">
-            <span className="text-foreground">
-              {phase === "uploading"
-                ? "Uploading workplan"
-                : phase === "processing"
-                  ? "Processing workplan"
-                  : "Workplan imported"}
-            </span>
-            <span className="font-mono tabular-nums text-muted-foreground">
-              {phase === "uploading"
-                ? `${progress}%`
-                : phase === "processing"
-                  ? "Step 2 of 3"
-                  : "Done"}
-            </span>
-          </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
-            <div
-              className={cn(
-                "h-full rounded-full bg-primary transition-[width] duration-200",
-                phase === "processing" && "animate-pulse",
-              )}
-              style={{
-                width:
-                  phase === "uploading"
-                    ? `${progress}%`
-                    : phase === "processing"
-                      ? "66%"
-                      : "100%",
-              }}
-            />
-          </div>
+      {phase !== "idle" && (() => {
+        const overallPct =
+          phase === "uploading"
+            ? Math.round(progress * 0.5)
+            : phase === "processing"
+              ? 75
+              : 100;
+        const headerLabel =
+          phase === "uploading"
+            ? "Uploading workplan"
+            : phase === "processing"
+              ? "Processing workplan"
+              : "Workplan imported";
 
-          <ol className="grid grid-cols-3 gap-2 text-[11px] font-medium">
-            {(
-              [
-                {
-                  key: "upload",
-                  label: "Upload",
-                  caption:
-                    phase === "uploading" && fileSize > 0
-                      ? `${formatBytes(uploadedBytes)} of ${formatBytes(fileSize)}`
-                      : phase === "uploading"
-                        ? `${progress}%`
-                        : "Complete",
-                  state:
-                    phase === "uploading"
-                      ? ("active" as const)
-                      : ("done" as const),
-                },
-                {
-                  key: "process",
-                  label: "Process",
-                  caption:
-                    phase === "uploading"
-                      ? "Waiting"
-                      : phase === "processing"
-                        ? "Parsing rows"
-                        : "Complete",
-                  state:
-                    phase === "uploading"
-                      ? ("pending" as const)
-                      : phase === "processing"
-                        ? ("active" as const)
-                        : ("done" as const),
-                },
-                {
-                  key: "finish",
-                  label: "Finish",
-                  caption:
-                    phase === "done" ? "Imported" : "Pending",
-                  state:
-                    phase === "done"
-                      ? ("done" as const)
-                      : ("pending" as const),
-                },
-              ] as const
-            ).map((step) => {
-              const Icon =
-                step.state === "active"
-                  ? Loader2
-                  : step.state === "done"
-                    ? Check
-                    : null;
-              return (
-                <li
-                  key={step.key}
+        const steps = [
+          {
+            key: "upload",
+            label: "Upload file",
+            caption:
+              phase === "uploading"
+                ? fileSize > 0
+                  ? `${formatBytes(uploadedBytes)} of ${formatBytes(fileSize)} · ${progress}%`
+                  : `${progress}%`
+                : `${formatBytes(fileSize)} sent`,
+            state:
+              phase === "uploading" ? ("active" as const) : ("done" as const),
+            Icon: CloudUpload,
+          },
+          {
+            key: "process",
+            label: "Parse phases & activities",
+            caption:
+              phase === "uploading"
+                ? "Waiting for upload"
+                : phase === "processing"
+                  ? "Reading workbook rows"
+                  : "Workbook parsed",
+            state:
+              phase === "uploading"
+                ? ("pending" as const)
+                : phase === "processing"
+                  ? ("active" as const)
+                  : ("done" as const),
+            Icon: Cog,
+          },
+          {
+            key: "finish",
+            label: "Save to project",
+            caption:
+              phase === "done" ? "All records imported" : "Pending",
+            state:
+              phase === "done" ? ("done" as const) : ("pending" as const),
+            Icon: Database,
+          },
+        ] as const;
+
+        return (
+          <div
+            className="overflow-hidden rounded-xl border bg-card shadow-sm"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="flex items-center justify-between gap-3 border-b bg-muted/40 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold leading-tight text-foreground">
+                  {headerLabel}
+                </p>
+                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                  {fileName || "Workplan import"}
+                </p>
+              </div>
+              <span
+                className={cn(
+                  "shrink-0 rounded-full px-2.5 py-1 font-mono text-[11px] font-semibold tabular-nums",
+                  phase === "done"
+                    ? "bg-emerald-500/10 text-emerald-600"
+                    : "bg-primary/10 text-primary",
+                )}
+              >
+                {overallPct}%
+              </span>
+            </div>
+
+            <div className="px-4 pt-3">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
+                <div
                   className={cn(
-                    "flex items-center gap-2 rounded-md border bg-background px-2 py-1.5",
-                    step.state === "active" && "border-primary/40",
-                    step.state === "pending" && "opacity-60",
+                    "h-full rounded-full transition-[width] duration-300",
+                    phase === "done" ? "bg-emerald-500" : "bg-primary",
+                    phase === "processing" && "animate-pulse",
                   )}
-                >
-                  <span
-                    className={cn(
-                      "flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px]",
-                      step.state === "done" &&
-                        "border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
-                      step.state === "active" &&
-                        "border-primary/40 bg-primary/10 text-primary",
-                      step.state === "pending" &&
-                        "border-border bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {Icon ? (
-                      <Icon
+                  style={{ width: `${overallPct}%` }}
+                />
+              </div>
+            </div>
+
+            <ol className="px-4 py-3">
+              {steps.map((step, idx) => {
+                const isLast = idx === steps.length - 1;
+                const StateIcon =
+                  step.state === "active"
+                    ? Loader2
+                    : step.state === "done"
+                      ? Check
+                      : step.Icon;
+                return (
+                  <li key={step.key} className="relative flex gap-3 pb-3 last:pb-0">
+                    {!isLast && (
+                      <span
+                        aria-hidden
                         className={cn(
-                          "size-3",
+                          "absolute left-[15px] top-8 h-[calc(100%-1.75rem)] w-px",
+                          step.state === "done" ? "bg-emerald-500/40" : "bg-border",
+                        )}
+                      />
+                    )}
+                    <span
+                      className={cn(
+                        "relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border",
+                        step.state === "done" &&
+                          "border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
+                        step.state === "active" &&
+                          "border-primary/40 bg-primary/10 text-primary",
+                        step.state === "pending" &&
+                          "border-border bg-muted text-muted-foreground",
+                      )}
+                    >
+                      <StateIcon
+                        className={cn(
+                          "size-4",
                           step.state === "active" && "animate-spin",
                         )}
                       />
-                    ) : null}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-foreground">
-                      {step.label}
                     </span>
-                    <span className="block text-[10px] leading-tight text-muted-foreground">
-                      {step.caption}
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <p
+                        className={cn(
+                          "text-sm font-medium leading-tight",
+                          step.state === "pending"
+                            ? "text-muted-foreground"
+                            : "text-foreground",
+                        )}
+                      >
+                        {step.label}
+                      </p>
+                      <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+                        {step.caption}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        "self-center text-[11px] font-medium uppercase tracking-wide",
+                        step.state === "done" && "text-emerald-600",
+                        step.state === "active" && "text-primary",
+                        step.state === "pending" && "text-muted-foreground/70",
+                      )}
+                    >
+                      {step.state === "done"
+                        ? "Done"
+                        : step.state === "active"
+                          ? "Working"
+                          : "Pending"}
                     </span>
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
-      )}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        );
+      })()}
 
       <Button type="submit" className="w-full" disabled={pending}>
         <Upload className="size-4" />

@@ -40,7 +40,7 @@ export default async function WorkspacePhasePage({
             description={
               <>
                 Delete <strong>{phase.name}</strong> and its <strong>{activityCount} activities</strong>?
-                All proofs will be removed.
+                All documents will be removed.
               </>
             }
             confirmWord={activityCount > 0 ? "DELETE" : undefined}

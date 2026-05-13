@@ -208,8 +208,8 @@ export default async function WorkspaceActivityPage({
             title="Delete activity"
             description={
               <>
-                Permanently delete <strong>{activity.name}</strong>? All proofs
-                uploaded to it will be removed.
+                Permanently delete <strong>{activity.name}</strong>? All
+                documents uploaded to it will be removed.
               </>
             }
             redirectTo={projectHref}
@@ -1017,7 +1017,7 @@ function buildUpdatesFeed(
         actor,
         email,
         timestamp: formatTimestamp(event.created_at),
-        body: `Uploaded ${meta.count ?? 1} proof${(meta.count ?? 1) === 1 ? "" : "s"} to this activity.`,
+        body: `Uploaded ${meta.count ?? 1} document${(meta.count ?? 1) === 1 ? "" : "s"} to this activity.`,
         attachments: attached,
       });
     } else if (event.action === "marked_done") {
@@ -1089,7 +1089,7 @@ function buildLifecycle(
     ),
     step(
       "proof",
-      "Proof uploaded",
+      "Document uploaded",
       proof,
       currentKey === "proof" ? "current" : "future",
     ),

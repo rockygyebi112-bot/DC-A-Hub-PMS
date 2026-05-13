@@ -125,7 +125,7 @@ export default async function WorkspaceProjectPage({
                 description={
                   <>
                     This will permanently delete <strong>all {phases.length} phases</strong>,{" "}
-                    <strong>{activities.length} activities</strong>, and every uploaded proof for
+                    <strong>{activities.length} activities</strong>, and every uploaded document for
                     this project. The project itself will remain.
                   </>
                 }
@@ -371,7 +371,7 @@ function ProjectPhases({
                           <span>{activity.planned_date ?? "No date"}</span>
                           {activity.responsible && <span>· {activity.responsible}</span>}
                           {activity.proofCount > 0 && (
-                            <span>· {activity.proofCount} proofs</span>
+                            <span>· {activity.proofCount} document{activity.proofCount === 1 ? "" : "s"}</span>
                           )}
                         </p>
                       </Link>
@@ -467,7 +467,7 @@ function ActivityCard({
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           <span>{activity.planned_date ?? "No date"}</span>
           {activity.responsible && <span>· {activity.responsible}</span>}
-          {activity.proofCount > 0 && <span>· {activity.proofCount} proofs</span>}
+          {activity.proofCount > 0 && <span>· {activity.proofCount} document{activity.proofCount === 1 ? "" : "s"}</span>}
         </div>
         <DeleteConfirm
           trigger={
@@ -482,7 +482,7 @@ function ActivityCard({
           title={`Delete activity`}
           description={
             <>
-              Delete <strong>{activity.name}</strong>? This will remove all proofs uploaded to it.
+              Delete <strong>{activity.name}</strong>? This will remove all documents uploaded to it.
             </>
           }
           action={async () => {
@@ -538,7 +538,7 @@ function ProjectList({
                   description={
                     <>
                       Delete <strong>{phase.name}</strong> and its{" "}
-                      <strong>{phase.activities.length} activities</strong>? Proofs will be deleted too.
+                      <strong>{phase.activities.length} activities</strong>? Documents will be deleted too.
                     </>
                   }
                   confirmWord={phase.activities.length > 0 ? "DELETE" : undefined}
@@ -563,7 +563,7 @@ function ProjectList({
                 <TableHead>Status</TableHead>
                 <TableHead>Start date</TableHead>
                 <TableHead>End date</TableHead>
-                <TableHead>Proofs</TableHead>
+                <TableHead>Documents</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
@@ -595,7 +595,7 @@ function ProjectList({
                       title="Delete activity"
                       description={
                         <>
-                          Delete <strong>{activity.name}</strong>? This will remove all proofs uploaded to it.
+                          Delete <strong>{activity.name}</strong>? This will remove all documents uploaded to it.
                         </>
                       }
                       action={async () => {

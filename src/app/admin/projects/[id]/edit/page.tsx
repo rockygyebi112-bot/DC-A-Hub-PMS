@@ -94,7 +94,7 @@ export default async function EditProjectPage({
 
       <SectionCard
         title="Danger zone"
-        description="Archive hides the project. Delete permanently removes it and all phases, activities, proofs, and budgets — this cannot be undone."
+        description="Archive hides the project. Delete permanently removes it and all phases, activities, documents, and budgets — this cannot be undone."
         tone="destructive"
       >
         <div className="flex flex-wrap items-center gap-2">
@@ -117,7 +117,7 @@ export default async function EditProjectPage({
             description={
               <>
                 This will permanently delete <strong>{project.name}</strong> and
-                every phase, activity, proof, and budget attached to it. This
+                every phase, activity, document, and budget attached to it. This
                 cannot be undone.
               </>
             }

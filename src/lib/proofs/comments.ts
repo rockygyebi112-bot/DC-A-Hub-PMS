@@ -75,7 +75,7 @@ export async function listProofComments(
   proofId: string,
 ): Promise<{ ok: true; data: ProofComment[] } | { ok: false; error: string }> {
   const ctx = await proofContext(proofId);
-  if (!ctx) return { ok: false, error: "Proof not found" };
+  if (!ctx) return { ok: false, error: "Document not found" };
 
   const guard = await requireProjectReader(ctx.projectId);
   if (!guard.ok) return { ok: false, error: guard.error };
@@ -129,7 +129,7 @@ export async function listMentionableUsers(
   proofId: string,
 ): Promise<{ ok: true; data: MentionableUser[] } | { ok: false; error: string }> {
   const ctx = await proofContext(proofId);
-  if (!ctx) return { ok: false, error: "Proof not found" };
+  if (!ctx) return { ok: false, error: "Document not found" };
 
   const guard = await requireProjectReader(ctx.projectId);
   if (!guard.ok) return { ok: false, error: guard.error };
@@ -197,7 +197,7 @@ export async function addProofComment(
   const body = parsed.data;
 
   const ctx = await proofContext(proofId);
-  if (!ctx) return { ok: false, error: "Proof not found" };
+  if (!ctx) return { ok: false, error: "Document not found" };
 
   const guard = await requireProjectReader(ctx.projectId);
   if (!guard.ok) return { ok: false, error: guard.error };

@@ -25,7 +25,6 @@ export default async function WorkspaceLayout({
     })),
   ]);
   const { projects } = layout;
-  const activeCount = projects.filter((p) => p.status === "active").length;
 
   const groups = [
     {
@@ -78,12 +77,6 @@ export default async function WorkspaceLayout({
         group: "Projects",
       }))}
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
-      sidebarFooter={
-        <div className="rounded-lg border bg-background/70 p-3 text-xs text-muted-foreground">
-          <p className="font-medium text-foreground">Operations</p>
-          <p className="mt-1">{activeCount} active / {projects.length} projects</p>
-        </div>
-      }
       topbarExtra={
         <NotificationsBell
           entries={notifications.entries}

@@ -71,6 +71,20 @@ function parseDateCell(value: string): string | null {
   if (!trimmed) return null;
   // Already an ISO date.
   if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10);
+  // Day-first format used by our workplan template and most non-US locales
+  // (e.g. "06/05/2026" = 6 May 2026). `new Date()` would mis-parse this as
+  // MM/DD/YYYY ("June 5") on values where the day is <= 12, and reject any
+  // value where the day is > 12 outright — silently dropping every row past
+  // the 12th of the month. Handle DMY explicitly with / - or . separators.
+  const dmy = trimmed.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if (dmy) {
+    const [, dStr, mStr, yStr] = dmy;
+    const day = Number(dStr);
+    const month = Number(mStr);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${yStr}-${mStr.padStart(2, "0")}-${dStr.padStart(2, "0")}`;
+    }
+  }
   const parsed = new Date(trimmed);
   if (Number.isNaN(parsed.getTime())) return null;
   // Strip the time-of-day so we always store a pure date.

@@ -14,7 +14,7 @@ type Activity = {
   name: string;
   status: ActivityStatusKey;
   planned_date: string | null;
-  location: string | null;
+  responsible: string | null;
   proofCount: number;
 };
 

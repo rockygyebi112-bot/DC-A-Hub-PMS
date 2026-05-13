@@ -53,13 +53,36 @@ export default async function NewWorkspaceActivityPage({
               </select>
             </label>
             <label className="grid gap-2 text-sm font-medium">
-              Planned date
+              Start date
               <Input name="planned_date" type="date" />
             </label>
           </div>
-          <Input name="name" placeholder="Activity name" required />
-          <Input name="location" placeholder="Location" />
-          <Textarea name="description" placeholder="Description" rows={5} />
+          <label className="grid gap-2 text-sm font-medium">
+            Activity name
+            <Input name="name" placeholder="What's the task?" required />
+          </label>
+          <label className="grid gap-2 text-sm font-medium">
+            Deliverable
+            <Input
+              name="deliverable"
+              placeholder="What concrete output proves this activity is done?"
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium">
+            Responsible team
+            <Input
+              name="responsible"
+              placeholder="Team member, team, or external partner"
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium">
+            Notes / dependencies
+            <Textarea
+              name="description"
+              placeholder="Anything the team needs to know — prerequisites, references, links."
+              rows={5}
+            />
+          </label>
           <Button type="submit" disabled={phases.length === 0}>
             Create activity
           </Button>

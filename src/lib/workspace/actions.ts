@@ -62,19 +62,20 @@ function getCell(row: Record<string, unknown>, names: string[]) {
   return "";
 }
 
-function buildActivityDescription({
-  deliverable,
-  notes,
-}: {
-  deliverable: string;
-  notes: string;
-}) {
-  return [
-    deliverable && `Deliverable: ${deliverable}`,
-    notes && `Notes/Dependencies: ${notes}`,
-  ]
-    .filter(Boolean)
-    .join("\n");
+// Convert a free-form date cell (Excel may surface ISO strings, locale strings,
+// or actual Date objects depending on cell formatting) into a Postgres-friendly
+// `YYYY-MM-DD` string, or null when the value is empty/unparseable. We never
+// want to fail the whole import on a single bad date — the row-level columns
+// are optional.
+function parseDateCell(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  // Already an ISO date.
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10);
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return null;
+  // Strip the time-of-day so we always store a pure date.
+  return parsed.toISOString().slice(0, 10);
 }
 
 export async function createPhase(projectId: string, formData: FormData): Promise<ActionResult> {
@@ -181,7 +182,12 @@ export async function importWorkplanSheet(
     const notes = getCell(row, ["Notes/Dependencies", "Notes", "Dependencies"]);
     const responsible = getCell(row, ["Responsible Team Member/Team", "Responsible"]);
     const status = normalizeStatus(getCell(row, ["Status"]));
-    const description = buildActivityDescription({ deliverable, notes });
+    const plannedDate = parseDateCell(
+      getCell(row, ["Start Date", "Planned Date", "Start"]),
+    );
+    const completedDate = parseDateCell(
+      getCell(row, ["End Date", "Completed Date", "Completion Date", "End"]),
+    );
 
     const { data: existingActivity, error: existingError } = await sb
       .from("activities")
@@ -197,9 +203,14 @@ export async function importWorkplanSheet(
       const { error } = await sb
         .from("activities")
         .update({
-          description: description || null,
+          description: notes || null,
+          deliverable: deliverable || null,
           responsible: responsible || null,
           status,
+          // Only overwrite dates when the sheet actually carries one — leaving
+          // the cell blank shouldn't wipe a date that was set in-app.
+          ...(plannedDate ? { planned_date: plannedDate } : {}),
+          ...(completedDate ? { completed_date: completedDate } : {}),
         })
         .eq("id", existingActivity.id);
       if (error) return { ok: false, error: error.message };
@@ -214,9 +225,12 @@ export async function importWorkplanSheet(
         .insert({
           phase_id: phase.id,
           name: activityName,
-          description: description || null,
+          description: notes || null,
+          deliverable: deliverable || null,
           responsible: responsible || null,
           status,
+          planned_date: plannedDate,
+          completed_date: completedDate,
           order_index: count ?? 0,
           created_by: userId,
         })
@@ -273,8 +287,8 @@ export async function createActivity(projectId: string, formData: FormData): Pro
     phase_id: formValue(formData, "phase_id"),
     name: formValue(formData, "name"),
     description: formValue(formData, "description"),
+    deliverable: formValue(formData, "deliverable"),
     planned_date: formValue(formData, "planned_date"),
-    location: formValue(formData, "location"),
     responsible: formValue(formData, "responsible"),
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
@@ -313,12 +327,11 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
     phase_id: formValue(formData, "phase_id"),
     name: formValue(formData, "name"),
     description: formValue(formData, "description"),
+    deliverable: formValue(formData, "deliverable"),
     planned_date: formValue(formData, "planned_date"),
-    location: formValue(formData, "location"),
     responsible: formValue(formData, "responsible"),
     status: formValue(formData, "status"),
     completed_date: formValue(formData, "completed_date"),
-    participants_count: formValue(formData, "participants_count"),
     narrative_note: formValue(formData, "narrative_note"),
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };

@@ -42,25 +42,21 @@ export default async function PortalActivityPage({
           }
         >
           <dl className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <dt className="text-xs font-medium text-muted-foreground">Deliverable</dt>
+              <dd className="mt-1 text-sm">{activity.deliverable ?? "Not specified"}</dd>
+            </div>
             <div>
-              <dt className="text-xs font-medium text-muted-foreground">Responsible</dt>
+              <dt className="text-xs font-medium text-muted-foreground">Responsible team</dt>
               <dd className="mt-1 text-sm">{activity.responsible ?? "Not assigned"}</dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-muted-foreground">Planned date</dt>
+              <dt className="text-xs font-medium text-muted-foreground">Start date</dt>
               <dd className="mt-1 text-sm">{activity.planned_date ?? "Not scheduled"}</dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-muted-foreground">Completed date</dt>
+              <dt className="text-xs font-medium text-muted-foreground">End date</dt>
               <dd className="mt-1 text-sm">{activity.completed_date ?? "Not marked complete"}</dd>
-            </div>
-            <div>
-              <dt className="text-xs font-medium text-muted-foreground">Participants</dt>
-              <dd className="mt-1 text-sm">{activity.participants_count ?? "Not recorded"}</dd>
-            </div>
-            <div>
-              <dt className="text-xs font-medium text-muted-foreground">Location</dt>
-              <dd className="mt-1 text-sm">{activity.location ?? "Not recorded"}</dd>
             </div>
           </dl>
           <div className="mt-6 rounded-lg border bg-background p-4">

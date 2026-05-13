@@ -32,12 +32,15 @@ export type WorkspaceActivity = {
   id: string;
   phase_id: string;
   name: string;
+  // Plain notes / dependencies blob. Historically this column held the
+  // concatenated "Deliverable: ... / Notes/Dependencies: ... / Responsible: ..."
+  // text; migration 0020 splits Deliverable + Responsible into their own
+  // columns and keeps `description` as just the notes portion.
   description: string | null;
+  deliverable: string | null;
   planned_date: string | null;
   completed_date: string | null;
   status: "not_started" | "in_progress" | "done";
-  location: string | null;
-  participants_count: number | null;
   narrative_note: string | null;
   responsible: string | null;
   order_index: number;
@@ -181,7 +184,7 @@ export const listProjectPhases = cache(async (projectId: string): Promise<Worksp
   const phaseIds = phases.map((phase) => phase.id);
   const { data: activities, error: activityError } = await sb
     .from("activities")
-    .select("id, phase_id, name, description, planned_date, completed_date, status, location, participants_count, narrative_note, responsible, order_index")
+    .select("id, phase_id, name, description, deliverable, planned_date, completed_date, status, narrative_note, responsible, order_index")
     .in("phase_id", phaseIds)
     .order("order_index", { ascending: true });
   throwIfError(activityError);
@@ -227,7 +230,7 @@ export const getActivity = cache(async (activityId: string) => {
   const sb = await createClient();
   const { data, error } = await sb
     .from("activities")
-    .select("id, phase_id, name, description, planned_date, completed_date, status, location, participants_count, narrative_note, responsible, order_index, phase:phases(id, name, project_id, project:projects(id, name, code))")
+    .select("id, phase_id, name, description, deliverable, planned_date, completed_date, status, narrative_note, responsible, order_index, phase:phases(id, name, project_id, project:projects(id, name, code))")
     .eq("id", activityId)
     .single();
   throwIfError(error);

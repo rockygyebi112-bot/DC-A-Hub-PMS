@@ -76,6 +76,10 @@ type Props = {
   markComplete?: () => void | Promise<void>;
   deleteAction?: () => Promise<{ ok: boolean; error?: string }>;
   deleteRedirectTo?: string;
+
+  // Visibility toggles for sections that don't apply to every audience.
+  showNotes?: boolean;
+  showTimeline?: boolean;
 };
 
 export function ActivityDetailView({
@@ -95,6 +99,8 @@ export function ActivityDetailView({
   markComplete,
   deleteAction,
   deleteRedirectTo,
+  showNotes = true,
+  showTimeline = true,
 }: Props) {
   const isDone = activity.status === "done";
   const phaseName = activity.phase?.name ?? "Phase";
@@ -263,7 +269,7 @@ export function ActivityDetailView({
           ) : (
             <>
               <DetailsCard activity={activity} />
-              <NotesCard description={activity.description} />
+              {showNotes && <NotesCard description={activity.description} />}
               <UpdatesCard
                 updates={updates}
                 composer={
@@ -282,7 +288,9 @@ export function ActivityDetailView({
 
         {/* RIGHT SIDEBAR */}
         <aside className="space-y-5 lg:sticky lg:top-4 lg:self-start">
-          <TimelineCard events={timeline} status={activity.status} />
+          {showTimeline && (
+            <TimelineCard events={timeline} status={activity.status} />
+          )}
           <UploadsCard proofs={proofs} />
         </aside>
       </div>

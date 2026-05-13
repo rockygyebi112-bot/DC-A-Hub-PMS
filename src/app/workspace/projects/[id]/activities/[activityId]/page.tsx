@@ -1,23 +1,17 @@
 import {
   ArrowLeft,
   CalendarDays,
-  ChevronRight,
   CircleCheck,
   Clock,
-  Copy,
   ExternalLink,
   FileSpreadsheet,
   FileText,
   GitBranch,
   Image as ImageIcon,
   Link2,
-  ListChecks,
   MessageSquare,
   MoreHorizontal,
   Pencil,
-  Plus,
-  Sparkles,
-  Upload,
 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -316,11 +310,8 @@ export default async function WorkspaceActivityPage({
             />
           ) : (
             <>
-              <DetailsCard activity={activity} editHref={`${baseHref}?edit=1`} />
-              <DependenciesCard
-                description={activity.description}
-                editHref={`${baseHref}?edit=1`}
-              />
+              <DetailsCard activity={activity} />
+              <DependenciesCard description={activity.description} />
               <UpdatesCard
                 updates={updates}
                 composer={
@@ -333,11 +324,6 @@ export default async function WorkspaceActivityPage({
                     }}
                   />
                 }
-              />
-              <NarrativeCard
-                narrative={activity.narrative_note}
-                editHref={`${baseHref}?edit=1`}
-                isDone={isDone}
               />
             </>
           )}
@@ -353,7 +339,6 @@ export default async function WorkspaceActivityPage({
             isAdmin={profile.role === "admin"}
             currentUserId={profile.userId}
           />
-          <QuickActionsCard baseHref={baseHref} />
         </aside>
       </div>
     </div>
@@ -379,57 +364,32 @@ function StripCell({ label, children }: { label: string; children: React.ReactNo
    ──────────────────────────────────────────────────────────────────── */
 function Card({
   icon,
-  iconTone = "blue",
   title,
   action,
   children,
   bodyClassName,
 }: {
-  icon: React.ReactNode;
-  iconTone?: "blue" | "green" | "yellow" | "violet";
+  icon?: React.ReactNode;
   title: string;
   action?: React.ReactNode;
   children: React.ReactNode;
   bodyClassName?: string;
 }) {
-  const tones: Record<string, string> = {
-    blue: "bg-blue-50 text-blue-600",
-    green: "bg-emerald-50 text-emerald-600",
-    yellow: "bg-amber-50 text-amber-600",
-    violet: "bg-violet-50 text-violet-600",
-  };
   return (
     <section className="rounded-2xl border bg-card shadow-sm">
-      <header className="flex items-center justify-between gap-3 px-5 pt-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <span
-            className={cn(
-              "grid size-9 shrink-0 place-items-center rounded-lg",
-              tones[iconTone],
-            )}
-          >
-            {icon}
-          </span>
+      <header className="flex items-center justify-between gap-3 border-b border-border/60 px-5 py-3">
+        <div className="flex items-center gap-2 min-w-0">
+          {icon && (
+            <span className="text-muted-foreground">{icon}</span>
+          )}
           <h2 className="font-heading truncate text-sm font-semibold tracking-tight">
             {title}
           </h2>
         </div>
         {action}
       </header>
-      <div className={cn("px-5 pb-5 pt-4", bodyClassName)}>{children}</div>
+      <div className={cn("px-5 py-4", bodyClassName)}>{children}</div>
     </section>
-  );
-}
-
-function EditLink({ href }: { href: string }) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-    >
-      <Pencil className="size-3.5" />
-      Edit
-    </Link>
   );
 }
 
@@ -438,17 +398,13 @@ function EditLink({ href }: { href: string }) {
    ──────────────────────────────────────────────────────────────────── */
 function DetailsCard({
   activity,
-  editHref,
 }: {
   activity: { deliverable: string | null; responsible: string | null };
-  editHref: string;
 }) {
   return (
     <Card
       icon={<FileText className="size-4" />}
-      iconTone="blue"
       title="Activity details"
-      action={<EditLink href={editHref} />}
     >
       <dl className="grid gap-6 sm:grid-cols-2">
         <Field label="Deliverable">
@@ -478,17 +434,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
    ──────────────────────────────────────────────────────────────────── */
 function DependenciesCard({
   description,
-  editHref,
 }: {
   description: string | null;
-  editHref: string;
 }) {
   return (
     <Card
       icon={<GitBranch className="size-4" />}
-      iconTone="green"
       title="Dependencies"
-      action={<EditLink href={editHref} />}
     >
       {description ? (
         <p className="whitespace-pre-wrap text-sm text-foreground">{description}</p>
@@ -522,17 +474,7 @@ function UpdatesCard({
   return (
     <Card
       icon={<MessageSquare className="size-4" />}
-      iconTone="violet"
       title="Updates"
-      action={
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-md border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-        >
-          <Plus className="size-3.5" />
-          Add update
-        </button>
-      }
     >
       {updates.length === 0 ? (
         <p className="rounded-lg border border-dashed bg-muted/30 p-5 text-center text-sm text-muted-foreground">
@@ -608,46 +550,6 @@ function AttachmentChip({ proof }: { proof: WorkspaceProof }) {
         </button>
       }
     />
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────────
-   COMPLETION NARRATIVE
-   ──────────────────────────────────────────────────────────────────── */
-function NarrativeCard({
-  narrative,
-  editHref,
-  isDone,
-}: {
-  narrative: string | null;
-  editHref: string;
-  isDone: boolean;
-}) {
-  return (
-    <Card
-      icon={<Sparkles className="size-4" />}
-      iconTone="yellow"
-      title="Completion narrative"
-      action={
-        <Link
-          href={editHref}
-          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-        >
-          <Plus className="size-3.5" />
-          {narrative ? "Edit narrative" : "Add narrative"}
-        </Link>
-      }
-    >
-      {narrative ? (
-        <p className="whitespace-pre-wrap text-sm text-foreground/90">{narrative}</p>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          {isDone
-            ? "This activity is complete but no narrative has been added yet."
-            : "Will appear in the client portal once the activity is marked done."}
-        </p>
-      )}
-    </Card>
   );
 }
 
@@ -741,18 +643,14 @@ function EvidenceCard({
   const links = proofs.filter((p) => p.kind === "link");
   return (
     <section className="rounded-2xl border bg-card shadow-sm">
-      <header className="flex items-center justify-between px-5 pt-4">
+      <header className="flex items-center justify-between border-b border-border/60 px-5 py-3">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Evidence &amp; proofs
         </h2>
-        <span className="inline-flex items-center gap-1 rounded-md border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground">
-          <Upload className="size-3.5" />
-          Upload files
-        </span>
       </header>
-      <div className="px-5 pb-5">
+      <div className="px-5 py-4">
         {/* Tabs row */}
-        <div className="mt-3 flex items-center gap-4 border-b text-xs font-medium">
+        <div className="flex items-center gap-4 border-b text-xs font-medium">
           <span className="relative -mb-px border-b-2 border-primary pb-2 text-primary">
             Files
             <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
@@ -852,42 +750,6 @@ function FileRow({ proof }: { proof: WorkspaceProof }) {
 }
 
 /* ──────────────────────────────────────────────────────────────────────
-   RIGHT: QUICK ACTIONS
-   ──────────────────────────────────────────────────────────────────── */
-function QuickActionsCard({ baseHref }: { baseHref: string }) {
-  const items = [
-    { label: "Request review", icon: <ListChecks className="size-4" />, href: baseHref },
-    { label: "Add sub-activity", icon: <Plus className="size-4" />, href: `${baseHref}?edit=1` },
-    { label: "Duplicate activity", icon: <Copy className="size-4" />, href: baseHref },
-  ];
-  return (
-    <section className="rounded-2xl border bg-card shadow-sm">
-      <header className="px-5 pt-4 pb-2">
-        <h2 className="font-heading text-sm font-semibold tracking-tight">
-          Quick actions
-        </h2>
-      </header>
-      <ul className="px-2 pb-3">
-        {items.map((it) => (
-          <li key={it.label}>
-            <Link
-              href={it.href}
-              className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm text-primary transition-colors hover:bg-muted"
-            >
-              <span className="inline-flex items-center gap-2">
-                {it.icon}
-                {it.label}
-              </span>
-              <ChevronRight className="size-4 text-muted-foreground" />
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────────
    EDIT FORM (kept from previous design — opens via ?edit=1)
    ──────────────────────────────────────────────────────────────────── */
 function EditCard({
@@ -904,7 +766,6 @@ function EditCard({
   return (
     <Card
       icon={<Pencil className="size-4" />}
-      iconTone="blue"
       title="Edit activity"
     >
       <form action={save} className="space-y-4">

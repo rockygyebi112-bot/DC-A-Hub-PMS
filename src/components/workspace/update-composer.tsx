@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useTransition } from "react";
-import { Paperclip, Send, Smile } from "lucide-react";
+import { Send } from "lucide-react";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
 
@@ -69,20 +69,6 @@ export function UpdateComposer({ action, user }: Props) {
         disabled={pending}
       />
       <div className="flex items-center gap-1">
-        <button
-          type="button"
-          aria-label="Attach"
-          className="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <Paperclip className="size-4" />
-        </button>
-        <button
-          type="button"
-          aria-label="Emoji"
-          className="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <Smile className="size-4" />
-        </button>
         <button
           type="submit"
           disabled={pending}

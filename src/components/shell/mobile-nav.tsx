@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { Menu, Sparkles, X } from "lucide-react";
+import { Building2, Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -36,12 +36,13 @@ export function MobileNav({
   footer?: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState({ open: false, pathname: "" });
 
   // Auto-close on route change so the drawer doesn't linger after navigation.
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
+  const open = openState.pathname === pathname ? openState.open : false;
+  function setOpen(nextOpen: boolean) {
+    setOpenState({ open: nextOpen, pathname });
+  }
 
   // Honor the same project-brand override as the desktop sidebar so the
   // header in the drawer reflects the active project context.
@@ -103,7 +104,7 @@ export function MobileNav({
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">
-                  <Sparkles className="size-4" />
+                  <Building2 className="size-4" />
                 </div>
               )}
             </div>
@@ -154,7 +155,7 @@ export function MobileNav({
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">
-                  <Sparkles className="size-3.5" />
+                  <Building2 className="size-3.5" />
                 </div>
               )}
             </div>

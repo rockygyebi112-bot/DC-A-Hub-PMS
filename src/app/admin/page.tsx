@@ -40,10 +40,7 @@ import {
 } from "@/components/admin/dashboard/activity-feed-card";
 import { getAdminCounts } from "@/lib/admin/queries";
 import { createClient } from "@/lib/supabase/server";
-import {
-  DashboardPeriodSelector,
-  type DashboardPeriod,
-} from "@/components/admin/ui/dashboard-period-selector";
+import type { DashboardPeriod } from "@/components/admin/ui/dashboard-period-selector";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -446,7 +443,6 @@ export default async function AdminOverview({
         <h1 className="font-heading text-xl font-bold tracking-tight text-foreground">
           Dashboard
         </h1>
-        <DashboardPeriodSelector current={period} />
       </div>
       <Suspense
         key={period}

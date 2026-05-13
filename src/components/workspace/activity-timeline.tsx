@@ -1,10 +1,10 @@
 import {
   CircleCheck,
   CirclePlay,
+  ClipboardList,
   FileUp,
   MessageSquare,
   Pencil,
-  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import type { ActivityTimelineEvent } from "@/lib/workspace/queries";
@@ -17,7 +17,7 @@ const eventStyles: Record<
   string,
   { label: string; icon: LucideIcon; tone: string }
 > = {
-  created: { label: "Activity created", icon: Sparkles, tone: "text-blue-600 dark:text-blue-400" },
+  created: { label: "Activity created", icon: ClipboardList, tone: "text-blue-600 dark:text-blue-400" },
   started: { label: "Marked in progress", icon: CirclePlay, tone: "text-amber-600 dark:text-amber-400" },
   marked_done: { label: "Marked complete", icon: CircleCheck, tone: "text-emerald-600 dark:text-emerald-400" },
   updated: { label: "Updated", icon: Pencil, tone: "text-muted-foreground" },

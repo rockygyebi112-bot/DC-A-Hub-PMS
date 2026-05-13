@@ -6,7 +6,6 @@ import { ThemeToggle } from "@/components/admin/ui/theme-toggle";
 import { UserDropdown } from "@/components/admin/ui/user-dropdown";
 import { Breadcrumbs } from "@/components/admin/ui/breadcrumbs";
 import { TopbarSearch, type SearchItem } from "./topbar-search";
-import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AppTopbar({
@@ -82,24 +81,6 @@ export function AppTopbar({
           </div>
         )}
         <div className="flex items-center gap-1 md:gap-2">
-          {/* Cmd/Ctrl+K palette trigger (desktop). Dispatches a custom
-              event picked up by <CommandPalette /> mounted in AppShell. */}
-          <button
-            type="button"
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("cmdk:toggle"));
-              }
-            }}
-            aria-label="Open command palette"
-            className="hidden h-9 items-center gap-2 rounded-full border border-border/70 bg-muted/40 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted md:inline-flex"
-          >
-            <Search className="size-3.5" />
-            <span className="hidden lg:inline">Quick search</span>
-            <kbd className="ml-1 rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-              ⌘K
-            </kbd>
-          </button>
           {extra}
           <ThemeToggle />
           <UserDropdown name={name} email={email} avatarUrl={avatarUrl} />

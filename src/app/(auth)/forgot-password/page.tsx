@@ -6,10 +6,10 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { requestPasswordReset } from "./actions";
 
 function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -22,15 +22,10 @@ function ForgotPasswordForm() {
     setError("");
     setLoading(true);
 
-    const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/callback?next=/reset-password`;
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-      email.trim(),
-      { redirectTo },
-    );
+    const result = await requestPasswordReset({ email: email.trim() });
 
-    if (resetError) {
-      setError(resetError.message);
+    if (!result.ok) {
+      setError(result.error);
       setLoading(false);
       return;
     }

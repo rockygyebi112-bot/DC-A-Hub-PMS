@@ -7,6 +7,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth } from "@/lib/auth/guards";
 import { sanitizeFileName, validateUpload } from "@/lib/uploads";
 import { getAppUrl } from "@/lib/app-url";
+import { sendEmail } from "@/lib/email/send";
+import {
+  renderEmailChangeCurrent,
+  renderEmailChangeNew,
+} from "@/lib/email/templates/email-change";
 import {
   updateEmailSchema,
   updateNameSchema,
@@ -74,20 +79,90 @@ export async function updateMyEmail(raw: unknown): Promise<ActionResult> {
   }
 
   const sb = await createClient();
-  const { error } = await sb.auth.updateUser(
-    { email: parsed.data.email },
-    {
-      // Supabase sends a confirmation link to BOTH addresses by default.
-      // Route both confirmations through our /auth/confirm token_hash flow so
-      // the change works cross-device.
-      emailRedirectTo: `${getAppUrl()}/auth/confirm?type=email_change&next=/account`,
-    },
-  );
-  if (error) {
-    // Friendly mapping for the most common case.
-    if (/already.*registered|already in use/i.test(error.message)) {
+  const { data: { user } } = await sb.auth.getUser();
+  const currentEmail = user?.email;
+  if (!currentEmail) return { ok: false, error: GENERIC_ERROR };
+
+  // Same address - nothing to do.
+  if (currentEmail.toLowerCase() === parsed.data.email.toLowerCase()) {
+    return { ok: true };
+  }
+
+  const admin = createAdminClient();
+  const appUrl = getAppUrl();
+  const redirectTo = `${appUrl}/auth/callback?next=/account`;
+
+  // Supabase's "Secure email change" flow requires confirmation links sent
+  // to BOTH the current and new addresses. We generate each link via the
+  // admin API (no Supabase-side email is sent) and deliver them ourselves
+  // through Resend so both messages use our verified domain and templates.
+  const [currentLink, newLink] = await Promise.all([
+    admin.auth.admin.generateLink({
+      type: "email_change_current",
+      email: currentEmail,
+      newEmail: parsed.data.email,
+      options: { redirectTo },
+    }),
+    admin.auth.admin.generateLink({
+      type: "email_change_new",
+      email: currentEmail,
+      newEmail: parsed.data.email,
+      options: { redirectTo },
+    }),
+  ]);
+
+  if (currentLink.error || newLink.error) {
+    const msg = (currentLink.error ?? newLink.error)?.message ?? "";
+    if (/already.*registered|already in use|exists/i.test(msg)) {
       return { ok: false, error: "That email is already in use." };
     }
+    return { ok: false, error: GENERIC_ERROR };
+  }
+
+  const currentHashed = currentLink.data.properties?.hashed_token;
+  const newHashed = newLink.data.properties?.hashed_token;
+  if (!currentHashed || !newHashed) {
+    return { ok: false, error: GENERIC_ERROR };
+  }
+
+  const buildUrl = (token: string) => {
+    const params = new URLSearchParams({
+      token_hash: token,
+      type: "email_change",
+      next: "/account",
+    });
+    return `${appUrl}/auth/confirm?${params.toString()}`;
+  };
+
+  const stamp = Date.now();
+  const tplCurrent = renderEmailChangeCurrent({
+    confirmUrl: buildUrl(currentHashed),
+    newEmail: parsed.data.email,
+  });
+  const tplNew = renderEmailChangeNew({ confirmUrl: buildUrl(newHashed) });
+
+  const [resCurrent, resNew] = await Promise.all([
+    sendEmail({
+      to: currentEmail,
+      subject: tplCurrent.subject,
+      html: tplCurrent.html,
+      text: tplCurrent.text,
+      category: "email_change",
+      idempotencyKey: `email-change-current/${auth.userId}/${stamp}`,
+      extraTags: [{ name: "audience", value: "current" }],
+    }),
+    sendEmail({
+      to: parsed.data.email,
+      subject: tplNew.subject,
+      html: tplNew.html,
+      text: tplNew.text,
+      category: "email_change",
+      idempotencyKey: `email-change-new/${auth.userId}/${stamp}`,
+      extraTags: [{ name: "audience", value: "new" }],
+    }),
+  ]);
+
+  if (!resCurrent.ok || !resNew.ok) {
     return { ok: false, error: GENERIC_ERROR };
   }
 

@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/admin/ui/theme-toggle";
 import { UserDropdown } from "@/components/admin/ui/user-dropdown";
 import { Breadcrumbs } from "@/components/admin/ui/breadcrumbs";
@@ -41,39 +40,26 @@ export function AppTopbar({
   /** Hide the path-based breadcrumb trail (e.g. for client-facing surfaces). */
   showBreadcrumbs?: boolean;
 }) {
-  const pathname = usePathname();
-  const showGreeting = !!greeting && (!greetingPath || pathname === greetingPath);
+  // Greeting props kept on the API for callsite compatibility but no longer
+  // rendered - the Linear/Notion-restrained topbar surfaces breadcrumbs only.
+  void greeting;
+  void greetingSubtitle;
+  void greetingPath;
   const items = searchItems ?? [];
   return (
     <header
       className={cn(
-        "topbar-glass sticky top-0 z-20 border-b",
+        "sticky top-0 z-20 border-b border-border bg-background/80",
+        "supports-[backdrop-filter]:backdrop-blur-md",
         // Respect the iOS notch / dynamic island on mobile.
         "pt-[env(safe-area-inset-top)]",
       )}
     >
-      <div className="flex h-[68px] items-center gap-2 px-3 md:gap-3 md:px-6">
+      <div className="flex h-14 items-center gap-2 px-3 md:gap-3 md:px-6">
         {mobileNav}
-        {/* Mobile: when a greeting is shown, hide the inline slot so the row
-            collapses to just the hamburger + right-side icons. The full
-            greeting renders on its own row below for breathing room. */}
-        <div
-          className={cn(
-            "min-w-0 flex-1 overflow-hidden",
-            showGreeting && "hidden sm:block",
-          )}
-        >
-          {showGreeting ? (
-            <div className="topbar-greeting">
-              <h1 className="truncate">{greeting}</h1>
-              {greetingSubtitle && <p className="truncate">{greetingSubtitle}</p>}
-            </div>
-          ) : showBreadcrumbs ? (
-            <Breadcrumbs />
-          ) : null}
+        <div className="min-w-0 flex-1 overflow-hidden">
+          {showBreadcrumbs ? <Breadcrumbs /> : null}
         </div>
-        {/* Push right-side icons to the edge on mobile when greeting row is split out. */}
-        {showGreeting && <div className="flex-1 sm:hidden" aria-hidden />}
         {showSearch && items.length > 0 && (
           /* Desktop only: live-search dropdown over the user's projects. */
           <div className="hidden md:block">
@@ -86,12 +72,6 @@ export function AppTopbar({
           <UserDropdown name={name} email={email} avatarUrl={avatarUrl} />
         </div>
       </div>
-      {showGreeting && (
-        <div className="topbar-greeting border-t border-border/60 px-4 pb-2 pt-1.5 sm:hidden">
-          <h1>{greeting}</h1>
-          {greetingSubtitle && <p>{greetingSubtitle}</p>}
-        </div>
-      )}
     </header>
   );
 }

@@ -154,7 +154,7 @@ export async function inviteUser(
     idempotencyKey:
       delivery === "invite_sent"
         ? `invite/${userId}`
-        : `password-setup/${userId}/${Date.now()}`,
+        : `password-setup/${userId}/${Math.floor(Date.now() / 60_000)}`,
     extraTags: [{ name: "delivery", value: delivery }],
   });
   if (!sendResult.ok) return { ok: false, error: sendResult.error };
@@ -186,12 +186,31 @@ export async function setUserRole(
   // the tenant (last-admin scenario is also enforced by a DB trigger).
   const { data: target } = await admin
     .from("profiles")
-    .select("user_id, role")
+    .select("user_id, role, is_active")
     .eq("id", profileId)
     .single();
   if (!target) return { ok: false, error: "User not found" };
   if (target.user_id === callerId && parsed.data.role !== "admin") {
     return { ok: false, error: "You cannot demote yourself" };
+  }
+
+  // Last-admin guard (M-17): mirror the deleteUser check so demoting the
+  // final active admin returns a friendly error instead of bricking the
+  // tenant. The DB trigger is still authoritative — this just lets us
+  // surface the case before the round-trip.
+  if (
+    target.role === "admin" &&
+    target.is_active &&
+    parsed.data.role !== "admin"
+  ) {
+    const { count } = await admin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "admin")
+      .eq("is_active", true);
+    if ((count ?? 0) <= 1) {
+      return { ok: false, error: "Cannot demote the last active admin" };
+    }
   }
 
   const { error } = await admin

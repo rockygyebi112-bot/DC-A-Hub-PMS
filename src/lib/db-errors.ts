@@ -20,11 +20,14 @@ export function dbErrorMessage(
   if (!error) return "Operation failed";
 
   // Server-side log so we keep diagnostic value without leaking to the client.
+  // In production we redact `details`/`hint` because they sometimes include
+  // raw row data or constraint internals (M-18). Local dev keeps them.
+  const isProd = process.env.NODE_ENV === "production";
   console.error("[db]", {
     code: "code" in error ? error.code : undefined,
     message: error.message,
-    details: "details" in error ? (error as PostgrestError).details : undefined,
-    hint: "hint" in error ? (error as PostgrestError).hint : undefined,
+    details: !isProd && "details" in error ? (error as PostgrestError).details : undefined,
+    hint: !isProd && "hint" in error ? (error as PostgrestError).hint : undefined,
   });
 
   const code = "code" in error ? error.code : undefined;

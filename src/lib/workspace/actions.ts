@@ -639,6 +639,32 @@ export async function requestProofAccess(
   const authz = await requireProjectReader(projectId);
   if (!authz.ok) return { ok: false, error: "Not authorized to view this document" };
 
+  // Audit FIRST, mint URL second. If the audit insert fails the user must
+  // not receive a working URL — we cannot guarantee accountability otherwise.
+  // (H-11 fail-closed.)
+  const trimmedPurpose = (purpose ?? "").trim().slice(0, 500);
+  try {
+    const hdrs = await headers();
+    const userAgent = hdrs.get("user-agent");
+    const fwd = hdrs.get("x-forwarded-for");
+    const ip = fwd ? fwd.split(",")[0]?.trim() || null : null;
+    const { error: logErr } = await sb.from("proof_access_log").insert({
+      proof_id: proof.id,
+      project_id: projectId,
+      user_id: auth.userId,
+      purpose: trimmedPurpose || null,
+      user_agent: userAgent,
+      ip_address: ip,
+    });
+    if (logErr) {
+      console.error("proof_access_log insert failed", logErr);
+      return { ok: false, error: "Could not record document access. Try again." };
+    }
+  } catch (err) {
+    console.error("proof_access_log insert threw", err);
+    return { ok: false, error: "Could not record document access. Try again." };
+  }
+
   // Mint the URL. Files get a 5-minute signed URL so a leaked link expires
   // quickly. Links are passed through unchanged.
   let url: string | null = null;
@@ -652,27 +678,6 @@ export async function requestProofAccess(
     url = signed?.signedUrl ?? null;
   }
   if (!url) return { ok: false, error: "Could not resolve document URL" };
-
-  // Best-effort audit log. Failure to log MUST NOT block the user from
-  // opening the document, but is surfaced in server logs so it can be
-  // alerted on.
-  const trimmedPurpose = (purpose ?? "").trim().slice(0, 500);
-  try {
-    const hdrs = await headers();
-    const userAgent = hdrs.get("user-agent");
-    const fwd = hdrs.get("x-forwarded-for");
-    const ip = fwd ? fwd.split(",")[0]?.trim() || null : null;
-    await sb.from("proof_access_log").insert({
-      proof_id: proof.id,
-      project_id: projectId,
-      user_id: auth.userId,
-      purpose: trimmedPurpose || null,
-      user_agent: userAgent,
-      ip_address: ip,
-    });
-  } catch (err) {
-    console.error("proof_access_log insert failed", err);
-  }
 
   return {
     ok: true,

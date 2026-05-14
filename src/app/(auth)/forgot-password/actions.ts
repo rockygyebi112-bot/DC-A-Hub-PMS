@@ -72,10 +72,10 @@ export async function requestPasswordReset(
     html: tpl.html,
     text: tpl.text,
     category: "password_reset",
-    // Timestamped key so a user who requests multiple resets in quick
-    // succession still gets each email (different keys), but a single
-    // server-action retry within milliseconds collapses to one send.
-    idempotencyKey: `password-reset/${userId}/${Date.now()}`,
+    // Bucket the timestamp to the minute so a burst of retries inside a
+    // single minute dedupe at Resend (protecting reputation + inbox), while
+    // genuinely separate user-driven resets minutes apart still each fire.
+    idempotencyKey: `password-reset/${userId}/${Math.floor(Date.now() / 60_000)}`,
   });
   if (!result.ok) {
     return { ok: false, error: "Could not send reset email. Try again." };

@@ -248,7 +248,7 @@ function CardsView({ projects }: { projects: Awaited<ReturnType<typeof listWorks
         <Link
           key={p.id}
           href={`/workspace/projects/${p.id}`}
-          className="group rounded-xl border bg-card p-4 shadow-sm transition-all hover-lift"
+          className="group rounded-lg border border-border bg-card p-4 transition-colors hover:border-foreground/10 focus-ring"
         >
           <div className="flex items-start gap-3">
             <ProjectIcon name={p.name} seed={p.id} />

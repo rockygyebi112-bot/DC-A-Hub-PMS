@@ -54,7 +54,93 @@ export function ExpenseTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-[12px] border">
+    <>
+      {/* Mobile: stacked card list. Tables with this many columns become a
+          horizontal-scroll trap on phones, so we collapse to one card per row
+          with the high-signal fields surfaced and the rest tucked into a
+          secondary line. */}
+      <ul className="space-y-2 md:hidden">
+        {expenses.map((exp) => {
+          async function remove() {
+            "use server";
+            await deleteExpense(projectId, exp.id);
+          }
+          return (
+            <li
+              key={exp.id}
+              className="rounded-[12px] border bg-card p-3 text-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">
+                    {exp.vendor || exp.description || "Expense"}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    {formatDate(exp.expense_date)}
+                    {exp.category_name ? ` · ${exp.category_name}` : ""}
+                  </p>
+                </div>
+                <p className="shrink-0 whitespace-nowrap text-right font-semibold tabular-nums">
+                  {formatMoney(exp.amount, exp.currency)}
+                </p>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                    STATUS_STYLE[exp.status],
+                  )}
+                >
+                  {STATUS_LABEL[exp.status]}
+                </span>
+                {exp.receipt_signed_url ? (
+                  <a
+                    href={exp.receipt_signed_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    <ExternalLink className="size-3" />
+                    {exp.receipt_name ?? "Receipt"}
+                  </a>
+                ) : null}
+                <div className="ml-auto flex gap-1">
+                  <ExpenseForm
+                    projectId={projectId}
+                    categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+                    defaultCurrency={defaultCurrency}
+                    initial={{
+                      id: exp.id,
+                      category_id: exp.category_id,
+                      amount: exp.amount,
+                      currency: exp.currency,
+                      expense_date: exp.expense_date,
+                      vendor: exp.vendor,
+                      description: exp.description,
+                      status: exp.status,
+                      receipt_name: exp.receipt_name,
+                      receipt_path: exp.receipt_path,
+                    }}
+                  />
+                  <form action={remove}>
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Delete expense"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </form>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Desktop: the original wide table. */}
+      <div className="hidden overflow-x-auto rounded-[12px] border md:block">
       <table className="w-full text-sm">
         <thead className="border-b bg-muted/40 text-[11px] uppercase tracking-wide text-muted-foreground">
           <tr>
@@ -155,6 +241,7 @@ export function ExpenseTable({
           })}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }

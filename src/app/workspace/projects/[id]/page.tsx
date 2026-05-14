@@ -149,7 +149,7 @@ export default async function WorkspaceProjectPage({
         }
       />
 
-      <div className="mb-6 grid gap-4 md:grid-cols-4">
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-4">
         <MetricCard title="Progress">
           <ProjectProgress done={project.doneCount} total={project.totalCount} />
         </MetricCard>

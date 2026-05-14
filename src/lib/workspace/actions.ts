@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { dbErrorMessage } from "@/lib/db-errors";
 import { requireAuth, requireProjectReader, requireProjectWriter } from "@/lib/auth/guards";
 import {
   validateUpload,
@@ -112,7 +113,7 @@ export async function createPhase(projectId: string, formData: FormData): Promis
     ...parsed.data,
     order_index: count ?? 0,
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
 
   revalidatePath(`/workspace/projects/${projectId}`);
   revalidatePath(`/admin/projects/${projectId}`);
@@ -159,7 +160,7 @@ export async function importWorkplanSheet(
     .select("id, name, order_index")
     .eq("project_id", projectId)
     .order("order_index", { ascending: true });
-  if (phaseError) return { ok: false, error: phaseError.message };
+  if (phaseError) return { ok: false, error: dbErrorMessage(phaseError) };
 
   const phaseByName = new Map(
     (existingPhases ?? []).map((phase) => [normalizeKey(phase.name), phase]),
@@ -188,7 +189,7 @@ export async function importWorkplanSheet(
         })
         .select("id, name, order_index")
         .single();
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, error: dbErrorMessage(error) };
       phase = created;
       phaseByName.set(normalizeKey(currentPhaseName), phase);
       phasesCreated += 1;
@@ -229,7 +230,7 @@ export async function importWorkplanSheet(
           ...(completedDate ? { completed_date: completedDate } : {}),
         })
         .eq("id", existingActivity.id);
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, error: dbErrorMessage(error) };
       activitiesUpdated += 1;
     } else {
       const { count } = await sb
@@ -252,7 +253,7 @@ export async function importWorkplanSheet(
         })
         .select("id")
         .single();
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, error: dbErrorMessage(error) };
 
       await sb.from("activity_log").insert({
         project_id: projectId,
@@ -287,7 +288,7 @@ export async function updatePhase(phaseId: string, formData: FormData): Promise<
   if (!auth.ok) return auth;
 
   const { error } = await sb.from("phases").update(parsed.data).eq("id", phaseId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
 
   revalidatePath(`/workspace/projects/${phase?.project_id}`);
   revalidatePath(`/admin/projects/${phase?.project_id}`);
@@ -324,7 +325,7 @@ export async function createActivity(projectId: string, formData: FormData): Pro
     })
     .select("id")
     .single();
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
 
   await sb.from("activity_log").insert({
     project_id: projectId,
@@ -367,7 +368,7 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
   if (!auth.ok) return auth;
 
   const { error } = await sb.from("activities").update(parsed.data).eq("id", activityId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
 
   if (projectId) {
     const markedDone = before?.status !== "done" && parsed.data.status === "done";
@@ -443,7 +444,7 @@ export async function deleteActivity(activityId: string): Promise<ActionResult<{
   await removeStorageFiles(sb, paths);
 
   const { error } = await sb.from("activities").delete().eq("id", activityId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
 
   revalidatePath(`/workspace/projects/${projectId}`);
   revalidatePath(`/portal/projects/${projectId}`);
@@ -468,7 +469,7 @@ export async function deletePhase(phaseId: string): Promise<ActionResult<{ proje
   await removeStorageFiles(sb, paths);
 
   const { error } = await sb.from("phases").delete().eq("id", phaseId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
 
   revalidatePath(`/workspace/projects/${phase.project_id}`);
   revalidatePath(`/portal/projects/${phase.project_id}`);
@@ -484,7 +485,7 @@ export async function deleteWorkplan(projectId: string): Promise<ActionResult> {
     .from("phases")
     .select("id")
     .eq("project_id", projectId);
-  if (phaseError) return { ok: false, error: phaseError.message };
+  if (phaseError) return { ok: false, error: dbErrorMessage(phaseError) };
 
   const phaseIds = (phases ?? []).map((p) => p.id);
   if (phaseIds.length === 0) {
@@ -498,7 +499,7 @@ export async function deleteWorkplan(projectId: string): Promise<ActionResult> {
   await removeStorageFiles(sb, paths);
 
   const { error } = await sb.from("phases").delete().in("id", phaseIds);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
 
   revalidatePath(`/workspace/projects/${projectId}`);
   revalidatePath(`/portal/projects/${projectId}`);
@@ -541,7 +542,7 @@ export async function uploadProofs(activityId: string, formData: FormData): Prom
     const { error: uploadError } = await sb.storage.from("proofs").upload(path, file, {
       contentType: file.type || "application/octet-stream",
     });
-    if (uploadError) return { ok: false, error: uploadError.message };
+    if (uploadError) return { ok: false, error: dbErrorMessage(uploadError) };
 
     const { error: insertError } = await sb.from("activity_proofs").insert({
       activity_id: activityId,
@@ -553,7 +554,7 @@ export async function uploadProofs(activityId: string, formData: FormData): Prom
       caption: formValue(formData, "caption") || null,
       uploaded_by: userId,
     });
-    if (insertError) return { ok: false, error: insertError.message };
+    if (insertError) return { ok: false, error: dbErrorMessage(insertError) };
   }
 
   await sb.from("activity_log").insert({

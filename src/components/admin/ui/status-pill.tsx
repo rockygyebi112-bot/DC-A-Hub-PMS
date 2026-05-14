@@ -11,6 +11,7 @@ type Status =
   | "admin"
   | "staff"
   | "client"
+  | "manager"
   | "member"
   | "viewer";
 
@@ -32,6 +33,8 @@ const STYLES: Record<Status, string> = {
   staff: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/40",
   client:
     "bg-[var(--color-srsf-purple-50)] text-[var(--color-srsf-purple-700)] border-[var(--color-srsf-purple-200)] dark:bg-[var(--color-srsf-purple-900)]/40 dark:text-[var(--color-srsf-purple-300)] dark:border-[var(--color-srsf-purple-800)]/50",
+  manager:
+    "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700/60",
   member:
     "bg-[var(--color-srsf-green-50)] text-[var(--color-srsf-green-700)] border-[var(--color-srsf-green-200)] dark:bg-[var(--color-srsf-green-900)]/40 dark:text-[var(--color-srsf-green-300)] dark:border-[var(--color-srsf-green-800)]/50",
   viewer: "bg-muted text-foreground border-border",
@@ -43,6 +46,7 @@ const LABELS: Partial<Record<Status, string>> = {
   completed: "Done",
   "active-user": "Active",
   "inactive-user": "Inactive",
+  manager: "Project Manager",
 };
 
 const DOT_CLASS: Partial<Record<Status, string>> = {

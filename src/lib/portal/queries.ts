@@ -115,10 +115,22 @@ export async function getPortalActivity(activityId: string) {
 /* -------------------- helpers -------------------- */
 
 async function getProjectManager(projectId: string): Promise<PortalManager | null> {
-  // The "project manager" surfaced to the client is the most senior staff
-  // member assigned to this project. Order: admin > staff > anyone.
+  // Prefer the explicitly designated PM (project_role='manager'). Fall
+  // back to the most senior staff member if no PM has been set yet so
+  // older projects still surface a useful contact.
   const team = await listProjectTeam(projectId);
+  const designated = team.find((m) => m.project_role === "manager");
+  const fromDesignated = designated?.profile;
+  if (fromDesignated) {
+    return {
+      user_id: fromDesignated.user_id,
+      full_name: fromDesignated.full_name,
+      email: fromDesignated.email,
+      role: fromDesignated.role,
+    };
+  }
   const candidates = team
+    .filter((m) => m.project_role !== "viewer")
     .map((m) => m.profile)
     .filter((p): p is NonNullable<typeof p> => !!p);
   if (candidates.length === 0) return null;

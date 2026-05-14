@@ -34,7 +34,8 @@ export async function requireAdmin(): Promise<GuardResult> {
 
 /**
  * Require write access to a specific project. Admins always pass; non-admins
- * must have a project_members row with project_role = 'member'.
+ * must have a project_members row with project_role = 'manager' or 'member'.
+ * Viewers (clients) are intentionally rejected here.
  */
 export async function requireProjectWriter(
   projectId: string,
@@ -50,7 +51,7 @@ export async function requireProjectWriter(
     .eq("project_id", projectId)
     .eq("user_id", res.userId)
     .maybeSingle();
-  if (!data || data.project_role !== "member") {
+  if (!data || (data.project_role !== "member" && data.project_role !== "manager")) {
     return { ok: false, error: "Not authorized" };
   }
   return res;

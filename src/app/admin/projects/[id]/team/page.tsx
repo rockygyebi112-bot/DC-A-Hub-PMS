@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Users } from "lucide-react";
+import { Crown, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -10,14 +10,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AssignMemberForm } from "@/components/admin/forms/assign-member-form";
-import { InviteClientViewerForm } from "@/components/admin/forms/invite-client-viewer-form";
-import { InviteStaffMemberForm } from "@/components/admin/forms/invite-staff-member-form";
+import { AddTeamMemberForm } from "@/components/admin/forms/add-team-member-form";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
-import { removeProjectMember } from "@/lib/admin/actions/members";
+import {
+  removeProjectMember,
+  setProjectManager,
+  unsetProjectManager,
+} from "@/lib/admin/actions/members";
 import {
   getProject,
   listAssignableUsers,
@@ -38,6 +40,7 @@ export default async function ProjectTeamPage({
   ]);
   if (!projectMaybe) notFound();
   const project = projectMaybe;
+  const hasManager = members.some((m) => m.project_role === "manager");
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -47,37 +50,35 @@ export default async function ProjectTeamPage({
         backFallbackHref={`/admin/projects/${id}`}
         action={
           <div className="flex flex-wrap gap-2">
-            <AssignMemberForm
+            <AddTeamMemberForm
               projectId={id}
+              kind="staff"
+              hasManager={hasManager}
               candidates={staffCandidates.map((candidate) => ({
                 user_id: candidate.user_id,
                 full_name: candidate.full_name,
                 email: candidate.email,
                 role: candidate.role as "admin" | "staff" | "client",
               }))}
-              projectRole="member"
-              buttonLabel="Add existing staff"
             />
-            <AssignMemberForm
+            <AddTeamMemberForm
               projectId={id}
+              kind="client"
+              hasManager={hasManager}
               candidates={clientCandidates.map((candidate) => ({
                 user_id: candidate.user_id,
                 full_name: candidate.full_name,
                 email: candidate.email,
                 role: candidate.role as "admin" | "staff" | "client",
               }))}
-              projectRole="viewer"
-              buttonLabel="Add existing viewer"
             />
-            <InviteStaffMemberForm projectId={id} />
-            <InviteClientViewerForm projectId={id} />
           </div>
         }
       />
 
       <SectionCard
         title="Team access"
-        description="Staff get delivery access. Client viewers get read-only progress visibility."
+        description="Staff manage the workplan and upload documents. One staff person can be designated Project Manager. Clients get read-only progress visibility."
       >
         {members.length === 0 ? (
           <EmptyState
@@ -103,10 +104,20 @@ export default async function ProjectTeamPage({
                     "use server";
                     await removeProjectMember(id, member.id);
                   }
+                  async function promote() {
+                    "use server";
+                    await setProjectManager(id, { member_id: member.id });
+                  }
+                  async function demote() {
+                    "use server";
+                    await unsetProjectManager(id);
+                  }
 
                   const profile = member.profile;
                   const displayName = profile?.full_name ?? "Unknown user";
                   const email = profile?.email ?? "unknown@example.com";
+                  const isClient = member.project_role === "viewer";
+                  const isManager = member.project_role === "manager";
 
                   return (
                     <TableRow key={member.id} style={{ height: "var(--admin-row-h)" }}>
@@ -114,6 +125,12 @@ export default async function ProjectTeamPage({
                         <div className="flex items-center gap-2">
                           <UserAvatar email={email} name={displayName} size="sm" />
                           <span className="font-medium">{displayName}</span>
+                          {isManager && (
+                            <Crown
+                              className="size-3.5 text-amber-500"
+                              aria-label="Project Manager"
+                            />
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>{profile?.email ?? "-"}</TableCell>
@@ -126,11 +143,27 @@ export default async function ProjectTeamPage({
                         <StatusPill status={member.project_role} />
                       </TableCell>
                       <TableCell className="text-right">
-                        <form action={remove}>
-                          <Button type="submit" variant="ghost" size="sm">
-                            Remove
-                          </Button>
-                        </form>
+                        <div className="flex justify-end gap-1">
+                          {!isClient &&
+                            (isManager ? (
+                              <form action={demote}>
+                                <Button type="submit" variant="ghost" size="sm">
+                                  Remove as PM
+                                </Button>
+                              </form>
+                            ) : (
+                              <form action={promote}>
+                                <Button type="submit" variant="ghost" size="sm">
+                                  Make PM
+                                </Button>
+                              </form>
+                            ))}
+                          <form action={remove}>
+                            <Button type="submit" variant="ghost" size="sm">
+                              Remove
+                            </Button>
+                          </form>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

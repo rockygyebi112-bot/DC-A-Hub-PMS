@@ -4,9 +4,11 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, requireProjectReader } from "@/lib/auth/guards";
 import { validateUpload, sanitizeFileName } from "@/lib/uploads";
+import { dbErrorMessage } from "@/lib/db-errors";
+
+const PORTAL_NOTE_MAX = 5000;
 
 type ActionResult<T = undefined> =
   | { ok: true; data: T }
@@ -169,10 +171,10 @@ export async function unlockProjectDocuments(
  *
  *  Clients (project_viewer) need to be able to post chat-style updates and
  *  attach documents from the portal — same flow staff use in the workspace.
- *  Current RLS only lets project members write, so we bypass RLS via the
- *  admin client *after* manually checking `requireProjectReader`. The
- *  service-role write is logged as the caller (`actor_user_id`) and audited
- *  through `activity_log`, so admins still see exactly who posted what.
+ *  Migration 0025 added viewer-scoped INSERT policies on activity_proofs,
+ *  activity_log and the proofs storage bucket so we use the user-scoped
+ *  client — no service-role bypass. RLS enforces actor_user_id = auth.uid()
+ *  and uploaded_by = auth.uid().
  * ──────────────────────────────────────────────────────────────────── */
 async function resolveActivityProject(
   activityId: string,
@@ -192,8 +194,11 @@ export async function portalPostActivityUpdate(
   activityId: string,
   formData: FormData,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const note = String(formData.get("note") ?? "").trim();
-  if (!note) return { ok: false, error: "Write something first." };
+  const rawNote = String(formData.get("note") ?? "").trim();
+  if (!rawNote) return { ok: false, error: "Write something first." };
+  if (rawNote.length > PORTAL_NOTE_MAX) {
+    return { ok: false, error: `Keep updates under ${PORTAL_NOTE_MAX.toLocaleString()} characters.` };
+  }
 
   const ctx = await resolveActivityProject(activityId);
   if (!ctx) return { ok: false, error: "Activity not found" };
@@ -201,15 +206,18 @@ export async function portalPostActivityUpdate(
   const auth = await requireProjectReader(ctx.projectId);
   if (!auth.ok) return { ok: false, error: auth.error };
 
-  const admin = createAdminClient();
-  const { error } = await admin.from("activity_log").insert({
+  // RLS (migration 0025) now permits viewer-attributed inserts for the
+  // 'updated'/'proof_added' actions, so we use the user-scoped client rather
+  // than the service-role client.
+  const sb = await createClient();
+  const { error } = await sb.from("activity_log").insert({
     project_id: ctx.projectId,
     activity_id: activityId,
     actor_user_id: auth.userId,
     action: "updated",
-    meta: { note },
+    meta: { note: rawNote },
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
 
   revalidatePath(`/portal/projects/${ctx.projectId}/activities/${activityId}`);
   revalidatePath(`/workspace/projects/${ctx.projectId}/activities/${activityId}`);
@@ -241,29 +249,32 @@ export async function portalUploadActivityDocuments(
     if (!validation.ok) return { ok: false, error: validation.error };
   }
 
-  const admin = createAdminClient();
+  // RLS (migration 0025) allows viewers to insert their own activity_proofs
+  // rows and write into the proofs bucket for projects they can access.
+  const sb = await createClient();
   for (const file of files) {
     const safeName = sanitizeFileName(file.name);
     const path = `projects/${ctx.projectId}/activities/${activityId}/${crypto.randomUUID()}-${safeName}`;
-    const { error: uploadError } = await admin.storage
+    const { error: uploadError } = await sb.storage
       .from("proofs")
       .upload(path, file, {
         contentType: file.type || "application/octet-stream",
       });
     if (uploadError) return { ok: false, error: uploadError.message };
 
-    const { error: insertError } = await admin.from("activity_proofs").insert({
+    const { error: insertError } = await sb.from("activity_proofs").insert({
       activity_id: activityId,
       kind: "file",
       file_path: path,
       file_name: safeName,
       mime_type: file.type || null,
       size_bytes: file.size,
+      uploaded_by: auth.userId,
     });
-    if (insertError) return { ok: false, error: insertError.message };
+    if (insertError) return { ok: false, error: dbErrorMessage(insertError) };
   }
 
-  await admin.from("activity_log").insert({
+  await sb.from("activity_log").insert({
     project_id: ctx.projectId,
     activity_id: activityId,
     actor_user_id: auth.userId,

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   CheckCircle2,
   Eye,
@@ -11,8 +12,15 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { ActivityStatus } from "@/components/workspace/status-badge";
 import { ProjectProgress } from "@/components/workspace/project-progress";
-import { WorkplanImportForm } from "@/components/workspace/workplan-import-form";
 import type { WorkspacePhase } from "@/lib/workspace/queries";
+
+// Code-split the import form — only rendered for empty workplans, so most
+// admin project views don't need its JS in the initial bundle.
+const WorkplanImportForm = dynamic(() =>
+  import("@/components/workspace/workplan-import-form").then(
+    (mod) => mod.WorkplanImportForm,
+  ),
+);
 
 type Props = {
   projectId: string;

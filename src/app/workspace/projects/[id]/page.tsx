@@ -1,4 +1,5 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { notFound, redirect } from "next/navigation";
 import {
   CalendarDays,
@@ -32,7 +33,15 @@ import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { ActivityStatus } from "@/components/workspace/status-badge";
 import { ProjectProgress } from "@/components/workspace/project-progress";
-import { WorkplanImportForm } from "@/components/workspace/workplan-import-form";
+// Code-split: the workplan import form is a 12 KB client island that's only
+// rendered when a project has no phases yet, so most page views never need
+// the bundle. `next/dynamic` keeps SSR on (no flash-of-empty), but pushes
+// the JS into its own chunk so initial navigation doesn't pay for it.
+const WorkplanImportForm = dynamic(() =>
+  import("@/components/workspace/workplan-import-form").then(
+    (mod) => mod.WorkplanImportForm,
+  ),
+);
 import { DeleteConfirm } from "@/components/workspace/delete-confirm";
 import {
   createActivity,

@@ -1,12 +1,10 @@
-import * as XLSX from "xlsx";
 import { requireAuth } from "@/lib/auth/guards";
 
 /**
  * Workplan template download.
  *
  * Returns an XLSX file with the exact column headers that
- * `importWorkplanSheet` in `@/lib/workspace/actions` recognises, plus a few
- * example rows that demonstrate the supported patterns:
+ * `importWorkplanSheet` in `@/lib/workspace/actions` recognises.
  *
  *  - `Phase` may be left blank on subsequent rows; the importer carries
  *    the most recent value forward, so each phase only needs to be named
@@ -22,19 +20,18 @@ import { requireAuth } from "@/lib/auth/guards";
  *
  * The sheet is named "Checklist" to match the importer's preferred sheet.
  */
-export async function GET() {
-  // Gate behind auth so we don't leak the template to anonymous users; this
-  // matches the rest of the workspace surface where only signed-in members
-  // can see or import workplans.
-  const auth = await requireAuth();
-  if (!auth.ok) {
-    return new Response("Unauthorized", { status: 401 });
-  }
 
-  // Header uses "Phase" to match the in-app terminology. The importer also
-  // accepts the legacy "Category" header for back-compat with older sheets.
-  // Column order mirrors the in-app activity form so what an admin sees on
-  // the activity page lines up 1:1 with what they edit in the spreadsheet.
+// Module-level cache of the generated buffer. The template is deterministic
+// (no per-user data), so we build it once per server instance and reuse it
+// on every download. xlsx is loaded lazily on first request so cold starts
+// for unrelated routes in the same bundle don't pay the parse cost.
+let cachedBuffer: Uint8Array | null = null;
+
+async function buildTemplateBuffer(): Promise<Uint8Array> {
+  if (cachedBuffer) return cachedBuffer;
+
+  const XLSX = await import("xlsx");
+
   const headerRow = [
     "Phase",
     "Activity",
@@ -52,18 +49,16 @@ export async function GET() {
   const aoa: string[][] = [headerRow];
 
   const sheet = XLSX.utils.aoa_to_sheet(aoa);
-  // Reasonable column widths so the file opens with all headers visible.
   sheet["!cols"] = [
-    { wch: 18 }, // Phase
-    { wch: 32 }, // Activity
-    { wch: 36 }, // Deliverable
-    { wch: 28 }, // Responsible
-    { wch: 14 }, // Start Date
-    { wch: 14 }, // End Date
-    { wch: 14 }, // Status
-    { wch: 36 }, // Notes/Dependencies
+    { wch: 18 },
+    { wch: 32 },
+    { wch: 36 },
+    { wch: 28 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 36 },
   ];
-  // Freeze the header row for easier editing.
   sheet["!freeze"] = { xSplit: 0, ySplit: 1 } as unknown as never;
 
   const workbook = XLSX.utils.book_new();
@@ -74,14 +69,33 @@ export async function GET() {
     bookType: "xlsx",
   }) as Buffer;
 
-  return new Response(new Uint8Array(buffer), {
+  cachedBuffer = new Uint8Array(buffer);
+  return cachedBuffer;
+}
+
+export async function GET() {
+  // Gate behind auth so we don't leak the template to anonymous users; this
+  // matches the rest of the workspace surface where only signed-in members
+  // can see or import workplans.
+  const auth = await requireAuth();
+  if (!auth.ok) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const body = await buildTemplateBuffer();
+
+  return new Response(body, {
     status: 200,
     headers: {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition":
         'attachment; filename="workplan-template.xlsx"',
-      "Cache-Control": "private, max-age=0, must-revalidate",
+      // Private so a shared CDN can't bypass the auth gate above. max-age=300
+      // lets the browser reuse a recent download without a round-trip, which
+      // is the realistic re-download pattern (admin downloads template, hits
+      // refresh, downloads again).
+      "Cache-Control": "private, max-age=300",
     },
   });
 }

@@ -15,6 +15,7 @@ import {
 } from "@/lib/admin/actions/projects";
 import { getProject, listClients } from "@/lib/admin/queries";
 import { listProjectPhases } from "@/lib/workspace/queries";
+import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 
 export default async function EditProjectPage({
   params,
@@ -42,6 +43,7 @@ export default async function EditProjectPage({
 
   return (
     <div className="max-w-6xl space-y-6">
+      <SetBreadcrumbLabels labels={{ [id]: project.name }} />
       <PageHeader
         title={`Edit ${project.name}`}
         subtitle={`${project.code} / ${project.client?.name ?? "No client"}`}

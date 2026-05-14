@@ -10,6 +10,7 @@ import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { ProjectProgress } from "@/components/workspace/project-progress";
 import { getClient, listClientProjects } from "@/lib/admin/queries";
+import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 
 export default async function EditClientPage({
   params,
@@ -24,6 +25,7 @@ export default async function EditClientPage({
 
   return (
     <div className="max-w-5xl space-y-6">
+      <SetBreadcrumbLabels labels={{ [id]: client.name }} />
       <PageHeader
         title={client.name}
         subtitle={

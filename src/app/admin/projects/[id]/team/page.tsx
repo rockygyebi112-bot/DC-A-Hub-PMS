@@ -25,6 +25,7 @@ import {
   listAssignableUsers,
   listProjectMembers,
 } from "@/lib/admin/queries";
+import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 
 export default async function ProjectTeamPage({
   params,
@@ -44,6 +45,7 @@ export default async function ProjectTeamPage({
 
   return (
     <div className="max-w-5xl space-y-6">
+      <SetBreadcrumbLabels labels={{ [id]: project.name }} />
       <PageHeader
         title={`${project.name} team`}
         subtitle={`${members.length} member${members.length === 1 ? "" : "s"} with project access`}

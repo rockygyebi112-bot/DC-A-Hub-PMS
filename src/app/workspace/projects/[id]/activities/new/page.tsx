@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { createActivity } from "@/lib/workspace/actions";
 import { getWorkspaceProject, listProjectPhases } from "@/lib/workspace/queries";
+import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 
 export default async function NewWorkspaceActivityPage({
   params,
@@ -28,6 +29,7 @@ export default async function NewWorkspaceActivityPage({
 
   return (
     <div className="mx-auto w-full max-w-3xl">
+      <SetBreadcrumbLabels labels={{ [id]: project.name }} />
       <PageHeader
         title="New activity"
         subtitle={`Add an activity to ${project.name}.`}

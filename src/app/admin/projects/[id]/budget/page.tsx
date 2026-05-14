@@ -14,6 +14,7 @@ import { CategoryTable } from "@/components/admin/budget/category-table";
 import { ExpenseTable } from "@/components/admin/budget/expense-table";
 import { ProjectTabs } from "@/components/admin/project-detail/parts";
 import { getProject } from "@/lib/admin/queries";
+import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 import {
   getBudgetSummary,
   getProjectBudget,
@@ -41,6 +42,7 @@ export default async function ProjectBudgetPage({
 
   return (
     <div className="space-y-6">
+      <SetBreadcrumbLabels labels={{ [id]: project.name }} />
       {/* Header */}
       <div className="space-y-4">
         <Link

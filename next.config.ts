@@ -36,6 +36,14 @@ const securityHeaders = [
     value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
   },
   { key: "X-DNS-Prefetch-Control", value: "off" },
+  // M-14 — extra hardening headers. COEP=require-corp is intentionally NOT
+  // set globally because it would block Supabase storage URLs without the
+  // matching CORP header. Add it per-route once we measure compatibility.
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+  { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+  { key: "X-Download-Options", value: "noopen" },
+  { key: "Origin-Agent-Cluster", value: "?1" },
 ];
 
 const nextConfig: NextConfig = {

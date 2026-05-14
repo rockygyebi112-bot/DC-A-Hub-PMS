@@ -18,6 +18,7 @@ export function EmailForm({
 }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [pending, startTransition] = useTransition();
 
   function submit(e: React.FormEvent) {
@@ -31,8 +32,15 @@ export function EmailForm({
       toast.error("That's already your current email");
       return;
     }
+    if (!currentPassword) {
+      toast.error("Enter your current password to confirm");
+      return;
+    }
     startTransition(async () => {
-      const res = await updateMyEmail({ email: next });
+      const res = await updateMyEmail({
+        email: next,
+        current_password: currentPassword,
+      });
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -41,6 +49,7 @@ export function EmailForm({
         "Confirmation links sent. Check both your current and new inbox to finish the change.",
       );
       setEmail("");
+      setCurrentPassword("");
       router.refresh();
     });
   }
@@ -71,6 +80,20 @@ export function EmailForm({
         <p className="text-xs text-muted-foreground">
           We&apos;ll email confirmation links to both your current and new
           address. The change only takes effect once both are confirmed.
+        </p>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="current_password_for_email">Current password</Label>
+        <Input
+          id="current_password_for_email"
+          type="password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          autoComplete="current-password"
+          required
+        />
+        <p className="text-xs text-muted-foreground">
+          We re-verify your password before mailing change links.
         </p>
       </div>
       <Button type="submit" disabled={pending}>

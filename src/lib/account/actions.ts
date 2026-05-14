@@ -88,6 +88,22 @@ export async function updateMyEmail(raw: unknown): Promise<ActionResult> {
     return { ok: true };
   }
 
+  // H-12: re-auth with the current password before mailing change links.
+  // Mirrors updateMyPassword — a throw-away client so the real session is
+  // untouched even on a successful verify.
+  const verifier = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+  const { error: verifyError } = await verifier.auth.signInWithPassword({
+    email: currentEmail,
+    password: parsed.data.current_password,
+  });
+  if (verifyError) {
+    return { ok: false, error: "Current password is incorrect" };
+  }
+
   const admin = createAdminClient();
   const appUrl = getAppUrl();
   const redirectTo = `${appUrl}/auth/callback?next=/account`;

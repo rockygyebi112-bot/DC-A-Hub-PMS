@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth/guards";
+import { dbErrorMessage } from "@/lib/db-errors";
 import { getAppUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email/send";
 import { renderInviteEmail } from "@/lib/email/templates/invite";
@@ -217,7 +218,7 @@ export async function setUserRole(
     .from("profiles")
     .update({ role: parsed.data.role })
     .eq("id", profileId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidatePath("/admin/users");
   revalidatePath(`/admin/users/${profileId}`);
   revalidateTag("admin-layout", "max");

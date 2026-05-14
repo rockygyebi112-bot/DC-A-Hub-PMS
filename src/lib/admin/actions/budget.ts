@@ -154,7 +154,7 @@ async function uploadReceipt(
       upsert: false,
     });
   if (error) throw error;
-  return { path, name: file.fileName };
+  return { path, name: safeName };
 }
 
 async function deleteReceipt(path: string | null | undefined) {

@@ -40,7 +40,7 @@ export default async function PortalHome() {
             <Link
               key={project.id}
               href={`/portal/projects/${project.id}`}
-              className="group rounded-xl border bg-card p-5 shadow-sm transition-all hover-lift"
+              className="group rounded-lg border border-border bg-card p-4 transition-colors hover:border-foreground/10 focus-ring"
             >
               <div className="flex items-start gap-3">
                 <ProjectIcon name={project.name} seed={project.id} />

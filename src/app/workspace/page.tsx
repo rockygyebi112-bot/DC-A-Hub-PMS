@@ -46,19 +46,20 @@ export default async function WorkspaceHome({
   const sp = await searchParams;
   const view = sp.view ?? "list";
   const statusFilter = sp.status ?? "all";
-  const sort = sp.sort ?? "created";
+  const sort = (sp.sort as "name" | "deadline" | "status" | "created" | undefined) ?? "created";
 
-  const [profile, allProjects] = await Promise.all([
+  // Two parallel queries:
+  //  - `allProjects` powers the KPI counts at the top of the page and the
+  //    "next deadline" callout, so it must be unfiltered.
+  //  - `projects` is what the list/grid renders; the DB does the sort and
+  //    status filter so we don't ship full rows to JS just to discard them.
+  // When no status filter is active, both reuse the same in-render cache
+  // entry — the only extra cost is the sort variant.
+  const [profile, allProjects, projects] = await Promise.all([
     getCurrentProfile(),
-    listWorkspaceProjects(),
+    listWorkspaceProjects({ sort: "created" }),
+    listWorkspaceProjects({ status: statusFilter, sort }),
   ]);
-
-  let projects = allProjects;
-  if (statusFilter !== "all") projects = projects.filter((p) => p.status === statusFilter);
-  if (sort === "name") projects = [...projects].sort((a, b) => a.name.localeCompare(b.name));
-  else if (sort === "deadline")
-    projects = [...projects].sort((a, b) => (a.end_date ?? "9999").localeCompare(b.end_date ?? "9999"));
-  else if (sort === "status") projects = [...projects].sort((a, b) => a.status.localeCompare(b.status));
 
   const isAdmin = profile?.role === "admin";
   const activeCount = allProjects.filter((p) => p.status === "active").length;

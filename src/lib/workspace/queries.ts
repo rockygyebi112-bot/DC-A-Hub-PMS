@@ -61,66 +61,107 @@ export type WorkspaceProof = {
   signedUrl: string | null;
 };
 
-export const listWorkspaceProjects = cache(async (): Promise<WorkspaceProject[]> => {
-  const sb = await createClient();
-  // Single PostgREST query with nested selects pulls projects + their
-  // phases + activity statuses in one round-trip. This replaces the prior
-  // three serial fetches (projects -> phases -> activities) and is the
-  // dominant cost on every workspace navigation.
-  if (process.env.NODE_ENV !== "production") {
-    console.log("[query] listWorkspaceProjects -> projects (joined)");
-  }
-  const { data: projects, error } = await sb
-    .from("projects")
-    .select(
-      `id, name, code, status, start_date, end_date, description,
-       client:clients(id, name, logo_url),
-       phases(id, activities(id, phase_id, status))`,
-    )
-    .is("archived_at", null)
-    .order("name", { ascending: true });
-  throwIfError(error);
-  if (!projects?.length) return [];
+export type ListWorkspaceProjectsOptions = {
+  /** Filter by project status. `"all"` (or omitted) returns every status. */
+  status?: string;
+  /** Sort key. Falls back to alphabetical name order if omitted. */
+  sort?: "name" | "deadline" | "status" | "created";
+  /** Hard cap on rows returned. Omit for no limit (legacy behaviour). */
+  limit?: number;
+};
 
-  type JoinedProject = {
-    id: string;
-    name: string;
-    code: string;
-    status: string;
-    start_date: string | null;
-    end_date: string | null;
-    description: string | null;
-    client:
-      | { id: string; name: string; logo_url: string | null }
-      | { id: string; name: string; logo_url: string | null }[]
-      | null;
-    phases:
-      | { id: string; activities: { id: string; phase_id: string; status: string }[] | null }[]
-      | null;
-  };
+type ProjectRow = {
+  id: string;
+  name: string;
+  code: string;
+  status: string;
+  start_date: string | null;
+  end_date: string | null;
+  description: string | null;
+  created_at?: string | null;
+  client:
+    | { id: string; name: string; logo_url: string | null }
+    | { id: string; name: string; logo_url: string | null }[]
+    | null;
+};
 
-  return (projects as unknown as JoinedProject[]).map((project) => {
-    let done = 0;
-    let total = 0;
-    for (const phase of project.phases ?? []) {
-      for (const activity of phase.activities ?? []) {
-        total += 1;
-        if (activity.status === "done") done += 1;
-      }
+type CountsRow = {
+  project_id: string;
+  total_count: number | null;
+  done_count: number | null;
+};
+
+export const listWorkspaceProjects = cache(
+  async (options: ListWorkspaceProjectsOptions = {}): Promise<WorkspaceProject[]> => {
+    const sb = await createClient();
+
+    // Two cheap queries instead of one big nested join. The previous version
+    // embedded `phases(id, activities(id, phase_id, status))` to compute a
+    // single "X / Y done" label per project, which transferred every activity
+    // row in the org over the wire. The `project_activity_counts` view does
+    // the same arithmetic in Postgres and returns one scalar row per project.
+    let projectsQuery = sb
+      .from("projects")
+      .select(
+        "id, name, code, status, start_date, end_date, description, created_at, client:clients(id, name, logo_url)",
+      )
+      .is("archived_at", null);
+
+    if (options.status && options.status !== "all") {
+      projectsQuery = projectsQuery.eq("status", options.status);
     }
-    const {
-      phases: _phases,
-      client,
-      ...rest
-    } = project;
-    return {
-      ...rest,
-      client: Array.isArray(client) ? client[0] ?? null : client,
-      doneCount: done,
-      totalCount: total,
-    };
-  });
-});
+
+    // Push sort into the DB so we don't fetch then re-sort in JS.
+    switch (options.sort) {
+      case "deadline":
+        projectsQuery = projectsQuery.order("end_date", {
+          ascending: true,
+          nullsFirst: false,
+        });
+        break;
+      case "status":
+        projectsQuery = projectsQuery.order("status", { ascending: true });
+        break;
+      case "created":
+        projectsQuery = projectsQuery.order("created_at", { ascending: false });
+        break;
+      case "name":
+      default:
+        projectsQuery = projectsQuery.order("name", { ascending: true });
+    }
+
+    if (options.limit && options.limit > 0) {
+      projectsQuery = projectsQuery.range(0, options.limit - 1);
+    }
+
+    const { data: projects, error } = await projectsQuery;
+    throwIfError(error);
+    if (!projects?.length) return [];
+
+    const projectIds = (projects as ProjectRow[]).map((p) => p.id);
+    const { data: countsRaw, error: countsError } = await sb
+      .from("project_activity_counts")
+      .select("project_id, total_count, done_count")
+      .in("project_id", projectIds);
+    throwIfError(countsError);
+
+    const countsById = new Map<string, CountsRow>();
+    for (const row of (countsRaw ?? []) as CountsRow[]) {
+      countsById.set(row.project_id, row);
+    }
+
+    return (projects as ProjectRow[]).map((project) => {
+      const { client, created_at: _created, ...rest } = project;
+      const counts = countsById.get(project.id);
+      return {
+        ...rest,
+        client: Array.isArray(client) ? client[0] ?? null : client,
+        doneCount: Number(counts?.done_count ?? 0),
+        totalCount: Number(counts?.total_count ?? 0),
+      };
+    });
+  },
+);
 
 export const getWorkspaceProject = cache(async (
   projectId: string,
@@ -141,33 +182,19 @@ export const getWorkspaceProject = cache(async (
   throwIfError(error);
   if (!project) return null;
 
-  // Pull activities + their parent phase via an embedded resource so we can
-  // filter by `phases.project_id` in a single round-trip instead of fetching
-  // phases first.
-  const { data: activitiesRaw } = await sb
-    .from("activities")
-    .select("id, status, phases!inner(project_id)")
-    .eq("phases.project_id", projectId);
-  const activities = (activitiesRaw ?? []) as Array<{
-    id: string;
-    status: string;
-    phases: { project_id: string } | null;
-  }>;
-
-  let done = 0;
-  let total = 0;
-  for (const activity of activities) {
-    if (!activity.phases) continue;
-    total += 1;
-    if (activity.status === "done") done += 1;
-  }
+  // One scalar row from the rollup view instead of every activity row.
+  const { data: counts } = await sb
+    .from("project_activity_counts")
+    .select("total_count, done_count")
+    .eq("project_id", projectId)
+    .maybeSingle();
 
   const { archived_at: _archivedAt, ...rest } = project;
   return {
     ...rest,
     client: Array.isArray(project.client) ? project.client[0] ?? null : project.client,
-    doneCount: done,
-    totalCount: total,
+    doneCount: Number(counts?.done_count ?? 0),
+    totalCount: Number(counts?.total_count ?? 0),
   };
 });
 

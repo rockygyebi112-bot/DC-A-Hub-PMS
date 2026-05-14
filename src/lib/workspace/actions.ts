@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import * as XLSX from "xlsx";
 import { headers } from "next/headers";
 import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
@@ -136,6 +135,10 @@ export async function importWorkplanSheet(
   }
 
   const bytes = await file.arrayBuffer();
+  // Lazy-import xlsx so action invocations that don't touch Excel (the vast
+  // majority — every other action in this file) don't pay the ~300 KB
+  // parse/load cost on cold start.
+  const XLSX = await import("xlsx");
   const workbook = XLSX.read(bytes, { type: "array", cellDates: true });
   const sheetName =
     workbook.SheetNames.find((name) => name.toLowerCase() === "checklist") ??

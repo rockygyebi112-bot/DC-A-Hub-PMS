@@ -6,6 +6,8 @@
  * - Pins the accepted MIME types for each surface. Anything outside the
  *   allowlist (HTML, SVG, executables, etc.) is rejected so signed URLs
  *   cannot be used to serve hostile content from the Supabase origin.
+ * - Rejects filenames that could confuse downstream systems (control
+ *   characters, bidi overrides, Windows reserved device names, etc.).
  */
 
 export const MAX_PROOF_BYTES = 25 * 1024 * 1024; // 25 MB
@@ -75,11 +77,53 @@ export function validateUpload(
       error: `Unsupported ${cfg.label} type: ${mime || "unknown"}`,
     };
   }
-  // Disallow filenames that could confuse downstream systems.
-  if (/[\u0000-\u001F]/.test(input.fileName)) {
-    return { ok: false, error: `Invalid ${cfg.label} filename` };
+  // Disallow filenames that could confuse downstream systems (H-8).
+  const fileNameError = checkUnsafeFileName(input.fileName);
+  if (fileNameError) {
+    return { ok: false, error: `Invalid ${cfg.label} filename: ${fileNameError}` };
   }
   return { ok: true };
+}
+
+const WIN_RESERVED_STEMS = new Set([
+  "con", "prn", "nul", "aux",
+  "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
+  "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+]);
+
+/**
+ * Return a short reason string if the filename is unsafe, or null if OK.
+ *
+ * Catches: control chars; bidi-override and isolate codepoints (which can
+ * disguise the visible filename in OS shells / mail UIs); trailing dots
+ * (Windows strips them, leaving a different file); leading dashes (CLI
+ * argument injection); Windows reserved device names; empty stem.
+ */
+export function checkUnsafeFileName(name: string): string | null {
+  if (!name) return "empty";
+
+  for (let i = 0; i < name.length; i++) {
+    const code = name.charCodeAt(i);
+    if (code <= 0x1f) return "control character";
+    // Bidi overrides: LRM/RLM (200E-200F), LRE/RLE/PDF/LRO/RLO (202A-202E),
+    // LRI/RLI/FSI/PDI (2066-2069). Any of these can flip the displayed
+    // filename so users open something they didn't expect.
+    if (
+      (code >= 0x200e && code <= 0x200f) ||
+      (code >= 0x202a && code <= 0x202e) ||
+      (code >= 0x2066 && code <= 0x2069)
+    ) {
+      return "bidirectional override";
+    }
+  }
+
+  if (name.startsWith("-")) return "leading dash";
+  if (name.endsWith(".") || name.endsWith(" ")) return "trailing dot or space";
+
+  const stem = name.split(".")[0]?.toLowerCase() ?? "";
+  if (WIN_RESERVED_STEMS.has(stem)) return "reserved name";
+
+  return null;
 }
 
 /** Strip path separators and other risky characters from a user-supplied name. */

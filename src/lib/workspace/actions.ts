@@ -548,7 +548,7 @@ export async function uploadProofs(activityId: string, formData: FormData): Prom
       activity_id: activityId,
       kind: "file",
       file_path: path,
-      file_name: file.name,
+      file_name: safeName,
       mime_type: file.type || null,
       size_bytes: file.size,
       caption: formValue(formData, "caption") || null,

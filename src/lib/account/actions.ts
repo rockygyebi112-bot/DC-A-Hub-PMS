@@ -261,7 +261,10 @@ export async function uploadMyAvatar(formData: FormData): Promise<ActionResult> 
     .upload(objectPath, arrayBuffer, {
       contentType: file.type,
       upsert: true,
-      cacheControl: "3600",
+      // Short cache: predictable path (userId/avatar.ext) means a privacy
+      // bug or a deactivated user's old image can otherwise linger in CDN
+      // caches for an hour (M-13). 5 minutes still saves repeat loads.
+      cacheControl: "300",
       metadata: { original_name: safeName },
     });
   if (uploadError) return { ok: false, error: GENERIC_ERROR };
@@ -298,11 +301,9 @@ export async function removeMyAvatar(): Promise<ActionResult> {
     .from("avatars")
     .remove(exts.map((e) => `${auth.userId}/avatar.${e}`));
 
-  // Profile self-update can't change role/email/is_active by RLS; avatar_url
-  // is allowed. Use service role to also clear when self-update is locked
-  // by other constraints.
-  const adminSb = createAdminClient();
-  const { error } = await adminSb
+  // Profile self-update is allowed by RLS for avatar_url (M-5: no longer
+  // routes through service role).
+  const { error } = await sb
     .from("profiles")
     .update({ avatar_url: null })
     .eq("user_id", auth.userId);

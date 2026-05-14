@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { getSessionUser } from "./session";
 import type { AppRole } from "./require-role";
 
 export type GuardResult =
@@ -11,23 +12,16 @@ export type GuardResult =
  * Returns the authenticated user's id and role, or an error result.
  * All server actions MUST start with an identity check — we never trust
  * the caller to be who the UI says they are.
+ *
+ * Goes through `getSessionUser()` so layout + page + this guard share a
+ * single Supabase round-trip per request. Previously each call paid for
+ * its own `auth.getUser()` + `profiles` select round-trip.
  */
 export async function requireAuth(): Promise<GuardResult> {
-  const sb = await createClient();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
+  const user = await getSessionUser();
   if (!user) return { ok: false, error: "Not authenticated" };
-
-  const { data: profile, error } = await sb
-    .from("profiles")
-    .select("role, is_active")
-    .eq("user_id", user.id)
-    .single();
-  if (error || !profile) return { ok: false, error: "Profile not found" };
-  if (profile.is_active === false)
-    return { ok: false, error: "Account disabled" };
-  return { ok: true, userId: user.id, role: profile.role as AppRole };
+  if (!user.isActive) return { ok: false, error: "Account disabled" };
+  return { ok: true, userId: user.userId, role: user.role };
 }
 
 /** Require the caller to be an admin. */

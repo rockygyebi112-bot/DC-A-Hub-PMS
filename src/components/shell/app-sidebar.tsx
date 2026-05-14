@@ -131,7 +131,7 @@ export function AppSidebar({
     <TooltipProvider delay={100}>
     <aside
       className={cn(
-        "sidebar-navy sticky top-0 hidden h-screen shrink-0 border-r border-[hsl(225_35%_24%)] transition-[width] duration-200 md:flex md:flex-col",
+        "sidebar-navy sticky top-0 hidden h-screen shrink-0 border-r border-sidebar-border transition-[width] duration-200 md:flex md:flex-col",
         collapsed ? "w-16" : "w-[var(--sidebar-width,240px)]",
       )}
     >

@@ -55,16 +55,16 @@ export function ErrorFallback({
 
   return (
     <div className="mx-auto max-w-xl px-6 py-16" role="alert" aria-live="assertive">
-      <div className="rounded-2xl border bg-card p-8 shadow-card">
+      <div className="rounded-lg border border-border bg-card p-6">
         <div className="flex items-start gap-3">
           <div
-            className="rounded-lg bg-destructive/10 p-2 text-destructive"
+            className="rounded-md bg-destructive/10 p-2 text-destructive"
             aria-hidden
           >
             <AlertTriangle className="size-5" />
           </div>
           <div className="flex-1">
-            <h1 className="font-heading text-lg font-bold tracking-tight text-foreground">
+            <h1 className="font-heading text-base font-semibold tracking-tight text-foreground">
               {title}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">{description}</p>

@@ -4,6 +4,9 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getAppUrl } from "@/lib/app-url";
+import { sendEmail } from "@/lib/email/send";
+import { renderInviteEmail } from "@/lib/email/templates/invite";
+import { renderPasswordResetEmail } from "@/lib/email/templates/password-reset";
 import {
   inviteUserSchema,
   setUserRoleSchema,
@@ -45,28 +48,54 @@ export async function inviteUser(
   if (!callerId) return { ok: false, error: "Not authorized" };
 
   const admin = createAdminClient();
-  const redirectTo = `${getAppUrl()}/auth/callback?next=/accept-invite`;
-  const { data: invite, error: inviteErr } =
-    await admin.auth.admin.inviteUserByEmail(parsed.data.email, {
-      redirectTo,
-    });
+  const appUrl = getAppUrl();
 
+  // Try to generate an invite link first. This creates the auth.users row if
+  // it doesn't exist and returns a hashed token we can deliver ourselves via
+  // Resend. If the user already exists, generateLink errors and we fall back
+  // to a password recovery link so the existing user can set/reset access.
   let delivery: InviteDelivery = "invite_sent";
-  if (inviteErr) {
-    if (!inviteErr.message.toLowerCase().includes("already")) {
-      return { ok: false, error: inviteErr.message };
+  let userId: string | undefined;
+  let hashedToken: string | undefined;
+
+  const inviteLink = await admin.auth.admin.generateLink({
+    type: "invite",
+    email: parsed.data.email,
+    options: {
+      redirectTo: `${appUrl}/auth/callback?next=/accept-invite`,
+      data: { full_name: parsed.data.full_name ?? null },
+    },
+  });
+
+  if (inviteLink.error) {
+    const msg = inviteLink.error.message.toLowerCase();
+    const alreadyExists =
+      msg.includes("already") ||
+      msg.includes("registered") ||
+      msg.includes("exists");
+    if (!alreadyExists) {
+      return { ok: false, error: inviteLink.error.message };
     }
     delivery = "password_setup_sent";
+    const recoveryLink = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email: parsed.data.email,
+      options: {
+        redirectTo: `${appUrl}/auth/callback?next=/reset-password`,
+      },
+    });
+    if (recoveryLink.error) {
+      return { ok: false, error: recoveryLink.error.message };
+    }
+    userId = recoveryLink.data.user?.id;
+    hashedToken = recoveryLink.data.properties?.hashed_token;
+  } else {
+    userId = inviteLink.data.user?.id;
+    hashedToken = inviteLink.data.properties?.hashed_token;
   }
 
-  let userId = invite?.user?.id;
-  if (!userId) {
-    const { data: list } = await admin.auth.admin.listUsers();
-    const email = parsed.data.email.toLowerCase();
-    userId = list.users.find((u) => u.email?.toLowerCase() === email)?.id;
-    if (!userId) {
-      return { ok: false, error: "Could not resolve the invited user id" };
-    }
+  if (!userId || !hashedToken) {
+    return { ok: false, error: "Could not generate invitation link" };
   }
 
   const { data: profile, error: profileErr } = await admin
@@ -84,16 +113,38 @@ export async function inviteUser(
     .single();
   if (profileErr) return { ok: false, error: profileErr.message };
 
-  if (delivery === "password_setup_sent") {
-    const sb = await createClient();
-    const { error: resetErr } = await sb.auth.resetPasswordForEmail(
-      parsed.data.email,
-      {
-        redirectTo: `${getAppUrl()}/auth/callback?next=/reset-password`,
-      },
-    );
-    if (resetErr) return { ok: false, error: resetErr.message };
-  }
+  // Construct the link pointing at our stateless `/auth/confirm` route, which
+  // calls supabase.auth.verifyOtp with the hashed token and then redirects.
+  const params = new URLSearchParams({
+    token_hash: hashedToken,
+    type: delivery === "invite_sent" ? "invite" : "recovery",
+    next: delivery === "invite_sent" ? "/accept-invite" : "/reset-password",
+  });
+  const actionUrl = `${appUrl}/auth/confirm?${params.toString()}`;
+
+  const tpl =
+    delivery === "invite_sent"
+      ? renderInviteEmail({
+          inviteUrl: actionUrl,
+          recipientName: parsed.data.full_name ?? undefined,
+        })
+      : renderPasswordResetEmail({ resetUrl: actionUrl, isInitialSetup: true });
+
+  const sendResult = await sendEmail({
+    to: parsed.data.email,
+    subject: tpl.subject,
+    html: tpl.html,
+    text: tpl.text,
+    category: delivery === "invite_sent" ? "invite" : "password_reset",
+    // Per-user idempotency keyed on user id; the 24h window means a re-invite
+    // after a day reuses a fresh key naturally.
+    idempotencyKey:
+      delivery === "invite_sent"
+        ? `invite/${userId}`
+        : `password-setup/${userId}/${Date.now()}`,
+    extraTags: [{ name: "delivery", value: delivery }],
+  });
+  if (!sendResult.ok) return { ok: false, error: sendResult.error };
 
   revalidatePath("/admin/users");
   // KPI count for total users is part of the cached admin layout payload.

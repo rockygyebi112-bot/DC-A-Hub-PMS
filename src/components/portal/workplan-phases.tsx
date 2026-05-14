@@ -14,7 +14,8 @@ type Activity = {
   name: string;
   status: ActivityStatusKey;
   planned_date: string | null;
-  responsible: string | null;
+  // `responsible` (per-task assignee) is intentionally not part of the
+  // portal type — task assignment is internal DC&A delivery info.
   proofCount: number;
 };
 

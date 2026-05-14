@@ -90,6 +90,23 @@ export default async function WorkspaceActivityPage({
     await updateActivity(activityId, fd);
   }
 
+  // Undo "mark complete". Status drops back to in_progress and the
+  // completed_date is cleared so the activity no longer reads as done.
+  async function reopen() {
+    "use server";
+    const fd = new FormData();
+    fd.set("phase_id", activity.phase_id);
+    fd.set("name", activity.name);
+    fd.set("status", "in_progress");
+    fd.set("deliverable", activity.deliverable ?? "");
+    fd.set("responsible", activity.responsible ?? "");
+    fd.set("planned_date", activity.planned_date ?? "");
+    fd.set("completed_date", "");
+    fd.set("description", activity.description ?? "");
+    fd.set("narrative_note", activity.narrative_note ?? "");
+    await updateActivity(activityId, fd);
+  }
+
   // Free-text update posted from the composer. We persist as an
   // `activity_log` row with action="updated" + meta.note so it shows up in
   // both the Updates feed and the lifecycle Timeline without needing a new
@@ -152,6 +169,7 @@ export default async function WorkspaceActivityPage({
       phases={phases.map((p) => ({ id: p.id, name: p.name }))}
       save={save}
       markComplete={markComplete}
+      reopen={reopen}
       deleteAction={async () => {
         "use server";
         return deleteActivity(activityId);

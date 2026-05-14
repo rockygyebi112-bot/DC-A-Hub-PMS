@@ -130,7 +130,7 @@
   --chart-3: hsl(225 80% 16%);
   --chart-4: hsl(38 92% 55%);
   --chart-5: hsl(160 60% 42%);
-  --radius: 0.875rem;
+  --radius: 0.5rem;
   --sidebar: hsl(225 80% 16%); /* deep navy */
   --sidebar-foreground: hsl(0 0% 100%);
   --sidebar-primary: hsl(221 83% 53%);
@@ -148,13 +148,13 @@
 
   /* admin density */
   --admin-row-h: 46px;
-  --admin-card-radius: 14px;
+  --admin-card-radius: var(--radius-lg);
   --sidebar-width: 240px;
   --topbar-height: 58px;
 
   /* elevation */
-  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --card-shadow: none;
+  --card-shadow-hover: none;
   --card-shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.10), 0 4px 8px rgba(0, 0, 0, 0.06);
   --topbar-blur: saturate(180%) blur(16px);
 
@@ -210,8 +210,8 @@
   --sidebar-ring: hsl(217 91% 60%);
 
   /* elevation (dark) */
-  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
-  --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.30);
+  --card-shadow: none;
+  --card-shadow-hover: none;
   --card-shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.35);
 
   /* status colors (dark) */
@@ -341,17 +341,17 @@
     transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Hover lift effect for cards.
-     Hover-only devices (mouse, trackpad) get the lift; touch devices skip
-     it because :hover sticks after tap on phones and feels stale. */
+  /* Hover affordance for cards: subtle border-color shift only.
+     Replaced the older translate+shadow lift for a quieter, Linear/Notion
+     style of interaction. Touch devices are skipped (hover:hover) because
+     :hover sticks after tap on phones and feels stale. */
   .hover-lift {
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
   @media (hover: hover) {
     .hover-lift:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border-color: hsl(var(--foreground) / 0.12);
     }
   }
 
@@ -364,13 +364,6 @@
   }
   .shadow-card-elevated {
     box-shadow: var(--card-shadow-elevated);
-  }
-
-  /* Override hover-lift to use token shadow (also guarded). */
-  @media (hover: hover) {
-    .hover-lift:hover {
-      box-shadow: var(--card-shadow-hover);
-    }
   }
 
   /* Page enter animation */
@@ -633,6 +626,28 @@
     font-size: 1.75rem;
     letter-spacing: -0.02em;
     line-height: 1;
+  }
+
+  /* Unified focus-ring utilities.
+     `.focus-ring` is for light/default surfaces (primary 2px outline, offset 2px).
+     `.focus-ring-inset` is for the navy sidebar scope - sky-300 reads against
+     the deep navy bg, and we inset the outline so it doesn't clip the sidebar
+     edge. Both rely on :focus-visible so mouse clicks don't trigger the ring. */
+  .focus-ring {
+    outline: none;
+  }
+  .focus-ring:focus-visible {
+    outline: 2px solid hsl(var(--primary) / 0.6);
+    outline-offset: 2px;
+    border-radius: var(--radius-md);
+  }
+
+  .focus-ring-inset {
+    outline: none;
+  }
+  .focus-ring-inset:focus-visible {
+    outline: 2px solid hsl(199 89% 77% / 0.7); /* sky-300 */
+    outline-offset: -2px;
   }
 
   /* Notification badge */

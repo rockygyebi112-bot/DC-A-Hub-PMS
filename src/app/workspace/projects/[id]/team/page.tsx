@@ -14,6 +14,7 @@ import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
 import { getWorkspaceProject, listProjectTeam } from "@/lib/workspace/queries";
+import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 
 export default async function WorkspaceTeamPage({
   params,
@@ -30,6 +31,7 @@ export default async function WorkspaceTeamPage({
 
   return (
     <div className="mx-auto w-full max-w-5xl">
+      <SetBreadcrumbLabels labels={{ [id]: project.name }} />
       <PageHeader
         title={`${project.name} team`}
         subtitle="Project members and client viewers."

@@ -12,6 +12,7 @@ import {
   type Milestone,
 } from "@/components/admin/project-detail/parts";
 import { getProject } from "@/lib/admin/queries";
+import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 import { getBudgetSummary } from "@/lib/admin/queries/budget";
 import { listProjectPhases, listProjectTeam } from "@/lib/workspace/queries";
 
@@ -172,6 +173,12 @@ export default async function ProjectOverviewPage({
 
   return (
     <div className="space-y-6">
+      <SetBreadcrumbLabels
+        labels={{
+          [id]: project.name,
+          ...(project.client?.id ? { [project.client.id]: project.client.name } : {}),
+        }}
+      />
       <ProjectTabs projectId={id} active="overview" />
       <WorkspaceView
       projectId={id}

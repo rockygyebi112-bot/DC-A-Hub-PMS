@@ -56,6 +56,7 @@ import {
   type WorkspaceActivity,
   type WorkspacePhase,
 } from "@/lib/workspace/queries";
+import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 
 const BOARD_COLUMNS: {
   key: WorkspaceActivity["status"];
@@ -104,6 +105,7 @@ export default async function WorkspaceProjectPage({
 
   return (
     <>
+      <SetBreadcrumbLabels labels={{ [id]: project.name }} />
       <PageHeader
         title={
           <span className="flex items-center gap-3">

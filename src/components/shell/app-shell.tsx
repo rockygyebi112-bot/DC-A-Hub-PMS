@@ -5,6 +5,7 @@ import type { SearchItem } from "./topbar-search";
 import { MobileNav } from "./mobile-nav";
 import { BottomNav } from "./bottom-nav";
 import { NavProgress } from "./nav-progress";
+import { BreadcrumbProvider } from "./breadcrumb-context";
 import { cn } from "@/lib/utils";
 
 export function AppShell({
@@ -26,6 +27,7 @@ export function AppShell({
   searchItems,
   searchActivityHrefBase,
   showBreadcrumbs,
+  breadcrumbSeed,
 }: {
   children: ReactNode;
   brand: string;
@@ -54,6 +56,11 @@ export function AppShell({
   searchActivityHrefBase?: "/workspace" | "/portal";
   /** Hide the path-based breadcrumb trail in the topbar. */
   showBreadcrumbs?: boolean;
+  /** Seed map for breadcrumb label resolution. Keys are URL segments
+   *  (typically UUIDs); values are the friendly names to display. The
+   *  layout passes the project + client lists it already loads so the
+   *  breadcrumb can show real names without any extra DB calls. */
+  breadcrumbSeed?: Record<string, string>;
 }) {
   return (
     // overflow-x-clip defends against any single child (table, long
@@ -64,6 +71,7 @@ export function AppShell({
     // scroll away with the page instead of pinning to the viewport. Tables
     // that genuinely need horizontal scroll still scroll within their own
     // overflow-x-auto container.
+    <BreadcrumbProvider seed={breadcrumbSeed}>
     <div className="flex min-h-screen overflow-x-clip bg-background text-foreground">
       {/* Global route-change progress bar (top of viewport). */}
       <Suspense fallback={null}>
@@ -118,5 +126,6 @@ export function AppShell({
       </div>
       <BottomNav groups={groups} items={bottomNavItems} />
     </div>
+    </BreadcrumbProvider>
   );
 }

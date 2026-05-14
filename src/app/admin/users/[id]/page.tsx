@@ -6,6 +6,7 @@ import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
 import { DeleteConfirm } from "@/components/workspace/delete-confirm";
+import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 import {
   deactivateUser,
   deleteUser,
@@ -40,6 +41,7 @@ export default async function UserDetailPage({
 
   return (
     <div className="max-w-3xl space-y-6">
+      <SetBreadcrumbLabels labels={{ [id]: user.full_name || user.email }} />
       <PageHeader
         title={user.full_name}
         subtitle={user.email}

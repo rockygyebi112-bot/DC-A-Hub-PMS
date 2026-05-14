@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { ToastForm } from "@/components/ui/toast-form";
 import { ProjectIcon } from "@/components/ui/project-icon";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
@@ -89,7 +90,7 @@ export default async function WorkspaceProjectPage({
 
   async function addPhase(formData: FormData) {
     "use server";
-    await createPhase(id, formData);
+    return createPhase(id, formData);
   }
 
   async function addActivity(formData: FormData) {
@@ -98,6 +99,7 @@ export default async function WorkspaceProjectPage({
     if (result.ok && result.data) {
       redirect(`/workspace/projects/${id}/activities/${result.data.id}`);
     }
+    return result;
   }
 
   return (
@@ -222,7 +224,7 @@ export default async function WorkspaceProjectPage({
           </div>
 
           <SectionCard title="Add phase">
-            <form action={addPhase} className="space-y-3">
+            <ToastForm action={addPhase} successMessage="Phase added" className="space-y-3">
               <Input name="name" placeholder="Inception" required />
               <div className="grid grid-cols-2 gap-2">
                 <Input name="start_date" type="date" />
@@ -232,11 +234,15 @@ export default async function WorkspaceProjectPage({
               <Button type="submit" className="w-full">
                 Add phase
               </Button>
-            </form>
+            </ToastForm>
           </SectionCard>
 
           <SectionCard title="Quick activity">
-            <form action={addActivity} className="space-y-3">
+            <ToastForm
+              action={addActivity}
+              successMessage={null}
+              className="space-y-3"
+            >
               <select
                 name="phase_id"
                 required
@@ -255,7 +261,7 @@ export default async function WorkspaceProjectPage({
               <Button type="submit" className="w-full" disabled={phases.length === 0}>
                 Add activity
               </Button>
-            </form>
+            </ToastForm>
           </SectionCard>
         </aside>
       </div>

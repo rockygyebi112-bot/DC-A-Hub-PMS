@@ -1,0 +1,14 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignore": [
+    ".claude/**",
+    ".next/**",
+    "scripts/**",
+    "supabase/**",
+    "tests/**"
+  ],
+  "ignoreDependencies": [
+    "server-only"
+  ],
+  "ignoreExportsUsedInFile": true
+}

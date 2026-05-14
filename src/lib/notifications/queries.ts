@@ -1,6 +1,5 @@
 import "server-only";
 
-import { cache as reactCache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 export type NotificationEntry = {
@@ -172,14 +171,3 @@ export async function getNotificationFeed(
   };
 }
 
-/**
- * Per-request memoized notification feed loader. Previously wrapped in
- * `unstable_cache`, but the underlying `getNotificationFeed` calls
- * `createClient()` which reads `cookies()` — disallowed inside
- * `unstable_cache` in Next 15+. React's `cache()` still dedupes within a
- * single request, which is what the layout needs.
- */
-export const getCachedNotificationFeed = reactCache(
-  (_userId: string, surface: "portal" | "workspace"): Promise<NotificationFeed> =>
-    getNotificationFeed(surface),
-);

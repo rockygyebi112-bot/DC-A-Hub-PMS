@@ -169,5 +169,3 @@ export const expenseSchema = z.object({
 export type ExpenseInput = z.input<typeof expenseSchema>;
 export type ExpenseParsed = z.output<typeof expenseSchema>;
 
-// kept as utility (unused for now, exposed for future text inputs)
-export const moneyTextSchema = moneyString;

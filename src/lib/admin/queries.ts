@@ -339,18 +339,6 @@ export const getAdminCounts = reactCache(async (): Promise<AdminCounts> => {
   };
 });
 
-export async function listRecentProjects(limit = 5) {
-  const sb = await createClient();
-  const { data, error } = await sb
-    .from("projects")
-    .select("id, name, code, status, created_at")
-    .is("archived_at", null)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  throwIfError(error);
-  return data ?? [];
-}
-
 /**
  * Per-request memoized loader for the admin shell. Bundles counts, the
  * client + project lists used by the sidebar/search, and the overdue

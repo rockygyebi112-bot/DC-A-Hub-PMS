@@ -32,15 +32,6 @@ export async function requireAdmin(): Promise<GuardResult> {
   return res;
 }
 
-/** Require the caller to be an admin or staff member (workspace surface). */
-export async function requireStaffOrAdmin(): Promise<GuardResult> {
-  const res = await requireAuth();
-  if (!res.ok) return res;
-  if (res.role !== "admin" && res.role !== "staff")
-    return { ok: false, error: "Not authorized" };
-  return res;
-}
-
 /**
  * Require write access to a specific project. Admins always pass; non-admins
  * must have a project_members row with project_role = 'member'.

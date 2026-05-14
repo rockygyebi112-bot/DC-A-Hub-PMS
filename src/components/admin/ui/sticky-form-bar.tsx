@@ -16,7 +16,7 @@ export function StickyFormBar({
   return (
     <div
       className={
-        "sticky z-10 -mx-4 mt-6 border-t bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 md:-mx-8 md:px-8 " +
+        "sticky z-10 -mx-4 mt-6 border-t border-border bg-background/95 px-4 py-3 supports-[backdrop-filter]:backdrop-blur md:-mx-8 md:px-8 " +
         // Mobile: clear the fixed bottom nav + iOS home indicator.
         "bottom-[calc(var(--mobile-bottom-nav-h,60px)+env(safe-area-inset-bottom,0px))] md:bottom-0"
       }

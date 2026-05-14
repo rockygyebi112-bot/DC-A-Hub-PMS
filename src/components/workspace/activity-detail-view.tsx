@@ -11,6 +11,7 @@ import {
   MessageSquare,
   MoreHorizontal,
   Pencil,
+  RotateCcw,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
@@ -76,6 +77,7 @@ type Props = {
   phases?: PhaseOption[];
   save?: (formData: FormData) => Promise<ToastFormResult | void>;
   markComplete?: () => void | Promise<void>;
+  reopen?: () => void | Promise<void>;
   deleteAction?: () => Promise<{ ok: boolean; error?: string }>;
   deleteRedirectTo?: string;
 
@@ -106,6 +108,7 @@ export function ActivityDetailView({
   phases,
   save,
   markComplete,
+  reopen,
   deleteAction,
   deleteRedirectTo,
   showNotes = true,
@@ -123,6 +126,7 @@ export function ActivityDetailView({
 
   const canEdit = !!save && !!phases;
   const canMarkComplete = !!markComplete && !isDone;
+  const canReopen = !!reopen && isDone;
   const canDelete = !!deleteAction;
 
   return (
@@ -171,10 +175,20 @@ export function ActivityDetailView({
               </Button>
             </form>
           ) : isDone ? (
-            <span className="inline-flex h-7 items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-medium text-emerald-700">
-              <CircleCheck className="size-3.5" />
-              Completed
-            </span>
+            <div className="inline-flex items-center gap-2">
+              <span className="inline-flex h-7 items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-medium text-emerald-700">
+                <CircleCheck className="size-3.5" />
+                Completed
+              </span>
+              {canReopen && (
+                <form action={reopen}>
+                  <Button type="submit" size="sm" variant="outline">
+                    <RotateCcw className="size-4" />
+                    Reopen
+                  </Button>
+                </form>
+              )}
+            </div>
           ) : null}
           {canDelete && (
             <DeleteConfirm

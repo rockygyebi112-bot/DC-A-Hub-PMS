@@ -20,11 +20,16 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
+        // Default + lg get a touch-coarse upsize to clear the 44 px iOS tap
+        // target while leaving the desktop density (fine pointer) alone. xs/sm
+        // are intentionally dense (used inside cards and tables) so they
+        // don't pick up the upsize — touch users should be hitting whole rows
+        // there, not the small inline action.
         default:
-          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+          "h-11 gap-1.5 px-3 pointer-fine:h-8 pointer-fine:px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
         xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+        lg: "h-11 gap-1.5 px-3.5 pointer-fine:h-9 pointer-fine:px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
         // Touch devices get larger tap targets via pointer-coarse: variants.
         // Fine pointer (mouse/trackpad) keeps the original dense sizes so the
         // desktop design density is unaffected.

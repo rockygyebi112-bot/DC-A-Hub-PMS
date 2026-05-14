@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email/send";
 import { renderPasswordResetEmail } from "@/lib/email/templates/password-reset";
+import { checkRateLimit, rateLimitMessage } from "@/lib/rate-limit";
 
 export type ForgotPasswordResult =
   | { ok: true }
@@ -30,6 +31,22 @@ export async function requestPasswordReset(
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid email" };
+  }
+
+  // C-4: rate limit by email (5 / hour). The key is the lowercased email
+  // since the user isn't authenticated. We also can't distinguish a real
+  // account from a typo here, so a generic limit is fine.
+  const rl = await checkRateLimit(
+    "pwd-reset",
+    parsed.data.email.toLowerCase(),
+    5,
+    3600,
+  );
+  if (!rl.ok) {
+    return {
+      ok: false,
+      error: rateLimitMessage(rl.retryAfterSeconds, "Too many reset requests"),
+    };
   }
 
   const admin = createAdminClient();

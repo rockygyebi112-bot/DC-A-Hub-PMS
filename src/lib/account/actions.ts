@@ -17,6 +17,11 @@ import {
   updateNameSchema,
   updatePasswordSchema,
 } from "@/lib/account/schemas";
+import {
+  checkRateLimit,
+  logPasswordVerifyAttempt,
+  rateLimitMessage,
+} from "@/lib/rate-limit";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T }
@@ -88,6 +93,22 @@ export async function updateMyEmail(raw: unknown): Promise<ActionResult> {
     return { ok: true };
   }
 
+  // C-4: rate limit (3 / hour) — separate bucket from pwd-verify so an
+  // account-takeover bot can't burn the email-change budget by attacking
+  // proof access.
+  const rlEmail = await checkRateLimit(
+    "email-change",
+    auth.userId,
+    3,
+    3600,
+  );
+  if (!rlEmail.ok) {
+    return {
+      ok: false,
+      error: rateLimitMessage(rlEmail.retryAfterSeconds, "Too many email change requests"),
+    };
+  }
+
   // H-12: re-auth with the current password before mailing change links.
   // Mirrors updateMyPassword — a throw-away client so the real session is
   // untouched even on a successful verify.
@@ -99,6 +120,12 @@ export async function updateMyEmail(raw: unknown): Promise<ActionResult> {
   const { error: verifyError } = await verifier.auth.signInWithPassword({
     email: currentEmail,
     password: parsed.data.current_password,
+  });
+  await logPasswordVerifyAttempt({
+    userId: auth.userId,
+    email: currentEmail,
+    success: !verifyError,
+    context: "email_change",
   });
   if (verifyError) {
     return { ok: false, error: "Current password is incorrect" };
@@ -201,6 +228,20 @@ export async function updateMyPassword(raw: unknown): Promise<ActionResult> {
   const { data: { user } } = await sb.auth.getUser();
   if (!user?.email) return { ok: false, error: "Profile not found" };
 
+  // C-4: rate limit (5 / 10 min).
+  const rlPwd = await checkRateLimit(
+    "pwd-verify",
+    `change:${auth.userId}`,
+    5,
+    600,
+  );
+  if (!rlPwd.ok) {
+    return {
+      ok: false,
+      error: rateLimitMessage(rlPwd.retryAfterSeconds, "Too many password attempts"),
+    };
+  }
+
   // Verify the current password without touching the active session: spin up
   // a throw-away client with no cookie/session persistence.
   const verifier = createSupabaseClient(
@@ -211,6 +252,12 @@ export async function updateMyPassword(raw: unknown): Promise<ActionResult> {
   const { error: signInError } = await verifier.auth.signInWithPassword({
     email: user.email,
     password: parsed.data.current_password,
+  });
+  await logPasswordVerifyAttempt({
+    userId: auth.userId,
+    email: user.email,
+    success: !signInError,
+    context: "password_change",
   });
   if (signInError) {
     return { ok: false, error: "Current password is incorrect" };

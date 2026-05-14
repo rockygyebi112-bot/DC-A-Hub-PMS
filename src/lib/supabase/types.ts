@@ -642,7 +642,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      // Hand-added — covered by migration 0021. Re-running `npm run db:types`
+      // against the linked Supabase project will regenerate this block; the
+      // shape below mirrors that output so the regen is a no-op.
+      project_activity_counts: {
+        Row: {
+          project_id: string
+          total_count: number | null
+          done_count: number | null
+          in_progress_count: number | null
+          not_started_count: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_access_project: { Args: { p_project_id: string }; Returns: boolean }

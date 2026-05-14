@@ -81,7 +81,6 @@ export function StatusBadge({
   tone,
   className,
   showDot = true,
-  size = "md",
 }: {
   /** Raw status string — case-insensitive. Used for label and (optionally) tone. */
   status: string;
@@ -89,24 +88,23 @@ export function StatusBadge({
   tone?: StatusTone;
   className?: string;
   showDot?: boolean;
-  size?: "sm" | "md";
 }) {
   const resolved = tone ?? statusToTone(status);
+  const label = prettify(status);
   return (
     <span
+      role="status"
+      aria-label={`Status: ${label}`}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border font-medium capitalize",
-        size === "sm"
-          ? "px-1.5 py-0.5 text-[10px]"
-          : "px-2 py-0.5 text-xs",
+        "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium capitalize",
         TONE_STYLES[resolved],
         className,
       )}
     >
       {showDot ? (
-        <span className={cn("size-1.5 rounded-full", DOT_STYLES[resolved])} />
+        <span aria-hidden className={cn("size-1.5 rounded-full", DOT_STYLES[resolved])} />
       ) : null}
-      {prettify(status)}
+      {label}
     </span>
   );
 }

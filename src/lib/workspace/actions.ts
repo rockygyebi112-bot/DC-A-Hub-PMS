@@ -5,6 +5,11 @@ import { headers } from "next/headers";
 import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { dbErrorMessage } from "@/lib/db-errors";
+import {
+  checkRateLimit,
+  logPasswordVerifyAttempt,
+  rateLimitMessage,
+} from "@/lib/rate-limit";
 import { requireAuth, requireProjectReader, requireProjectWriter } from "@/lib/auth/guards";
 import {
   validateUpload,
@@ -595,6 +600,22 @@ export async function requestProofAccess(
     return { ok: false, error: "Password is required" };
   }
 
+  // C-4: rate limit before doing any work. 5 attempts per 10 minutes per
+  // user — generous enough for legitimate user fat-fingering, tight enough
+  // that an attacker cannot brute the password via this endpoint.
+  const rl = await checkRateLimit(
+    "pwd-verify",
+    `proof:${auth.userId}`,
+    5,
+    600,
+  );
+  if (!rl.ok) {
+    return {
+      ok: false,
+      error: rateLimitMessage(rl.retryAfterSeconds, "Too many password attempts"),
+    };
+  }
+
   const sb = await createClient();
 
   // Re-verify identity by checking the current user's password against
@@ -615,6 +636,12 @@ export async function requestProofAccess(
   const { error: verifyError } = await verifier.auth.signInWithPassword({
     email: currentUser.email,
     password,
+  });
+  await logPasswordVerifyAttempt({
+    userId: auth.userId,
+    email: currentUser.email,
+    success: !verifyError,
+    context: "proof_access",
   });
   if (verifyError) {
     return { ok: false, error: "Incorrect password" };

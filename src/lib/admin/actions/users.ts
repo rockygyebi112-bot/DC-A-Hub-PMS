@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth/guards";
 import { dbErrorMessage } from "@/lib/db-errors";
+import { checkRateLimit, rateLimitMessage } from "@/lib/rate-limit";
 import { getAppUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email/send";
 import { renderInviteEmail } from "@/lib/email/templates/invite";
@@ -48,6 +49,17 @@ export async function inviteUser(
 
   const callerId = await assertCallerIsAdmin();
   if (!callerId) return { ok: false, error: "Not authorized" };
+
+  // C-4: 30 invites per 10 minutes per admin. Generous so onboarding a new
+  // project doesn't trip the limit, tight enough to stop a compromised
+  // admin token from being used to mail-bomb hundreds of addresses.
+  const rl = await checkRateLimit("invite", callerId, 30, 600);
+  if (!rl.ok) {
+    return {
+      ok: false,
+      error: rateLimitMessage(rl.retryAfterSeconds, "Too many invites in a row"),
+    };
+  }
 
   const admin = createAdminClient();
   const appUrl = getAppUrl();

@@ -7,6 +7,11 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth, requireProjectReader } from "@/lib/auth/guards";
 import { validateUpload, sanitizeFileName } from "@/lib/uploads";
 import { dbErrorMessage } from "@/lib/db-errors";
+import {
+  checkRateLimit,
+  logPasswordVerifyAttempt,
+  rateLimitMessage,
+} from "@/lib/rate-limit";
 
 const PORTAL_NOTE_MAX = 5000;
 
@@ -53,6 +58,20 @@ export async function unlockProjectDocuments(
     return { ok: false, error: "Not authorized to view these documents" };
   }
 
+  // C-4: rate limit before any DB work. 5 / 10 min per user.
+  const rl = await checkRateLimit(
+    "pwd-verify",
+    `unlock:${auth.userId}`,
+    5,
+    600,
+  );
+  if (!rl.ok) {
+    return {
+      ok: false,
+      error: rateLimitMessage(rl.retryAfterSeconds, "Too many password attempts"),
+    };
+  }
+
   const sb = await createClient();
 
   // Re-verify identity using a fresh supabase-js client so the real session
@@ -71,6 +90,12 @@ export async function unlockProjectDocuments(
   const { error: verifyError } = await verifier.auth.signInWithPassword({
     email: currentUser.email,
     password,
+  });
+  await logPasswordVerifyAttempt({
+    userId: auth.userId,
+    email: currentUser.email,
+    success: !verifyError,
+    context: "portal_unlock",
   });
   if (verifyError) {
     return { ok: false, error: "Incorrect password" };

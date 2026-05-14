@@ -37,7 +37,7 @@ export function BottomNav({
     <nav
       aria-label="Primary"
       className={cn(
-        "mobile-nav fixed inset-x-0 bottom-0 z-30 border-t border-border md:hidden",
+        "fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background md:hidden",
         // Respect the iOS home indicator.
         "pb-[env(safe-area-inset-bottom)]",
       )}
@@ -64,19 +64,12 @@ export function BottomNav({
                 prefetch
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "relative flex h-full min-h-11 flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium leading-none transition-colors-smooth",
+                  "flex h-full min-h-11 flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium leading-none transition-colors-smooth focus-ring",
                   active
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {/* Active indicator (top notch) */}
-                {active && (
-                  <span
-                    aria-hidden
-                    className="absolute inset-x-6 top-0 h-[3px] rounded-b-full bg-primary"
-                  />
-                )}
                 <Icon
                   className="size-[22px]"
                   strokeWidth={active ? 2.25 : 1.75}

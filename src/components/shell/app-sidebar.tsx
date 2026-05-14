@@ -196,7 +196,7 @@ export function AppSidebar({
         {groups.map((group, idx) => (
           <div key={idx} className="space-y-1">
             {!collapsed && group.group && (
-              <p className="nav-group-label px-3 pb-1">
+              <p className="px-3 pt-4 pb-1 text-[11px] font-medium uppercase tracking-wider text-white/40">
                 {group.group}
               </p>
             )}
@@ -212,7 +212,7 @@ export function AppSidebar({
                   href={item.href}
                   prefetch
                   className={cn(
-                    "flex h-10 items-center gap-3 rounded-[10px] px-3 text-sm transition-colors-smooth",
+                    "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors-smooth focus-ring-inset",
                     collapsed && "justify-center px-0",
                     active
                       ? "bg-[var(--color-dca-blue-500)] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
@@ -247,7 +247,7 @@ export function AppSidebar({
                           href={item.href}
                           prefetch
                           className={cn(
-                            "flex h-10 items-center justify-center rounded-[10px] px-0 text-sm transition-colors-smooth",
+                            "flex items-center justify-center rounded-md px-0 py-2 text-sm transition-colors-smooth focus-ring-inset",
                             active
                               ? "bg-[var(--color-dca-blue-500)] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
                               : "text-white/70 hover:bg-white/5 hover:text-white",

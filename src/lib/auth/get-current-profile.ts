@@ -16,7 +16,12 @@ export type CurrentProfile = {
  */
 export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   const user = await getSessionUser();
-  if (!user) return null;
+  // Inactive users keep their cookie until the JWT refreshes (~1h), so without
+  // an explicit isActive gate here the shell of /admin, /workspace, or /portal
+  // is reachable for that window even though every individual data read fails
+  // via RLS. Treat inactive as not-signed-in so the root redirect sends them
+  // back to /login.
+  if (!user || !user.isActive) return null;
   return {
     userId: user.userId,
     email: user.email,

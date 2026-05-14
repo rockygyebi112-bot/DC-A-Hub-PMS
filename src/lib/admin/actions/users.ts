@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/guards";
 import { getAppUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email/send";
 import { renderInviteEmail } from "@/lib/email/templates/invite";
@@ -18,18 +19,18 @@ export type ActionResult<T = undefined> =
 
 type InviteDelivery = "invite_sent" | "password_setup_sent";
 
+/**
+ * Returns the caller's user id if they are an active admin, otherwise null.
+ * Thin adapter over the shared `requireAdmin()` guard — kept so the call
+ * sites below don't have to destructure the GuardResult shape. The previous
+ * inline implementation skipped the `is_active` check, which let deactivated
+ * admins with a still-valid JWT continue calling admin server actions until
+ * their token refreshed. `requireAdmin()` enforces is_active via the
+ * single cached `getSessionUser()` entry, closing that window.
+ */
 async function assertCallerIsAdmin(): Promise<string | null> {
-  const sb = await createClient();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
-  if (!user) return null;
-  const { data } = await sb
-    .from("profiles")
-    .select("role")
-    .eq("user_id", user.id)
-    .single();
-  return data?.role === "admin" ? user.id : null;
+  const res = await requireAdmin();
+  return res.ok ? res.userId : null;
 }
 
 export async function inviteUser(
@@ -98,20 +99,32 @@ export async function inviteUser(
     return { ok: false, error: "Could not generate invitation link" };
   }
 
-  const { data: profile, error: profileErr } = await admin
+  // If this user already has a profile, do NOT overwrite role/full_name.
+  // The previous upsert silently demoted any pre-existing admin/staff who
+  // was "re-invited" as client — a privilege downgrade attack against
+  // active accounts. Insert a new row only when one doesn't exist.
+  const { data: existingProfile } = await admin
     .from("profiles")
-    .upsert(
-      {
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  let profile: { id: string } | null = existingProfile;
+  if (!existingProfile) {
+    const { data: inserted, error: profileErr } = await admin
+      .from("profiles")
+      .insert({
         user_id: userId,
         email: parsed.data.email,
         full_name: parsed.data.full_name ?? parsed.data.email,
         role: parsed.data.role,
-      },
-      { onConflict: "user_id" },
-    )
-    .select("id")
-    .single();
-  if (profileErr) return { ok: false, error: profileErr.message };
+      })
+      .select("id")
+      .single();
+    if (profileErr) return { ok: false, error: profileErr.message };
+    profile = inserted;
+  }
+  if (!profile) return { ok: false, error: "Could not resolve profile" };
 
   // Construct the link pointing at our stateless `/auth/confirm` route, which
   // calls supabase.auth.verifyOtp with the hashed token and then redirects.

@@ -86,6 +86,14 @@ export const inviteClientViewerSchema = z.object({
 });
 export type InviteClientViewerInput = z.infer<typeof inviteClientViewerSchema>;
 
+// Shape mirrors inviteClientViewerSchema; kept as its own type so the
+// "Invite staff" form has a distinct, intention-revealing payload shape.
+export const inviteStaffMemberSchema = z.object({
+  email: z.string().trim().email(),
+  full_name: z.string().trim().max(200).optional(),
+});
+export type InviteStaffMemberInput = z.infer<typeof inviteStaffMemberSchema>;
+
 export const setUserRoleSchema = z.object({
   role: z.enum(["admin", "staff", "client"]),
 });

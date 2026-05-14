@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { AssignMemberForm } from "@/components/admin/forms/assign-member-form";
 import { InviteClientViewerForm } from "@/components/admin/forms/invite-client-viewer-form";
+import { InviteStaffMemberForm } from "@/components/admin/forms/invite-staff-member-form";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
@@ -55,7 +56,7 @@ export default async function ProjectTeamPage({
                 role: candidate.role as "admin" | "staff" | "client",
               }))}
               projectRole="member"
-              buttonLabel="Add staff"
+              buttonLabel="Add existing staff"
             />
             <AssignMemberForm
               projectId={id}
@@ -66,8 +67,9 @@ export default async function ProjectTeamPage({
                 role: candidate.role as "admin" | "staff" | "client",
               }))}
               projectRole="viewer"
-              buttonLabel="Add viewer"
+              buttonLabel="Add existing viewer"
             />
+            <InviteStaffMemberForm projectId={id} />
             <InviteClientViewerForm projectId={id} />
           </div>
         }

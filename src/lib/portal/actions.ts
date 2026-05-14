@@ -107,6 +107,33 @@ export async function unlockProjectDocuments(
     ]),
   );
 
+  // Audit FIRST, mint URLs second (H-11 fail-closed). One row per proof so
+  // admins still see which files were exposed. If the audit insert fails the
+  // user gets nothing — we cannot guarantee accountability otherwise.
+  try {
+    const hdrs = await headers();
+    const userAgent = hdrs.get("user-agent");
+    const fwd = hdrs.get("x-forwarded-for");
+    const ip = fwd ? fwd.split(",")[0]?.trim() || null : null;
+    const { error: logErr } = await sb.from("proof_access_log").insert(
+      proofs.map((p) => ({
+        proof_id: p.id,
+        project_id: projectId,
+        user_id: auth.userId,
+        purpose: "bulk_unlock",
+        user_agent: userAgent,
+        ip_address: ip,
+      })),
+    );
+    if (logErr) {
+      console.error("proof_access_log bulk insert failed", logErr);
+      return { ok: false, error: "Could not record document access. Try again." };
+    }
+  } catch (err) {
+    console.error("proof_access_log bulk insert threw", err);
+    return { ok: false, error: "Could not record document access. Try again." };
+  }
+
   // Mint URLs in parallel: files get a 5-minute signed URL on the `proofs`
   // bucket; links are passed through unchanged.
   const resolved = await Promise.all(
@@ -138,30 +165,6 @@ export async function unlockProjectDocuments(
     }),
   );
   const documents = resolved.filter((d): d is UnlockedDocument => d !== null);
-
-  // Best-effort bulk audit log. One row per document so admins still see
-  // which files were exposed by this unlock. Failure to log MUST NOT block
-  // the user from receiving the URLs (matches `requestProofAccess`).
-  try {
-    const hdrs = await headers();
-    const userAgent = hdrs.get("user-agent");
-    const fwd = hdrs.get("x-forwarded-for");
-    const ip = fwd ? fwd.split(",")[0]?.trim() || null : null;
-    if (documents.length > 0) {
-      await sb.from("proof_access_log").insert(
-        documents.map((doc) => ({
-          proof_id: doc.id,
-          project_id: projectId,
-          user_id: auth.userId,
-          purpose: "bulk_unlock",
-          user_agent: userAgent,
-          ip_address: ip,
-        })),
-      );
-    }
-  } catch (err) {
-    console.error("proof_access_log bulk insert failed", err);
-  }
 
   return { ok: true, data: documents };
 }

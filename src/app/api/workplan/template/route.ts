@@ -25,9 +25,9 @@ import { requireAuth } from "@/lib/auth/guards";
 // (no per-user data), so we build it once per server instance and reuse it
 // on every download. xlsx is loaded lazily on first request so cold starts
 // for unrelated routes in the same bundle don't pay the parse cost.
-let cachedBuffer: Uint8Array | null = null;
+let cachedBuffer: ArrayBuffer | null = null;
 
-async function buildTemplateBuffer(): Promise<Uint8Array> {
+async function buildTemplateBuffer(): Promise<ArrayBuffer> {
   if (cachedBuffer) return cachedBuffer;
 
   const XLSX = await import("xlsx");
@@ -69,7 +69,12 @@ async function buildTemplateBuffer(): Promise<Uint8Array> {
     bookType: "xlsx",
   }) as Buffer;
 
-  cachedBuffer = new Uint8Array(buffer);
+  // Detach from the Node Buffer's pooled ArrayBuffer so we hand `Response`
+  // a plain ArrayBuffer slice it can keep alive without our pool reclaiming
+  // the bytes.
+  const view = new Uint8Array(buffer);
+  const detached = view.slice().buffer;
+  cachedBuffer = detached;
   return cachedBuffer;
 }
 

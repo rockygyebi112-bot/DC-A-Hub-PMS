@@ -9,7 +9,6 @@ import {
   Columns3,
   Layers,
   ListChecks,
-  MoreVertical,
   Plus,
   Trash2,
   Users,
@@ -539,8 +538,13 @@ function ProjectList({
                 </div>
                 <DeleteConfirm
                   trigger={
-                    <Button variant="ghost" size="icon-sm" aria-label="Delete phase">
-                      <MoreVertical className="size-4" />
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Delete phase"
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="size-4" />
                     </Button>
                   }
                   title="Delete phase"

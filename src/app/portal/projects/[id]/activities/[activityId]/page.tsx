@@ -52,6 +52,7 @@ export default async function PortalActivityPage({
       upload={upload}
       showNotes={false}
       showTimeline={false}
+      showResponsible={false}
     />
   );
 }

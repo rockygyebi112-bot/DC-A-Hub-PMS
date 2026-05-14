@@ -9,7 +9,8 @@ type Activity = {
   name: string;
   status: "not_started" | "in_progress" | "done";
   planned_date: string | null;
-  responsible: string | null;
+  // `responsible` is intentionally absent: who within DC&A is handling a
+  // task is internal delivery info and is not shown in the client portal.
   proofCount: number;
 };
 
@@ -69,7 +70,6 @@ export function PhaseActivities({
                       {formatDate(activity.planned_date)}
                     </span>
                   )}
-                  {activity.responsible && <span>· {activity.responsible}</span>}
                   {activity.proofCount > 0 && (
                     <span className="inline-flex items-center gap-1">
                       · <FileCheck2 className="size-3" />

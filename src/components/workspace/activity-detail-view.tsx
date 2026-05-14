@@ -11,6 +11,7 @@ import {
   MessageSquare,
   MoreHorizontal,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,13 @@ type Props = {
   // Visibility toggles for sections that don't apply to every audience.
   showNotes?: boolean;
   showTimeline?: boolean;
+  /**
+   * Whether to surface the per-activity "Responsible team" assignment.
+   * Defaults to true (workspace/admin). The client portal passes false
+   * because internal task assignment is a DC&A delivery detail, not
+   * something the client should see.
+   */
+  showResponsible?: boolean;
 };
 
 export function ActivityDetailView({
@@ -101,6 +109,7 @@ export function ActivityDetailView({
   deleteRedirectTo,
   showNotes = true,
   showTimeline = true,
+  showResponsible = true,
 }: Props) {
   const isDone = activity.status === "done";
   const phaseName = activity.phase?.name ?? "Phase";
@@ -169,8 +178,13 @@ export function ActivityDetailView({
           {canDelete && (
             <DeleteConfirm
               trigger={
-                <Button variant="outline" size="icon-sm" aria-label="More actions">
-                  <MoreHorizontal className="size-4" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive focus-visible:ring-destructive/40"
+                >
+                  <Trash2 className="size-4" />
+                  Delete
                 </Button>
               }
               title="Delete activity"
@@ -268,7 +282,7 @@ export function ActivityDetailView({
             />
           ) : (
             <>
-              <DetailsCard activity={activity} />
+              <DetailsCard activity={activity} showResponsible={showResponsible} />
               {showNotes && <NotesCard description={activity.description} />}
               <UpdatesCard
                 updates={updates}
@@ -343,18 +357,27 @@ function Card({
 
 function DetailsCard({
   activity,
+  showResponsible,
 }: {
   activity: { deliverable: string | null; responsible: string | null };
+  showResponsible: boolean;
 }) {
   return (
     <Card icon={<FileText className="size-4" />} title="Activity details">
-      <dl className="-mx-5 -my-4 grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+      <dl
+        className={cn(
+          "-mx-5 -my-4 grid divide-y divide-border sm:divide-y-0",
+          showResponsible && "sm:grid-cols-2 sm:divide-x",
+        )}
+      >
         <Field label="Deliverable">
           {activity.deliverable ?? <Muted text="Not specified" />}
         </Field>
-        <Field label="Responsible team">
-          {activity.responsible ?? <Muted text="Not assigned" />}
-        </Field>
+        {showResponsible && (
+          <Field label="Responsible team">
+            {activity.responsible ?? <Muted text="Not assigned" />}
+          </Field>
+        )}
       </dl>
     </Card>
   );

@@ -10,6 +10,7 @@ export const updateNameSchema = z.object({
 
 export const updateEmailSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email"),
+  current_password: z.string().min(1, "Enter your current password"),
 });
 
 export const updatePasswordSchema = z

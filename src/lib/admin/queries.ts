@@ -29,7 +29,7 @@ export async function listClients(opts: { includeArchived?: boolean } = {}) {
   });
 }
 
-export async function getClient(id: string) {
+export const getClient = reactCache(async (id: string) => {
   const sb = await createClient();
   const { data, error } = await sb
     .from("clients")
@@ -38,7 +38,7 @@ export async function getClient(id: string) {
     .maybeSingle();
   throwIfError(error);
   return data;
-}
+});
 
 export type ClientProjectRow = {
   id: string;
@@ -52,56 +52,47 @@ export type ClientProjectRow = {
   totalCount: number;
 };
 
-export async function listClientProjects(clientId: string): Promise<ClientProjectRow[]> {
-  const sb = await createClient();
-  // Pull projects + phases + activities for the client in a single
-  // round-trip via PostgREST nested selects. Previously this issued three
-  // sequential queries; now we compute done/total counts client-side from
-  // the embedded `phases.activities` rows.
-  if (process.env.NODE_ENV !== "production") {
-    console.log("[query] listClientProjects -> projects (joined)");
-  }
-  const { data: projects, error } = await sb
-    .from("projects")
-    .select(
-      `id, name, code, status, archived_at, start_date, end_date,
-       phases(id, activities(id, phase_id, status))`,
-    )
-    .eq("client_id", clientId)
-    .order("name", { ascending: true });
-  throwIfError(error);
-  if (!projects?.length) return [];
+export const listClientProjects = reactCache(
+  async (clientId: string): Promise<ClientProjectRow[]> => {
+    const sb = await createClient();
+    // Two cheap queries instead of one big nested join. The prior version
+    // pulled every activity row under the client just to compute done/total
+    // counts in JS; `project_activity_counts` does that arithmetic in
+    // Postgres and returns one scalar row per project.
+    const { data: projects, error } = await sb
+      .from("projects")
+      .select(
+        "id, name, code, status, archived_at, start_date, end_date",
+      )
+      .eq("client_id", clientId)
+      .order("name", { ascending: true });
+    throwIfError(error);
+    if (!projects?.length) return [];
 
-  type Joined = {
-    id: string;
-    name: string;
-    code: string;
-    status: string;
-    archived_at: string | null;
-    start_date: string | null;
-    end_date: string | null;
-    phases:
-      | { id: string; activities: { id: string; phase_id: string; status: string }[] | null }[]
-      | null;
-  };
+    const projectIds = projects.map((p) => p.id);
+    const { data: countsRaw } = await sb
+      .from("project_activity_counts")
+      .select("project_id, total_count, done_count")
+      .in("project_id", projectIds);
 
-  return (projects as unknown as Joined[]).map((project) => {
-    let done = 0;
-    let total = 0;
-    for (const phase of project.phases ?? []) {
-      for (const activity of phase.activities ?? []) {
-        total += 1;
-        if (activity.status === "done") done += 1;
-      }
+    const countsById = new Map<
+      string,
+      { total_count: number | null; done_count: number | null }
+    >();
+    for (const row of countsRaw ?? []) {
+      countsById.set(row.project_id, row);
     }
-    const { phases: _phases, ...rest } = project;
-    return {
-      ...rest,
-      doneCount: done,
-      totalCount: total,
-    };
-  });
-}
+
+    return projects.map((project) => {
+      const counts = countsById.get(project.id);
+      return {
+        ...project,
+        doneCount: Number(counts?.done_count ?? 0),
+        totalCount: Number(counts?.total_count ?? 0),
+      };
+    });
+  },
+);
 
 const PROJECT_SORT_COLUMNS = [
   "name",
@@ -145,7 +136,7 @@ export async function listProjects(
   return data ?? [];
 }
 
-export async function getProject(id: string) {
+export const getProject = reactCache(async (id: string) => {
   const sb = await createClient();
   const { data, error } = await sb
     .from("projects")
@@ -156,7 +147,7 @@ export async function getProject(id: string) {
     .maybeSingle();
   throwIfError(error);
   return data;
-}
+});
 
 export async function listUsers(opts: { includeInactive?: boolean } = {}) {
   const sb = await createClient();

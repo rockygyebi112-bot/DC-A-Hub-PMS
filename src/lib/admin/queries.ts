@@ -174,7 +174,7 @@ export async function getUserByProfileId(id: string) {
 
 export type ProjectMemberRow = {
   id: string;
-  project_role: "member" | "viewer";
+  project_role: "manager" | "member" | "viewer";
   user_id: string;
   profile:
     | {
@@ -207,7 +207,7 @@ export async function listProjectMembers(
     const p = byUserId.get(r.user_id);
     return {
       id: r.id,
-      project_role: r.project_role as "member" | "viewer",
+      project_role: r.project_role as "manager" | "member" | "viewer",
       user_id: r.user_id,
       profile: p
         ? {

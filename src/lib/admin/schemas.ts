@@ -62,9 +62,16 @@ export const inviteUserSchema = z.object({
 });
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;
 
+// Project roles a member row can hold. 'manager' is the designated
+// Project Manager (one per project, write access + treated as the
+// staff lead surfaced to clients). 'member' is a regular staff team
+// member (write). 'viewer' is a client (read-only).
+export const projectRoleSchema = z.enum(["manager", "member", "viewer"]);
+export type ProjectRole = z.infer<typeof projectRoleSchema>;
+
 export const assignMemberSchema = z.object({
   user_id: z.string().uuid(),
-  project_role: z.enum(["member", "viewer"]),
+  project_role: projectRoleSchema,
 });
 export type AssignMemberInput = z.infer<typeof assignMemberSchema>;
 
@@ -76,9 +83,41 @@ export const assignMembersSchema = z.object({
     .array(z.string().uuid())
     .min(1, "Pick at least one user")
     .max(100, "Too many users in one batch"),
-  project_role: z.enum(["member", "viewer"]),
+  project_role: projectRoleSchema,
 });
 export type AssignMembersInput = z.infer<typeof assignMembersSchema>;
+
+// Combined "Add staff/client" dialog payload. Admin may pick any number of
+// existing users AND/OR include a single new-invite block. Either side is
+// optional but at least one must be present (validated server-side).
+export const addTeamMembersSchema = z.object({
+  kind: z.enum(["staff", "client"]),
+  existing_user_ids: z.array(z.string().uuid()).max(100).default([]),
+  invite_email: z
+    .string()
+    .trim()
+    .email("Must be a valid email")
+    .or(z.literal(""))
+    .optional()
+    .transform((v) => (v === "" || v === undefined ? undefined : v)),
+  invite_full_name: z
+    .string()
+    .trim()
+    .max(200)
+    .or(z.literal(""))
+    .optional()
+    .transform((v) => (v === "" || v === undefined ? undefined : v)),
+  // Only honoured for kind='staff'. When true and exactly one user is being
+  // added, that user becomes the project manager (clears any prior PM).
+  make_manager: z.boolean().optional().default(false),
+});
+export type AddTeamMembersInput = z.input<typeof addTeamMembersSchema>;
+export type AddTeamMembersParsed = z.output<typeof addTeamMembersSchema>;
+
+export const setProjectManagerSchema = z.object({
+  member_id: z.string().uuid(),
+});
+export type SetProjectManagerInput = z.infer<typeof setProjectManagerSchema>;
 
 export const inviteClientViewerSchema = z.object({
   email: z.string().trim().email(),

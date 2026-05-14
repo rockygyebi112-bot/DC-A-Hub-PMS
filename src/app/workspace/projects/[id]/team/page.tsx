@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Users } from "lucide-react";
+import { Crown, Users } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   Table,
@@ -53,12 +53,19 @@ export default async function WorkspaceTeamPage({
                 {team.map((member) => {
                   const name = member.profile?.full_name ?? "Unknown user";
                   const email = member.profile?.email ?? "unknown@example.com";
+                  const isManager = member.project_role === "manager";
                   return (
                     <TableRow key={member.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <UserAvatar email={email} name={name} size="sm" />
                           <span className="font-medium">{name}</span>
+                          {isManager && (
+                            <Crown
+                              className="size-3.5 text-amber-500"
+                              aria-label="Project Manager"
+                            />
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>{member.profile?.email ?? "-"}</TableCell>
@@ -66,7 +73,7 @@ export default async function WorkspaceTeamPage({
                         <StatusPill status={(member.profile?.role ?? "client") as "admin" | "staff" | "client"} />
                       </TableCell>
                       <TableCell>
-                        <StatusPill status={member.project_role as "member" | "viewer"} />
+                        <StatusPill status={member.project_role as "manager" | "member" | "viewer"} />
                       </TableCell>
                     </TableRow>
                   );

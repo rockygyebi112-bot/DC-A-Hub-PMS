@@ -2,8 +2,10 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ToastForm } from "@/components/ui/toast-form";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
+import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 import { DeleteConfirm } from "@/components/workspace/delete-confirm";
 import { deletePhase, updatePhase } from "@/lib/workspace/actions";
 import { getPhase, listProjectPhases } from "@/lib/workspace/queries";
@@ -19,11 +21,12 @@ export default async function WorkspacePhasePage({
 
   async function save(formData: FormData) {
     "use server";
-    await updatePhase(phaseId, formData);
+    return updatePhase(phaseId, formData);
   }
 
   return (
     <div className="mx-auto w-full max-w-3xl">
+      <SetBreadcrumbLabels labels={{ [phaseId]: phase.name }} />
       <PageHeader
         title={phase.name}
         subtitle="Edit phase details and dates."
@@ -54,7 +57,7 @@ export default async function WorkspacePhasePage({
       />
 
       <SectionCard title="Phase details">
-        <form action={save} className="space-y-4">
+        <ToastForm action={save} successMessage="Phase saved" className="space-y-4">
           <Input name="name" defaultValue={phase.name} required />
           <div className="grid gap-3 sm:grid-cols-2">
             <Input name="start_date" type="date" defaultValue={phase.start_date ?? ""} />
@@ -67,7 +70,7 @@ export default async function WorkspacePhasePage({
             rows={5}
           />
           <Button type="submit">Save phase</Button>
-        </form>
+        </ToastForm>
       </SectionCard>
     </div>
   );

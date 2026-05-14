@@ -17,6 +17,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ToastForm, type ToastFormResult } from "@/components/ui/toast-form";
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
 import { ActivityStatus } from "@/components/workspace/status-badge";
 import { DeleteConfirm } from "@/components/workspace/delete-confirm";
@@ -73,7 +74,7 @@ type Props = {
   // Edit mode (workspace only). Omit any of these to hide the action.
   isEditing?: boolean;
   phases?: PhaseOption[];
-  save?: (formData: FormData) => void | Promise<void>;
+  save?: (formData: FormData) => Promise<ToastFormResult | void>;
   markComplete?: () => void | Promise<void>;
   deleteAction?: () => Promise<{ ok: boolean; error?: string }>;
   deleteRedirectTo?: string;
@@ -639,14 +640,18 @@ function EditCard({
   phases,
   baseHref,
 }: {
-  save: (fd: FormData) => void | Promise<void>;
+  save: (fd: FormData) => Promise<ToastFormResult | void>;
   activity: ActivityForView;
   phases: PhaseOption[];
   baseHref: string;
 }) {
   return (
     <Card icon={<Pencil className="size-4" />} title="Edit activity">
-      <form action={save} className="space-y-4">
+      <ToastForm
+        action={save}
+        successMessage="Activity saved"
+        className="space-y-4"
+      >
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-2 text-sm font-medium">
             Phase
@@ -738,7 +743,7 @@ function EditCard({
             Cancel
           </Button>
         </div>
-      </form>
+      </ToastForm>
     </Card>
   );
 }

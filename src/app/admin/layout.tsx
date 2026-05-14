@@ -40,6 +40,12 @@ export default async function AdminLayout({
     const c = (p as { client?: { id?: string } | null }).client;
     if (c?.id) projectClientMap[p.id] = c.id;
   }
+  // Seed the breadcrumb provider with the project + client names we already
+  // loaded for the sidebar / search. Pages that show deeper UUIDs (phases,
+  // activities, users) register their own labels via <SetBreadcrumbLabels>.
+  const breadcrumbSeed: Record<string, string> = {};
+  for (const p of projects) breadcrumbSeed[p.id] = p.name;
+  for (const c of clients) breadcrumbSeed[c.id] = c.name;
   const firstName = profile.fullName.trim().split(/\s+/)[0] || "Admin";
   const greeting = `${timeBasedGreeting()}, ${firstName}`;
   const greetingSubtitle =
@@ -113,6 +119,7 @@ export default async function AdminLayout({
       greeting={greeting}
       greetingSubtitle={greetingSubtitle}
       greetingPath="/admin"
+      breadcrumbSeed={breadcrumbSeed}
       topbarExtra={<NotificationsBell surface="workspace" />}
     >
       {children}

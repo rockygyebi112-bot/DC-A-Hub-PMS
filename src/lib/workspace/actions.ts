@@ -403,7 +403,8 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
   }
   revalidatePath(`/workspace/projects/${projectId}/activities/${activityId}`);
   revalidatePath(`/portal/projects/${projectId}/activities/${activityId}`);
-  revalidatePath(`/admin/projects/${projectId}`);
+  // (Was: a duplicate revalidatePath for `/admin/projects/${projectId}` here.
+  // Removed — the branch above already revalidates it.)
   return { ok: true };
 }
 

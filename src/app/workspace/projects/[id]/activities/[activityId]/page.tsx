@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { ActivityDetailView } from "@/components/workspace/activity-detail-view";
+import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 import {
   deleteActivity,
   updateActivity,
@@ -63,7 +64,7 @@ export default async function WorkspaceActivityPage({
 
   async function save(formData: FormData) {
     "use server";
-    await updateActivity(activityId, formData);
+    return updateActivity(activityId, formData);
   }
 
   async function upload(formData: FormData) {
@@ -125,6 +126,13 @@ export default async function WorkspaceActivityPage({
   }
 
   return (
+    <>
+    <SetBreadcrumbLabels
+      labels={{
+        [activityId]: activity.name,
+        ...(activity.phase?.project ? { [id]: activity.phase.project.name } : {}),
+      }}
+    />
     <ActivityDetailView
       activity={decoratedActivity}
       proofs={proofs}
@@ -150,5 +158,6 @@ export default async function WorkspaceActivityPage({
       }}
       deleteRedirectTo={projectHref}
     />
+    </>
   );
 }

@@ -57,6 +57,8 @@ export default async function WorkspaceLayout({
       { name: p.client?.name ?? p.name, logoUrl: p.client?.logo_url ?? null },
     ]),
   );
+  const breadcrumbSeed: Record<string, string> = {};
+  for (const p of projects) breadcrumbSeed[p.id] = p.name;
 
   return (
     <AppShell
@@ -73,6 +75,7 @@ export default async function WorkspaceLayout({
         group: "Projects",
       }))}
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
+      breadcrumbSeed={breadcrumbSeed}
       topbarExtra={<NotificationsBell surface="workspace" />}
     >
       {children}

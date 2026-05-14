@@ -17,12 +17,12 @@ export function SectionCard({
   return (
     <section
       className={cn(
-        "rounded-[var(--admin-card-radius)] border bg-card text-card-foreground shadow-sm",
+        "rounded-[var(--admin-card-radius)] border border-border bg-card text-card-foreground overflow-hidden",
         tone === "destructive" && "border-destructive/30",
       )}
     >
       {(title || description || action) && (
-        <header className="flex flex-col gap-3 border-b px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between">
+        <header className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 space-y-0.5">
             {title && (
               <h2
@@ -41,7 +41,7 @@ export function SectionCard({
           {action && <div className="shrink-0">{action}</div>}
         </header>
       )}
-      <div className="p-5">{children}</div>
+      <div className="p-4">{children}</div>
     </section>
   );
 }

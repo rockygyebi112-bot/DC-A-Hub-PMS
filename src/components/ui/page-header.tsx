@@ -36,7 +36,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "mb-6 flex flex-col gap-4",
+        "mb-5 flex flex-col gap-3",
         align === "between" && "sm:flex-row sm:items-start sm:justify-between",
         className,
       )}
@@ -53,11 +53,11 @@ export function PageHeader({
               {eyebrow}
             </p>
           ) : null}
-          <h1 className="font-heading text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-[28px]">
+          <h1 className="font-heading text-xl font-semibold leading-tight tracking-tight text-foreground">
             {title}
           </h1>
           {description ? (
-            <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground line-clamp-1 sm:line-clamp-none">
               {description}
             </p>
           ) : null}

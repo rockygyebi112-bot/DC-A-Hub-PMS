@@ -13,8 +13,15 @@ interface EmptyStateProps {
 }
 
 /**
+ * EmptyState
+ *
  * Friendly empty state with icon, message and optional call-to-action.
- * Use whenever a table, chart or list has no data.
+ *
+ * Use `variant="inline"` (compact, the default) inside data containers -
+ * table bodies, list sections, kanban columns, dropdown empty results.
+ *
+ * Use `variant="page"` (generous) only when the entire page has zero content
+ * - first-run portal landing, brand-new workspace, no-search-results full-page.
  */
 export function EmptyState({
   icon: Icon = Inbox,

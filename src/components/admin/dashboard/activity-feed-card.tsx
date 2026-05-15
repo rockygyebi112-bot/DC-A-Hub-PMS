@@ -50,7 +50,7 @@ export function ActivityFeedCard({
   viewAllHref?: string;
 }) {
   return (
-    <div className="rounded-[var(--admin-card-radius)] border bg-card shadow-card">
+    <div className="overflow-hidden rounded-[var(--admin-card-radius)] border bg-card shadow-card">
       <header className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Activity Feed

@@ -44,7 +44,7 @@ export function UpcomingMilestonesTimeline({
   viewAllHref?: string;
 }) {
   return (
-    <div className="rounded-[var(--admin-card-radius)] border bg-card shadow-card">
+    <div className="overflow-hidden rounded-[var(--admin-card-radius)] border bg-card shadow-card">
       <header className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Upcoming Milestones
@@ -67,15 +67,15 @@ export function UpcomingMilestonesTimeline({
           <ol className="relative">
             <span
               aria-hidden
-              className="absolute left-[60px] top-3 bottom-3 w-px bg-border"
+              className="absolute left-[50px] top-3 bottom-3 w-px bg-border sm:left-[60px]"
             />
             {milestones.map((m) => {
               const { month, day } = splitDate(m.date);
               const pill = PILL[m.status];
               const Wrapper = m.href ? Link : "div";
               return (
-                <li key={m.id} className="relative flex items-start gap-4 py-3">
-                  <div className="flex w-[52px] shrink-0 flex-col items-start text-left">
+                <li key={m.id} className="relative flex items-start gap-3 py-3 sm:gap-4">
+                  <div className="flex w-[44px] shrink-0 flex-col items-start text-left sm:w-[52px]">
                     <span className="text-[10px] font-bold tracking-wider text-muted-foreground">
                       {month}
                     </span>

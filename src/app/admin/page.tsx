@@ -449,7 +449,7 @@ function DashboardSkeleton() {
   // streams in.
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
@@ -485,8 +485,10 @@ async function DashboardBody({ period }: { period: DashboardPeriod }) {
   return (
     <div className="space-y-5">
       {/* KPI summary row. Project status breakdown lives in the Health
-          summary below, so the strip stays focused on top-level totals. */}
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
+          summary below, so the strip stays focused on top-level totals.
+          On phones we keep these on a single horizontal row so they read
+          as a compact summary band rather than three stacked tiles. */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <KpiCard
           label="Total Projects"
           value={data.totals.total}

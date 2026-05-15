@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, DM_Mono } from "next/font/google";
+import Script from "next/script";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "./providers";
+import { themeScript } from "@/lib/theme/script";
 import "./globals.css";
 
 // Inter — the de-facto enterprise SaaS UI font (Linear, Stripe, Notion).
@@ -65,6 +67,14 @@ export default function RootLayout({
       className={`${inter.variable} ${interHeading.variable} ${dmMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
+        {/* Pre-paint theme application. `next/script` with
+            beforeInteractive is the App Router-blessed pattern for inline
+            scripts that must run before React hydrates. */}
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeScript }}
+        />
         <a href="#main-content" className="skip-to-content">
           Skip to main content
         </a>

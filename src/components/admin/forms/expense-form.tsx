@@ -108,27 +108,46 @@ export function ExpenseForm({
       toast.error("Amount must be greater than 0");
       return;
     }
-    startTransition(async () => {
-      const fd = new FormData();
-      if (initial?.id) fd.set("expense_id", initial.id);
-      fd.set("category_id", categoryId);
-      fd.set("amount", amount);
-      fd.set("currency", currency);
-      fd.set("expense_date", date);
-      fd.set("vendor", vendor);
-      fd.set("description", description);
-      fd.set("status", status);
-      if (file) fd.set("receipt", file);
-      if (clearReceipt) fd.set("clear_receipt", "1");
+    // Build the FormData now so we can close the dialog before awaiting.
+    const fd = new FormData();
+    if (initial?.id) fd.set("expense_id", initial.id);
+    fd.set("category_id", categoryId);
+    fd.set("amount", amount);
+    fd.set("currency", currency);
+    fd.set("expense_date", date);
+    fd.set("vendor", vendor);
+    fd.set("description", description);
+    fd.set("status", status);
+    if (file) fd.set("receipt", file);
+    if (clearReceipt) fd.set("clear_receipt", "1");
 
+    // Snapshot for restore-on-failure.
+    const snapshot = {
+      categoryId, amount, currency, date, vendor, description, status,
+      file, clearReceipt,
+    };
+    // Eager close — dialog disappears immediately, server work runs in
+    // background. If it fails we re-open with the previous values so the
+    // user doesn't have to re-enter everything.
+    setOpen(false);
+    reset();
+    startTransition(async () => {
       const res = await submitExpenseFormData(projectId, fd);
       if (!res.ok) {
         toast.error(res.error);
+        setCategoryId(snapshot.categoryId);
+        setAmount(snapshot.amount);
+        setCurrency(snapshot.currency);
+        setDate(snapshot.date);
+        setVendor(snapshot.vendor);
+        setDescription(snapshot.description);
+        setStatus(snapshot.status);
+        setFile(snapshot.file);
+        setClearReceipt(snapshot.clearReceipt);
+        setOpen(true);
         return;
       }
       toast.success(isEdit ? "Expense updated" : "Expense added");
-      setOpen(false);
-      reset();
       router.refresh();
     });
   }

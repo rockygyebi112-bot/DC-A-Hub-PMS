@@ -1,19 +1,10 @@
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * @deprecated Accent colors are no longer rendered. Kept on the type for
- * callsite compatibility - the new design treats KPI cards uniformly and
- * lets the value carry the meaning.
- */
-export type KpiAccent = "blue" | "green" | "purple" | "amber" | "cyan";
-
 export type KpiCardProps = {
   label: string;
   value: number | string;
   icon: LucideIcon;
-  /** @deprecated no longer rendered, see KpiAccent */
-  accent?: KpiAccent;
   /** Optional small line beneath the value (e.g. "+3 vs last week"). */
   sublabel?: string;
   className?: string;

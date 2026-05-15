@@ -2,14 +2,12 @@ import {
   ArrowLeft,
   CalendarDays,
   CircleCheck,
-  Clock,
   ExternalLink,
   FileSpreadsheet,
   FileText,
   GitBranch,
   Image as ImageIcon,
   MessageSquare,
-  MoreHorizontal,
   Pencil,
   RotateCcw,
   Trash2,
@@ -118,9 +116,7 @@ export function ActivityDetailView({
   const isDone = activity.status === "done";
   const phaseName = activity.phase?.name ?? "Phase";
   const projectName = activity.phase?.project?.name ?? "Project";
-  const progress = computeProgress(activity.status, timeline);
   const duration = formatDuration(activity.planned_date, activity.completed_date);
-  const lastEvent = timeline[timeline.length - 1];
   const proofsById = new Map(proofs.map((p) => [p.id, p]));
   const updates = buildUpdatesFeed(timeline, proofsById);
 
@@ -174,21 +170,13 @@ export function ActivityDetailView({
                 Mark complete
               </Button>
             </form>
-          ) : isDone ? (
-            <div className="inline-flex items-center gap-2">
-              <span className="inline-flex h-7 items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-medium text-emerald-700">
-                <CircleCheck className="size-3.5" />
-                Completed
-              </span>
-              {canReopen && (
-                <form action={reopen}>
-                  <Button type="submit" size="sm" variant="outline">
-                    <RotateCcw className="size-4" />
-                    Reopen
-                  </Button>
-                </form>
-              )}
-            </div>
+          ) : canReopen ? (
+            <form action={reopen}>
+              <Button type="submit" size="sm" variant="outline">
+                <RotateCcw className="size-4" />
+                Reopen
+              </Button>
+            </form>
           ) : null}
           {canDelete && (
             <DeleteConfirm
@@ -217,7 +205,7 @@ export function ActivityDetailView({
       </div>
 
       {/* STATUS STRIP ------------------------------------------------ */}
-      <section className="mb-6 grid divide-y divide-border rounded-2xl border bg-card shadow-sm sm:grid-cols-2 sm:divide-y-0 sm:[&>*:nth-child(n+3)]:border-t sm:[&>*:nth-child(even)]:border-l sm:divide-border lg:grid-cols-5 lg:[&>*]:border-t-0 lg:[&>*:not(:first-child)]:border-l">
+      <section className="mb-6 grid divide-y divide-border rounded-2xl border bg-card shadow-sm sm:grid-cols-3 sm:divide-y-0 sm:[&>*:not(:first-child)]:border-l">
         <StripCell label="Status">
           <ActivityStatus status={activity.status} />
         </StripCell>
@@ -231,17 +219,6 @@ export function ActivityDetailView({
               {duration && (
                 <p className="mt-0.5 text-xs text-muted-foreground">{duration}</p>
               )}
-            </div>
-          </div>
-        </StripCell>
-        <StripCell label="Progress">
-          <div className="flex items-center gap-2.5">
-            <span className="text-sm font-semibold tabular-nums">{progress}%</span>
-            <div className="h-1.5 w-full max-w-[140px] overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${progress}%` }}
-              />
             </div>
           </div>
         </StripCell>
@@ -266,21 +243,6 @@ export function ActivityDetailView({
           ) : (
             <span className="text-xs text-muted-foreground">No members yet</span>
           )}
-        </StripCell>
-        <StripCell label="Last update">
-          <div className="flex items-start gap-2">
-            <Clock className="mt-0.5 size-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium leading-tight">
-                {lastEvent ? formatRelative(lastEvent.created_at) : "No activity yet"}
-              </p>
-              {lastEvent?.actor_name && (
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  by {lastEvent.actor_name}
-                </p>
-              )}
-            </div>
-          </div>
         </StripCell>
       </section>
 
@@ -640,7 +602,6 @@ function FileRow({ proof }: { proof: WorkspaceProof }) {
           </span>
           <span className="ml-2 flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
             {proof.size_bytes ? formatBytes(proof.size_bytes) : null}
-            <MoreHorizontal className="size-4 text-muted-foreground opacity-60 group-hover/file:opacity-100" />
           </span>
         </button>
       }
@@ -769,19 +730,6 @@ function Muted({ text }: { text: string }) {
 /* ──────────────────────────────────────────────────────────────────────
  *  Pure helpers
  * ──────────────────────────────────────────────────────────────────── */
-function computeProgress(
-  status: "not_started" | "in_progress" | "done",
-  events: ActivityTimelineEvent[],
-): number {
-  if (status === "done") return 100;
-  if (status === "not_started") return 0;
-  let score = 25;
-  if (events.some((e) => e.action === "created")) score += 15;
-  if (events.some((e) => e.action === "proof_added")) score += 32;
-  if (events.some((e) => e.action === "updated")) score = Math.min(score + 10, 95);
-  return Math.min(score, 95);
-}
-
 function formatDateRange(start: string | null, end: string | null) {
   if (!start && !end) return "Not scheduled";
   const fmt = (s: string | null) =>
@@ -802,19 +750,6 @@ function formatDuration(start: string | null, end: string | null) {
   const diff = Math.max(0, Math.round((b.getTime() - a.getTime()) / 86_400_000));
   if (diff === 0) return "Same day";
   return `${diff} day${diff === 1 ? "" : "s"}`;
-}
-
-function formatRelative(value: string) {
-  const date = new Date(value);
-  const diff = Date.now() - date.getTime();
-  const minutes = Math.round(diff / 60_000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} hr${hours === 1 ? "" : "s"} ago`;
-  const days = Math.round(hours / 24);
-  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
-  return date.toLocaleDateString(undefined, { month: "short", day: "2-digit" });
 }
 
 function formatDateTime(value: string) {

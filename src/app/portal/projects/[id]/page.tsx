@@ -5,9 +5,6 @@ import { PageHeader } from "@/components/admin/ui/page-header";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import {
   ActivityStatusCard,
-  ManagerCard,
-  OverallProgressCard,
-  TimelineCard,
   WorkplanCard,
 } from "@/components/portal/project-summary-cards";
 import { NeedHelpCard } from "@/components/portal/side-cards";
@@ -45,7 +42,6 @@ export default async function PortalProjectPage({
   const subtitle = [project.code, project.client?.name]
     .filter(Boolean)
     .join(" / ");
-  const referenceDate = new Date().toISOString();
 
   return (
     <div className="space-y-6">
@@ -63,13 +59,10 @@ export default async function PortalProjectPage({
 
       <PortalProjectTabs projectId={project.id} />
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        <OverallProgressCard
-          done={project.doneCount}
-          total={project.totalCount}
-          health="good"
-        />
+      {/* Summary cards. Manager + timeline + overall progress used to live
+          here too; manager is surfaced via NeedHelpCard, and timeline +
+          progress already appear in the workplan table headers below. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <WorkplanCard
           phases={phases.length}
           activities={totalActivities}
@@ -78,12 +71,6 @@ export default async function PortalProjectPage({
           notStarted={notStartedCount}
           inProgress={inProgressCount}
           done={doneCount}
-        />
-        <ManagerCard manager={manager} />
-        <TimelineCard
-          startDate={project.start_date}
-          endDate={project.end_date}
-          referenceDate={referenceDate}
         />
       </div>
 

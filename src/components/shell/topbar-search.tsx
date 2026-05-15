@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -78,13 +85,18 @@ export function TopbarSearch({
     return out;
   }, [items, activities, activityHrefBase]);
 
+  // Defer the query used for filtering so fast typing doesn't block the input.
+  // React keeps the previous filtered list visible until the new pass settles,
+  // which is cheaper and smoother than a setTimeout-based debounce.
+  const deferredQuery = useDeferredValue(query);
+
   const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = deferredQuery.trim().toLowerCase();
     if (!q) return [] as SearchItem[];
     return dedupedItems
       .filter((it) => it.label.toLowerCase().includes(q))
       .slice(0, 8);
-  }, [dedupedItems, query]);
+  }, [dedupedItems, deferredQuery]);
 
   // Reset highlight when the query changes. Derived-state pattern (set during
   // render with a guard) avoids the cascading-render hit of doing this in an effect.

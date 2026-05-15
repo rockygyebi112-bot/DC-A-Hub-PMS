@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, DM_Mono } from "next/font/google";
-import Script from "next/script";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "./providers";
 import { themeScript } from "@/lib/theme/script";
@@ -66,15 +65,15 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
       className={`${inter.variable} ${interHeading.variable} ${dmMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Pre-paint theme application. A raw <script> in <head> runs before
+            React hydrates and before first paint, avoiding the dark/light
+            flash. next/script with beforeInteractive can't be used here
+            because React 19 warns when a <script> is rendered inside the
+            React tree (in <body>). */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-full flex flex-col font-sans">
-        {/* Pre-paint theme application. `next/script` with
-            beforeInteractive is the App Router-blessed pattern for inline
-            scripts that must run before React hydrates. */}
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: themeScript }}
-        />
         <a href="#main-content" className="skip-to-content">
           Skip to main content
         </a>

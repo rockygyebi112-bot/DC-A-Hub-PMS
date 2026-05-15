@@ -41,6 +41,7 @@ export function TopbarSearch({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
+  const [prevQuery, setPrevQuery] = useState("");
   const [activities, setActivities] = useState<SearchableActivity[]>([]);
   const [activitiesLoaded, setActivitiesLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -85,9 +86,12 @@ export function TopbarSearch({
       .slice(0, 8);
   }, [dedupedItems, query]);
 
-  useEffect(() => {
+  // Reset highlight when the query changes. Derived-state pattern (set during
+  // render with a guard) avoids the cascading-render hit of doing this in an effect.
+  if (prevQuery !== query) {
+    setPrevQuery(query);
     setHighlight(0);
-  }, [query]);
+  }
 
   // Close the dropdown when the user clicks outside the search container.
   useEffect(() => {

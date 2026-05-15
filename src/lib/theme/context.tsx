@@ -56,6 +56,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     try {
       const raw = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
       if (raw === "light" || raw === "dark" || raw === "system") {
+        // Hydration-time sync from an external system (localStorage). The
+        // server renders "system"; once we mount we restore the persisted
+        // choice. This is the documented effect-as-subscription pattern.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setThemeState(raw);
       }
     } catch {

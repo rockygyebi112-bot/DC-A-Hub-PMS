@@ -89,13 +89,22 @@ export function AssignMemberForm({
       toast.error("Pick at least one user");
       return;
     }
+    // Snapshot so we can restore on failure.
+    const userIds = Array.from(selected);
+    // Eager close: the dialog disappears immediately and the parent page
+    // refreshes in the background. If the action fails we re-open with the
+    // previous selection so the user can retry without re-picking everyone.
+    setOpen(false);
+    reset();
     startTransition(async () => {
       const res = await addProjectMembers(projectId, {
-        user_ids: Array.from(selected),
+        user_ids: userIds,
         project_role: projectRole,
       });
       if (!res.ok) {
         toast.error(res.error);
+        setSelected(new Set(userIds));
+        setOpen(true);
         return;
       }
       const { added, skipped } = res.data ?? { added: 0, skipped: 0 };
@@ -108,8 +117,6 @@ export function AssignMemberForm({
           `Added ${added} ${added === 1 ? "user" : "users"}${skipped ? ` (${skipped} already on the team)` : ""}`,
         );
       }
-      setOpen(false);
-      reset();
       router.refresh();
     });
   }

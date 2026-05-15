@@ -39,16 +39,25 @@ export function UpdateComposer({ action, upload, user }: Props) {
       toast.error("Write something or attach a file.");
       return;
     }
+    // Snapshot so we can restore on failure.
+    const filesToUpload = pendingFiles;
+    // Eager reset: the input clears the instant the user hits Post. The
+    // already-captured `formData` keeps the values the action needs, so
+    // resetting the visible form does not affect the request.
+    formRef.current?.reset();
+    setPendingFiles([]);
+    inputRef.current?.focus();
     startTransition(async () => {
       // Upload staged attachments first so the proof_added log row lands
       // before the note, keeping a sensible chronological order in the feed.
-      if (pendingFiles.length > 0 && upload) {
+      if (filesToUpload.length > 0 && upload) {
         const fd = new FormData();
-        pendingFiles.forEach((f) => fd.append("proofs", f));
+        filesToUpload.forEach((f) => fd.append("proofs", f));
         try {
           await upload(fd);
         } catch (err) {
           toast.error(err instanceof Error ? err.message : "Upload failed");
+          setPendingFiles(filesToUpload);
           return;
         }
       }
@@ -56,12 +65,11 @@ export function UpdateComposer({ action, upload, user }: Props) {
         const res = await action(formData);
         if (!res.ok) {
           toast.error(res.error ?? "Could not post update");
+          if (inputRef.current) inputRef.current.value = note;
+          setPendingFiles(filesToUpload);
           return;
         }
       }
-      formRef.current?.reset();
-      setPendingFiles([]);
-      inputRef.current?.focus();
     });
   }
 

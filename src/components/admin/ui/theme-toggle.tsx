@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/lib/theme/context";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

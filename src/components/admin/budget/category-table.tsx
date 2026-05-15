@@ -63,7 +63,7 @@ export function CategoryTable({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{cat.name}</p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {cat.expense_count} expense{cat.expense_count === 1 ? "" : "s"}
                   </p>
                 </div>

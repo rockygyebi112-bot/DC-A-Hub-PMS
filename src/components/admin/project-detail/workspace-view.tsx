@@ -760,7 +760,7 @@ function WorkplanCard({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search activities..."
-              className="h-8 w-[200px] rounded-md border border-border bg-background pl-8 pr-3 text-xs outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+              className="h-8 w-full rounded-md border border-border bg-background pl-8 pr-3 text-xs outline-none transition-colors placeholder:text-muted-foreground focus:border-primary sm:w-[200px]"
             />
           </label>
         </div>

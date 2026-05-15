@@ -163,7 +163,7 @@ export function TopbarSearch({
           }}
           onKeyDown={onKeyDown}
           placeholder="Search projects..."
-          className="h-10 w-[300px] rounded-full border border-border bg-muted/40 pl-10 pr-4 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:bg-background lg:w-[340px]"
+          className="h-10 w-[220px] rounded-full border border-border bg-muted/40 pl-10 pr-4 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:bg-background md:w-[280px] lg:w-[340px]"
         />
       </label>
 

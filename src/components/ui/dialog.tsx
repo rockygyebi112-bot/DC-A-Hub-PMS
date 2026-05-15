@@ -58,7 +58,9 @@ function DialogContent({
           // Mobile (< sm): bottom sheet. Pinned to the bottom, full width,
           // rounded only at the top, slides up. Reserves room for the iOS
           // home indicator via env(safe-area-inset-bottom).
-          "inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl pb-[calc(1rem+env(safe-area-inset-bottom,0px))]",
+          // Use `dvh` (dynamic viewport height) so the sheet adapts when iOS
+          // Safari's URL bar collapses/expands and works in landscape.
+          "inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl pb-[calc(1rem+env(safe-area-inset-bottom,0px))]",
           "data-open:animate-in data-open:slide-in-from-bottom data-open:duration-200",
           "data-closed:animate-out data-closed:slide-out-to-bottom data-closed:duration-150",
           // Tablet / desktop (sm+): traditional centered modal that overrides

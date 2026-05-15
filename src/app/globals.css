@@ -669,4 +669,25 @@
     line-height: 1;
     border: 2px solid var(--card, white);
   }
+
+}
+
+/*
+ * Offscreen-row paint skipping. Applied to list rows that may render in the
+ * hundreds. The browser uses `contain-intrinsic-size` as a placeholder height
+ * while the row is offscreen and only does the real layout/paint pass when
+ * the row scrolls into view. `auto` (not `hidden`) ensures content stays in
+ * the accessibility tree and find-in-page still works.
+ *
+ * Tailwind 4 requires `@utility` for custom utility classes — defining them
+ * inside `@layer utilities` does not emit them when the class is statically
+ * referenced.
+ */
+@utility row-cv {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 56px;
+}
+@utility row-cv-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 96px;
 }

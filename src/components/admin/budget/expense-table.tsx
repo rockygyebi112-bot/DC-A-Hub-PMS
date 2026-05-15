@@ -68,7 +68,7 @@ export function ExpenseTable({
           return (
             <li
               key={exp.id}
-              className="rounded-[12px] border bg-card p-3 text-sm"
+              className="row-cv-card rounded-[12px] border bg-card p-3 text-sm"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -160,7 +160,7 @@ export function ExpenseTable({
               await deleteExpense(projectId, exp.id);
             }
             return (
-              <tr key={exp.id} className="hover:bg-muted/30">
+              <tr key={exp.id} className="row-cv hover:bg-muted/30">
                 <td className="whitespace-nowrap px-4 py-3 tabular-nums text-muted-foreground">
                   {formatDate(exp.expense_date)}
                 </td>

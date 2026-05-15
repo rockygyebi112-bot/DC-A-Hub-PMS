@@ -120,7 +120,7 @@ async function WorkspaceBody({
 
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
         <WorkspaceMetric
           icon={FolderKanban}
           label="Assigned"
@@ -203,7 +203,7 @@ async function WorkspaceBody({
 function WorkspaceBodySkeleton() {
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="h-[92px] animate-pulse rounded-xl border bg-muted/40" />
         ))}
@@ -215,7 +215,43 @@ function WorkspaceBodySkeleton() {
 
 function ListView({ projects }: { projects: Awaited<ReturnType<typeof listWorkspaceProjects>> }) {
   return (
-    <div className="overflow-x-auto">
+    <>
+      {/* Mobile: card list. A seven-column table is a horizontal-scroll trap
+          on phones, so we collapse to one card per row with the high-signal
+          fields surfaced. */}
+      <ul className="space-y-2 p-3 md:hidden">
+        {projects.map((p) => (
+          <li key={p.id} className="row-cv-card">
+            <Link
+              href={`/workspace/projects/${p.id}`}
+              className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 transition-colors active:bg-muted/60"
+            >
+              <div className="flex items-start gap-2.5">
+                <ProjectIcon name={p.name} seed={p.id} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="truncate font-medium">{p.name}</p>
+                    <StatusPill status={p.status as "planning" | "active" | "paused" | "completed"} />
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {p.client?.name ?? "No client"} · {p.code}
+                  </p>
+                </div>
+              </div>
+              <ProjectProgress done={p.doneCount} total={p.totalCount} />
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>
+                  {p.end_date ? `Due ${formatProjectDate(p.end_date)}` : "No deadline"}
+                </span>
+                <PriorityPill priority={inferPriority(p.status, p.totalCount)} />
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      {/* Desktop: the seven-column table. */}
+      <div className="hidden overflow-x-auto md:block">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-muted/40 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -275,7 +311,8 @@ function ListView({ projects }: { projects: Awaited<ReturnType<typeof listWorksp
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }
 

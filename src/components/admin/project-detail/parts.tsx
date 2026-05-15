@@ -26,7 +26,10 @@ export function ProjectTabs({
 }) {
   return (
     <div className="border-b border-border">
-      <nav className="-mb-px flex gap-6 overflow-x-auto" aria-label="Project sections">
+      <nav
+        className="-mb-px flex gap-6 overflow-x-auto pl-[max(0px,env(safe-area-inset-left))] pr-[max(0px,env(safe-area-inset-right))]"
+        aria-label="Project sections"
+      >
         {TABS.map((tab) => {
           const isActive = tab.key === active;
           return (

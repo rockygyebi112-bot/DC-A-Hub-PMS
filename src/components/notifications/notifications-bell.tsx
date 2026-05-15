@@ -227,7 +227,7 @@ export function NotificationsBell({
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-[360px] p-0"
+        className="w-[min(360px,calc(100vw-1rem))] p-0"
       >
         <header className="flex items-center justify-between gap-2 border-b px-3 py-2.5">
           <div className="min-w-0">

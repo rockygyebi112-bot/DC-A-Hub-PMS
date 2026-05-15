@@ -600,6 +600,51 @@ function PhaseHeader({
   );
 }
 
+function ActivityCard({ activity }: { activity: WVActivity }) {
+  const assigneeName = activity.responsible ?? "Unassigned";
+  const assigneeEmail = (activity.responsible ?? "unassigned").toLowerCase();
+  return (
+    <li className="row-cv-card rounded-lg border border-border bg-card p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-start gap-2">
+          {activity.status === "done" ? (
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 fill-emerald-500 text-white" />
+          ) : activity.status === "in_progress" ? (
+            <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-dca-blue-500)]">
+              <span className="size-1.5 rounded-full bg-[var(--color-dca-blue-500)]" />
+            </span>
+          ) : (
+            <span className="mt-0.5 size-4 shrink-0 rounded-full border-2 border-muted-foreground/30" />
+          )}
+          <span className="text-[13px] font-medium leading-snug text-foreground break-words">
+            {activity.name}
+          </span>
+        </div>
+        <PriorityDot p={activity.priority ?? "medium"} />
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-6 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <UserAvatar name={assigneeName} email={assigneeEmail} size="sm" />
+          <span className="text-foreground/80">{assigneeName}</span>
+        </span>
+        {activity.planned_date ? (
+          <span className="inline-flex items-center gap-1">
+            <CalendarDays className="size-3" />
+            {formatDate(activity.planned_date)}
+          </span>
+        ) : null}
+        <span className="inline-flex items-center gap-1">
+          <FileText className="size-3 text-rose-500" />
+          <span className="rounded bg-muted px-1.5 py-0.5 font-semibold tabular-nums">
+            +{activity.proofCount}
+          </span>
+        </span>
+        <StatusBadge status={activity.status} />
+      </div>
+    </li>
+  );
+}
+
 function ActivityRow({ activity }: { activity: WVActivity }) {
   const assigneeName = activity.responsible ?? "Unassigned";
   const assigneeEmail = (activity.responsible ?? "unassigned").toLowerCase();
@@ -752,7 +797,15 @@ function WorkplanCard({
                   onToggle={() => toggle(phase.id)}
                 />
                 {isExpanded && filtered.length > 0 && (
-                  <div className="overflow-x-auto border-t border-border bg-muted/10">
+                  <>
+                  {/* Mobile: stacked card list — a six-column table is a
+                      horizontal-scroll trap on phones. */}
+                  <ul className="space-y-2 border-t border-border bg-muted/10 p-3 md:hidden">
+                    {filtered.map((a) => (
+                      <ActivityCard key={a.id} activity={a} />
+                    ))}
+                  </ul>
+                  <div className="hidden overflow-x-auto border-t border-border bg-muted/10 md:block">
                     <table className="w-full min-w-[840px] table-fixed">
                       <thead>
                         <tr className="border-b border-border bg-muted/30">
@@ -801,6 +854,7 @@ function WorkplanCard({
                       </tbody>
                     </table>
                   </div>
+                  </>
                 )}
                 {isExpanded && filtered.length === 0 && (
                   <div className="border-t border-border bg-muted/10 px-5 py-6 text-center text-xs text-muted-foreground">

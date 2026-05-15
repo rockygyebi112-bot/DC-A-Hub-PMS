@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import type { ComponentType } from "react";
 import {
@@ -48,28 +49,11 @@ export default async function WorkspaceHome({
   const statusFilter = sp.status ?? "all";
   const sort = (sp.sort as "name" | "deadline" | "status" | "created" | undefined) ?? "created";
 
-  // Two parallel queries:
-  //  - `allProjects` powers the KPI counts at the top of the page and the
-  //    "next deadline" callout, so it must be unfiltered.
-  //  - `projects` is what the list/grid renders; the DB does the sort and
-  //    status filter so we don't ship full rows to JS just to discard them.
-  // When no status filter is active, both reuse the same in-render cache
-  // entry — the only extra cost is the sort variant.
-  const [profile, allProjects, projects] = await Promise.all([
-    getCurrentProfile(),
-    listWorkspaceProjects({ sort: "created" }),
-    listWorkspaceProjects({ status: statusFilter, sort }),
-  ]);
-
+  // Resolve the current profile up front — it's a tiny, cached query and
+  // we need it to decide which header actions to render before the heavier
+  // project list resolves. The suspended body below handles the slow part.
+  const profile = await getCurrentProfile();
   const isAdmin = profile?.role === "admin";
-  const activeCount = allProjects.filter((p) => p.status === "active").length;
-  const completedCount = allProjects.filter((p) => p.status === "completed").length;
-  const waitingCount = allProjects.filter((p) =>
-    ["planning", "paused"].includes(p.status),
-  ).length;
-  const nextDeadline = allProjects
-    .filter((p) => p.end_date && p.status !== "completed")
-    .sort((a, b) => (a.end_date ?? "").localeCompare(b.end_date ?? ""))[0];
 
   return (
     <div className="space-y-6">
@@ -77,7 +61,7 @@ export default async function WorkspaceHome({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">All Projects</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {profile?.fullName ?? "Workspace"} · {allProjects.length} projects assigned
+            {profile?.fullName ?? "Workspace"}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -96,6 +80,46 @@ export default async function WorkspaceHome({
         </div>
       </div>
 
+      <Suspense
+        key={`${statusFilter}-${sort}-${view}`}
+        fallback={<WorkspaceBodySkeleton />}
+      >
+        <WorkspaceBody view={view} statusFilter={statusFilter} sort={sort} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function WorkspaceBody({
+  view,
+  statusFilter,
+  sort,
+}: {
+  view: string;
+  statusFilter: string;
+  sort: "name" | "deadline" | "status" | "created";
+}) {
+  // Two parallel queries:
+  //  - `allProjects` powers the KPI counts at the top of the page and the
+  //    "next deadline" callout, so it must be unfiltered.
+  //  - `projects` is what the list/grid renders; the DB does the sort and
+  //    status filter so we don't ship full rows to JS just to discard them.
+  const [allProjects, projects] = await Promise.all([
+    listWorkspaceProjects({ sort: "created" }),
+    listWorkspaceProjects({ status: statusFilter, sort }),
+  ]);
+
+  const activeCount = allProjects.filter((p) => p.status === "active").length;
+  const completedCount = allProjects.filter((p) => p.status === "completed").length;
+  const waitingCount = allProjects.filter((p) =>
+    ["planning", "paused"].includes(p.status),
+  ).length;
+  const nextDeadline = allProjects
+    .filter((p) => p.end_date && p.status !== "completed")
+    .sort((a, b) => (a.end_date ?? "").localeCompare(b.end_date ?? ""))[0];
+
+  return (
+    <>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <WorkspaceMetric
           icon={FolderKanban}
@@ -172,6 +196,19 @@ export default async function WorkspaceHome({
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+function WorkspaceBodySkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-[92px] animate-pulse rounded-xl border bg-muted/40" />
+        ))}
+      </div>
+      <div className="h-[420px] animate-pulse rounded-2xl border bg-muted/40" />
     </div>
   );
 }

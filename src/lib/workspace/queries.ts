@@ -242,6 +242,27 @@ export const listProjectPhases = cache(async (projectId: string): Promise<Worksp
   }));
 });
 
+/**
+ * Lean phase list — id + name + order_index only, no activities / proofs.
+ * Use on pages that just need to render a phase selector or compute a
+ * phase index. `listProjectPhases` pulls every activity + per-activity
+ * proof count and is wasteful for those cases.
+ */
+export const listProjectPhasesLite = cache(
+  async (
+    projectId: string,
+  ): Promise<{ id: string; name: string; order_index: number }[]> => {
+    const sb = await createClient();
+    const { data, error } = await sb
+      .from("phases")
+      .select("id, name, order_index")
+      .eq("project_id", projectId)
+      .order("order_index", { ascending: true });
+    throwIfError(error);
+    return data ?? [];
+  },
+);
+
 export async function getPhase(phaseId: string) {
   const sb = await createClient();
   const { data, error } = await sb

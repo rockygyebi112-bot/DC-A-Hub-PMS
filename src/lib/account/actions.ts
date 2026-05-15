@@ -51,11 +51,11 @@ function avatarExt(mime: string): string {
 }
 
 function revalidateAll() {
-  // The avatar / name shows up in the topbar across every surface.
+  // Only the /account page needs server revalidation here. The forms in
+  // `src/components/account/*` call `router.refresh()` on success, which
+  // re-renders the topbar (in the surface the user is currently viewing)
+  // without nuking the whole /admin, /workspace, and /portal trees.
   revalidatePath("/account");
-  revalidatePath("/admin");
-  revalidatePath("/workspace");
-  revalidatePath("/portal");
 }
 
 export async function updateMyName(raw: unknown): Promise<ActionResult> {

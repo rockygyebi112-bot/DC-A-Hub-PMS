@@ -23,15 +23,14 @@ export default async function ProjectOverviewPage({
 }) {
   const { id } = await params;
 
-  const projectMaybe = await getProject(id);
-  if (!projectMaybe) notFound();
-  const project = projectMaybe;
-
-  const [phases, team, budgetSummary] = await Promise.all([
+  const [projectMaybe, phases, team, budgetSummary] = await Promise.all([
+    getProject(id),
     listProjectPhases(id),
     listProjectTeam(id),
     getBudgetSummary(id),
   ]);
+  if (!projectMaybe) notFound();
+  const project = projectMaybe;
 
   // Aggregate counts
   const allActivities = phases.flatMap((p) =>

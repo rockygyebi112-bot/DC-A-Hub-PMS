@@ -11,7 +11,7 @@ import {
   getActivity,
   listActivityProofs,
   listActivityTimeline,
-  listProjectPhases,
+  listProjectPhasesLite,
   listProjectTeam,
 } from "@/lib/workspace/queries";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
@@ -34,7 +34,7 @@ export default async function WorkspaceActivityPage({
   const [profile, activity, phases, proofs, timeline, team] = await Promise.all([
     getCurrentProfile(),
     getActivity(activityId),
-    listProjectPhases(id),
+    listProjectPhasesLite(id),
     listActivityProofs(activityId),
     listActivityTimeline(activityId),
     listProjectTeam(id),

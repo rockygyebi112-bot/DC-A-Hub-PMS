@@ -1,25 +1,15 @@
 import { Suspense } from "react";
 import {
   Activity,
-  CheckCircle2,
   FolderKanban,
-  PauseCircle,
   Users,
 } from "lucide-react";
 import { KpiCard } from "@/components/admin/dashboard/kpi-card";
-import {
-  ProjectOverviewDonut,
-  type DonutSegment,
-} from "@/components/admin/dashboard/project-overview-donut";
 import {
   TasksOverview,
   type TaskRow,
   type TasksByFilter,
 } from "@/components/admin/dashboard/tasks-overview";
-import {
-  NeedsAttentionCard,
-  type AttentionItem,
-} from "@/components/admin/dashboard/needs-attention-card";
 import {
   ProjectHealthSummary,
   type HealthBucket,
@@ -81,10 +71,6 @@ type DashboardData = {
   tasks: {
     byFilter: TasksByFilter;
     counts: { all: number; overdue: number; due_week: number; completed: number };
-  };
-  attention: {
-    items: AttentionItem[];
-    counts: { overdue: number; due_week: number };
   };
   recentProjects: RecentProjectRow[];
   milestones: MilestoneRow[];
@@ -345,16 +331,6 @@ async function getDashboardData(
     due_week: dueWeekRows.length,
     completed: completedRows.length,
   };
-  const attentionItems: AttentionItem[] = [
-    ...overdueSorted.slice(0, 4).map((r) => ({
-      ...toTaskRow(r, false),
-      reason: "overdue" as const,
-    })),
-    ...dueWeekSorted.slice(0, 4).map((r) => ({
-      ...toTaskRow(r, false),
-      reason: "due_soon" as const,
-    })),
-  ].slice(0, 6);
 
   // Recent projects with progress
   const recentProjects: RecentProjectRow[] = projects.slice(0, 5).map((p) => {
@@ -428,10 +404,6 @@ async function getDashboardData(
     totals,
     health,
     tasks: { byFilter: tasksByFilter, counts: taskCounts },
-    attention: {
-      items: attentionItems,
-      counts: { overdue: taskCounts.overdue, due_week: taskCounts.due_week },
-    },
     recentProjects,
     milestones,
     activity: activityFeed,
@@ -477,8 +449,8 @@ function DashboardSkeleton() {
   // streams in.
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
             className="h-[92px] animate-pulse rounded-2xl border bg-muted/40"
@@ -499,13 +471,6 @@ async function DashboardBody({ period }: { period: DashboardPeriod }) {
     getDashboardData(period),
   ]);
 
-  const donutSegments: DonutSegment[] = [
-    { key: "on_track", label: "On Track", value: data.health.on_track },
-    { key: "at_risk", label: "At Risk", value: data.health.at_risk },
-    { key: "delayed", label: "Delayed", value: data.health.delayed },
-    { key: "not_started", label: "Not Started", value: data.health.not_started },
-  ];
-
   const healthBuckets: HealthBucket[] = [
     { key: "on_track", label: "On Track", value: data.health.on_track },
     { key: "at_risk", label: "At Risk", value: data.health.at_risk },
@@ -513,57 +478,41 @@ async function DashboardBody({ period }: { period: DashboardPeriod }) {
     { key: "not_started", label: "Not Started", value: data.health.not_started },
   ];
 
+  // Default the task list to "overdue" so the most urgent items are visible
+  // on first paint — replaces the old standalone "Needs attention" card.
+  const defaultTaskFilter = data.tasks.counts.overdue > 0 ? "overdue" : "all";
+
   return (
     <div className="space-y-5">
-      {/* KPI summary row. 2 cols on phones so the section doesn't span a
-          full scroll-screen; widens to 3/5 on larger surfaces. */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
+      {/* KPI summary row. Project status breakdown lives in the Health
+          summary below, so the strip stays focused on top-level totals. */}
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
         <KpiCard
           label="Total Projects"
           value={data.totals.total}
           icon={FolderKanban}
-          accent="blue"
         />
         <KpiCard
           label="Active Projects"
           value={data.totals.active}
           icon={Activity}
-          accent="green"
-        />
-        <KpiCard
-          label="Completed Projects"
-          value={data.totals.completed}
-          icon={CheckCircle2}
-          accent="purple"
-        />
-        <KpiCard
-          label="On Hold Projects"
-          value={data.totals.paused}
-          icon={PauseCircle}
-          accent="amber"
         />
         <KpiCard
           label="Total Users"
           value={counts.totalUsers}
           icon={Users}
-          accent="cyan"
         />
       </div>
-
-      <NeedsAttentionCard
-        items={data.attention.items}
-        counts={data.attention.counts}
-        viewAllHref="/admin/projects"
-      />
 
       {/* Main 2-column grid */}
       <div className="grid gap-5 xl:grid-cols-2">
         {/* Left column */}
         <div className="space-y-5">
-          <ProjectOverviewDonut total={data.totals.total} segments={donutSegments} />
+          <ProjectHealthSummary buckets={healthBuckets} />
           <TasksOverview
             tasksByFilter={data.tasks.byFilter}
             counts={data.tasks.counts}
+            defaultFilter={defaultTaskFilter}
             viewAllHref="/admin/projects"
           />
         </div>
@@ -578,12 +527,7 @@ async function DashboardBody({ period }: { period: DashboardPeriod }) {
         </div>
       </div>
 
-      {/* Bottom row */}
-      <div className="grid gap-5 xl:grid-cols-2">
-        <ProjectHealthSummary buckets={healthBuckets} />
-        <ActivityFeedCard items={data.activity} viewAllHref="/admin/projects" />
-      </div>
-
+      <ActivityFeedCard items={data.activity} viewAllHref="/admin/projects" />
     </div>
   );
 }

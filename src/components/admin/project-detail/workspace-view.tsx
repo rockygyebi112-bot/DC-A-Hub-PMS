@@ -13,8 +13,8 @@ import {
   FileText,
   Filter,
   ListChecks,
-  MoreHorizontal,
   Paperclip,
+  Pencil,
   Search,
   Shield,
   ShieldCheck,
@@ -312,9 +312,9 @@ function ProjectHero(props: WorkspaceViewProps) {
         <Link
           href={`/admin/projects/${props.projectId}/edit`}
           className="inline-flex size-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-muted"
-          aria-label="More actions"
+          aria-label="Edit project"
         >
-          <MoreHorizontal className="size-4" />
+          <Pencil className="size-4" />
         </Link>
       </div>
     </div>
@@ -653,15 +653,6 @@ function ActivityRow({ activity }: { activity: WVActivity }) {
       <td className="px-3 py-3 align-top">
         <PriorityDot p={activity.priority ?? "medium"} />
       </td>
-      <td className="px-3 py-3 align-top">
-        <button
-          type="button"
-          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100"
-          aria-label="Activity actions"
-        >
-          <MoreHorizontal className="size-4" />
-        </button>
-      </td>
     </tr>
   );
 }
@@ -801,10 +792,6 @@ function WorkplanCard({
                           >
                             Priority
                           </th>
-                          <th
-                            className="px-3 py-2.5 text-right text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground"
-                            style={{ width: "4%" }}
-                          />
                         </tr>
                       </thead>
                       <tbody>

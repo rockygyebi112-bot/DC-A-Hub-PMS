@@ -100,7 +100,7 @@ export function TasksOverview({
   ];
 
   return (
-    <div className="rounded-[var(--admin-card-radius)] border bg-card shadow-card">
+    <div className="overflow-hidden rounded-[var(--admin-card-radius)] border bg-card shadow-card">
       <header className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Tasks Overview
@@ -115,15 +115,18 @@ export function TasksOverview({
         )}
       </header>
       <div className="px-4 sm:px-5">
-        <div className="flex flex-wrap items-center gap-2 pb-3">
+        {/* Horizontal scroll on mobile so the project dropdown + four filter
+            pills don't force the card wider than the viewport. Negative
+            inline margin lets the scroll area bleed to the card edges. */}
+        <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-3 sm:mx-0 sm:flex-wrap sm:px-0">
           {projectOptions.length > 0 && (
-            <label className="relative inline-flex items-center">
+            <label className="relative inline-flex shrink-0 items-center">
               <span className="sr-only">Filter by project</span>
               <select
                 value={projectFilter}
                 onChange={(e) => setProjectFilter(e.target.value)}
                 className={cn(
-                  "appearance-none rounded-full border border-border bg-background py-1.5 pl-3 pr-8 text-xs font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/40",
+                  "max-w-[140px] appearance-none truncate rounded-full border border-border bg-background py-1.5 pl-3 pr-8 text-xs font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/40 sm:max-w-none",
                   projectFilter !== "all" &&
                     "border-[var(--color-dca-navy-900)] bg-[var(--color-dca-navy-900)] text-white hover:bg-[var(--color-dca-navy-900)]",
                 )}

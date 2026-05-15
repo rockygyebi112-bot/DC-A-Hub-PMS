@@ -26,7 +26,7 @@ export function ProjectHealthSummary({
   const total = buckets.reduce((acc, b) => acc + b.value, 0) || 1;
 
   return (
-    <div className="rounded-[var(--admin-card-radius)] border bg-card shadow-card">
+    <div className="overflow-hidden rounded-[var(--admin-card-radius)] border bg-card shadow-card">
       <header className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Project Health Summary
@@ -45,15 +45,20 @@ export function ProjectHealthSummary({
             );
           })}
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-y-3 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-4">
           {buckets.map((b) => {
             const pct = Math.round((b.value / total) * 100);
             return (
-              <div key={b.key} className="space-y-1">
-                <p className="stat-number text-xl leading-none">{b.value}</p>
+              // min-w-0 lets the cell shrink inside the 2-col grid so the
+              // dot + label row can truncate instead of forcing the card
+              // to grow past the viewport.
+              <div key={b.key} className="min-w-0 space-y-1">
+                <p className="stat-number text-xl leading-none tabular-nums">
+                  {b.value}
+                </p>
                 <div className="flex items-center gap-1.5">
-                  <span className={`status-dot ${DOT[b.key]}`} />
-                  <span className="text-[11px] font-medium text-muted-foreground">
+                  <span className={`status-dot shrink-0 ${DOT[b.key]}`} />
+                  <span className="truncate text-[11px] font-medium text-muted-foreground">
                     {b.label}
                   </span>
                 </div>

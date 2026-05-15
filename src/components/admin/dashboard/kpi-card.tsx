@@ -20,18 +20,18 @@ export function KpiCard({
   return (
     <div
       className={cn(
-        "rounded-[var(--admin-card-radius)] border border-border bg-card p-4 transition-colors",
+        "rounded-[var(--admin-card-radius)] border border-border bg-card p-3 transition-colors sm:p-4",
         "hover:border-foreground/10",
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
+        <span className="min-w-0 flex-1 text-[10px] font-medium uppercase leading-tight tracking-wide text-muted-foreground sm:text-xs">
           {label}
         </span>
-        <Icon className="h-5 w-5 text-muted-foreground" aria-hidden />
+        <Icon className="size-4 shrink-0 text-muted-foreground sm:size-5" aria-hidden />
       </div>
-      <div className="stat-number mt-2 text-2xl font-semibold leading-none text-foreground tabular-nums">
+      <div className="stat-number mt-2 text-xl font-semibold leading-none text-foreground tabular-nums sm:text-2xl">
         {value}
       </div>
       {sublabel ? (

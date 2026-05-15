@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { Bell, CheckCheck } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -61,7 +68,23 @@ export function NotificationsBell({
     unreadCount: 0,
     lastReadAt: null,
   });
-  const { entries, unreadCount, lastReadAt } = feed;
+  // Optimistic overlay: when the user clicks "Mark read" the badge zeroes
+  // and rows lose their unread style instantly while the server action runs
+  // in the background. If the action throws, the optimistic state reverts.
+  const [optimisticFeed, applyOptimistic] = useOptimistic(
+    feed,
+    (state, action: "markAllRead") => {
+      if (action === "markAllRead") {
+        return {
+          ...state,
+          unreadCount: 0,
+          lastReadAt: new Date().toISOString(),
+        };
+      }
+      return state;
+    },
+  );
+  const { entries, unreadCount, lastReadAt } = optimisticFeed;
 
   useEffect(() => {
     try {
@@ -177,6 +200,7 @@ export function NotificationsBell({
 
   function markRead() {
     startTransition(async () => {
+      applyOptimistic("markAllRead");
       await markNotificationsRead();
       await refresh();
     });

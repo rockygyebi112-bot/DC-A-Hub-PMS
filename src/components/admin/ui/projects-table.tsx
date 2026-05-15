@@ -80,7 +80,7 @@ export function ProjectsTable({ rows }: { rows: ProjectsTableRow[] }) {
         {rows.map((p) => {
           const href = `/admin/projects/${p.id}`;
           return (
-            <li key={p.id}>
+            <li key={p.id} className="row-cv-card">
               <Link
                 href={href}
                 className={`flex min-h-16 flex-col gap-1 rounded-lg border border-border bg-card p-3 transition-colors active:bg-muted/60 ${
@@ -152,7 +152,7 @@ export function ProjectsTable({ rows }: { rows: ProjectsTableRow[] }) {
             return (
               <TableRow
                 key={p.id}
-                className={`cursor-pointer hover:bg-muted/40 transition-colors ${
+                className={`row-cv cursor-pointer hover:bg-muted/40 transition-colors ${
                   p.archived_at ? "opacity-60" : ""
                 }`}
                 style={{ height: "var(--admin-row-h)" }}

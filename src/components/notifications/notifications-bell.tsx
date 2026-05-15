@@ -51,21 +51,26 @@ export function NotificationsBell({
   surface: "workspace" | "portal";
 }) {
   const cacheKey = `notifications-bell:${surface}`;
-  // Hydrate from sessionStorage so the badge doesn't flash empty between
-  // navigations. The fetch below still runs to refresh.
-  const [feed, setFeed] = useState<NotificationFeed>(() => {
-    if (typeof window === "undefined") {
-      return { entries: [], unreadCount: 0, lastReadAt: null };
-    }
-    try {
-      const raw = window.sessionStorage.getItem(cacheKey);
-      if (raw) return JSON.parse(raw) as NotificationFeed;
-    } catch {
-      // ignore
-    }
-    return { entries: [], unreadCount: 0, lastReadAt: null };
+  // Both server and client start with the empty feed so SSR output matches
+  // the initial client render. The cached snapshot is rehydrated in a
+  // useEffect below; the fetch then refreshes it. Reading sessionStorage in
+  // the lazy initializer would cause a hydration mismatch (server has 0
+  // unread, client mounts with N).
+  const [feed, setFeed] = useState<NotificationFeed>({
+    entries: [],
+    unreadCount: 0,
+    lastReadAt: null,
   });
   const { entries, unreadCount, lastReadAt } = feed;
+
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(cacheKey);
+      if (raw) setFeed(JSON.parse(raw) as NotificationFeed);
+    } catch {
+      // sessionStorage may be unavailable (private mode, quota) — non-fatal.
+    }
+  }, [cacheKey]);
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const inFlight = useRef(false);

@@ -43,7 +43,7 @@ export function ClientsTable({ rows }: { rows: ClientsTableRow[] }) {
                   <p className="truncate text-xs text-muted-foreground">
                     {c.contact_email ?? "No contact email"}
                   </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {c.project_count}{" "}
                     {c.project_count === 1 ? "project" : "projects"}
                   </p>

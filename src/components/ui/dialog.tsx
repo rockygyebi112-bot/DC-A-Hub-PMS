@@ -116,7 +116,11 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        // sticky bottom-0 pins the footer to the bottom of the scrollable
+        // dialog body on mobile so action buttons stay reachable even when
+        // the body is long and the footer stacks vertically (3+ buttons).
+        // On desktop the dialog has overflow-visible so sticky is a no-op.
+        "sticky bottom-0 -mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:static sm:flex-row sm:justify-end",
         className
       )}
       {...props}

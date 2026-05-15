@@ -109,7 +109,7 @@ export function ProjectsTable({ rows }: { rows: ProjectsTableRow[] }) {
                     <ChevronRight className="size-4 text-muted-foreground" />
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
                     {p.code}
                   </code>

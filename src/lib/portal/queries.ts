@@ -2,8 +2,10 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import {
+  getActivity,
   getWorkspaceProject,
   listActivityProofs,
+  listActivityTimeline,
   listProjectPhases,
   listProjectTeam,
   listWorkspaceProjects,
@@ -50,15 +52,20 @@ export async function getPortalProjectDetail(projectId: string) {
 }
 
 export async function getPortalActivity(activityId: string) {
-  const { getActivity, listActivityTimeline, listProjectTeam } = await import(
-    "@/lib/workspace/queries"
-  );
-  const activity = await getActivity(activityId);
-  const projectId = activity.phase?.project_id;
-  const [proofs, timeline, team] = await Promise.all([
+  // Kick off the activity-id-only reads in parallel with `getActivity` itself.
+  // The team query depends on the activity's `project_id`, so it stays inside
+  // the chained `.then()` and only fires after the activity row resolves —
+  // but that single dependency no longer blocks proofs + timeline.
+  const activityPromise = getActivity(activityId);
+  const teamPromise = activityPromise.then((a) => {
+    const projectId = a.phase?.project_id;
+    return projectId ? listProjectTeam(projectId) : [];
+  });
+  const [activity, proofs, timeline, team] = await Promise.all([
+    activityPromise,
     listActivityProofs(activityId),
     listActivityTimeline(activityId),
-    projectId ? listProjectTeam(projectId) : Promise.resolve([]),
+    teamPromise,
   ]);
   return { activity, proofs, timeline, team };
 }
@@ -105,24 +112,20 @@ function rankRole(role: string): number {
  * Lightweight count of all proofs (files + links) in a project. Used by the
  * locked Uploads page so the gate can tell the client how many documents
  * are waiting behind the password without leaking any metadata.
+ *
+ * Previously this fanned out into three serial round-trips (phases → activities
+ * → proofs) and shipped every intermediate id list over the wire. The embedded
+ * `!inner` joins collapse that into one HEAD count request — Postgres still
+ * has to walk the chain, but only a single tuple count comes back over HTTP.
  */
 export async function countProjectDocuments(projectId: string): Promise<number> {
   const sb = await createClient();
-  const { data: phases } = await sb
-    .from("phases")
-    .select("id")
-    .eq("project_id", projectId);
-  const phaseIds = (phases ?? []).map((p) => p.id);
-  if (phaseIds.length === 0) return 0;
-  const { data: activities } = await sb
-    .from("activities")
-    .select("id")
-    .in("phase_id", phaseIds);
-  const activityIds = (activities ?? []).map((a) => a.id);
-  if (activityIds.length === 0) return 0;
   const { count } = await sb
     .from("activity_proofs")
-    .select("id", { count: "exact", head: true })
-    .in("activity_id", activityIds);
+    .select("id, activity:activities!inner(id, phase:phases!inner(project_id))", {
+      count: "exact",
+      head: true,
+    })
+    .eq("activity.phase.project_id", projectId);
   return count ?? 0;
 }

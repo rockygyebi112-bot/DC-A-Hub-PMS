@@ -204,9 +204,13 @@ export function TasksOverview({
                       )}
                     </span>
                     <div className="min-w-0">
+                      {/* line-clamp-2 instead of truncate — task titles are
+                          the meat of this card; wrapping to two lines is
+                          friendlier than chopping the end ("Build and submit
+                          Cohort Enrollment & Attendance…"). */}
                       <p
                         className={cn(
-                          "truncate text-sm font-medium",
+                          "line-clamp-2 text-sm font-medium leading-snug",
                           task.isCompleted &&
                             "text-muted-foreground line-through",
                         )}

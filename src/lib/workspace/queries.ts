@@ -382,20 +382,18 @@ export const listProjectTeam = cache(async (projectId: string) => {
 });
 
 /**
- * Cross-request cached loader powering the workspace shell. Returns just
- * the bits the layout needs — projects for the sidebar/search and the
- * notification feed — so every page navigation can be served from the
- * server-side cache instead of issuing fresh Supabase calls. Bust with
- * `revalidateTag('workspace-layout')` or
- * `revalidateTag('workspace-layout-<userId>')` from server actions.
+ * Per-request loader powering the workspace shell. Returns just the bits the
+ * layout needs — projects for the sidebar/search and the notification feed.
+ *
+ * Memoized with React's `cache()` so the layout + page in the same render
+ * pass share one Supabase round-trip. Not a cross-request cache: the
+ * underlying `listWorkspaceProjects` reads cookies for per-user RLS, which
+ * `unstable_cache` forbids (and shared cross-user caching here would be
+ * incorrect anyway — every user sees a different subset).
  */
 export type WorkspaceLayoutData = {
   projects: WorkspaceProject[];
 };
-
-// Previously wrapped in `unstable_cache`, but `listWorkspaceProjects` uses
-// Supabase with `cookies()` for per-user RLS — disallowed inside
-// `unstable_cache`. React's `cache()` still dedupes within a request.
 export const getWorkspaceLayoutData = cache(
   async (_userId: string): Promise<WorkspaceLayoutData> => {
     const projects = await listWorkspaceProjects().catch(() => [] as WorkspaceProject[]);

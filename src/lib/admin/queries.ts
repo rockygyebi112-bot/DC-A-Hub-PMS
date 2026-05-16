@@ -9,7 +9,26 @@ import {
   PROJECT_ACTIVITY_COUNTS,
 } from "@/lib/supabase/columns";
 
-export async function listClients(opts: { includeArchived?: boolean } = {}) {
+// Reserved Postgres LIKE/ILIKE wildcards. Escape before interpolating any
+// attacker-controlled value into an `.ilike(...)` or `.or(...)` filter so
+// users can't broaden the pattern (`%`/`_`) or break out of it (`\`).
+function escapeLike(value: string): string {
+  return value.replace(/([\\%_])/g, "\\$1");
+}
+
+/**
+ * Shared pagination options surfaced by every admin list query. Keep these
+ * unset to preserve the legacy "load everything" shape; pages that scale to
+ * thousands of rows pass `{ limit, offset }` to cap the wire payload.
+ */
+export type PaginationOptions = {
+  limit?: number;
+  offset?: number;
+};
+
+export async function listClients(
+  opts: { includeArchived?: boolean; search?: string } & PaginationOptions = {},
+) {
   const sb = await createClient();
   const q = sb
     .from("clients")
@@ -18,6 +37,11 @@ export async function listClients(opts: { includeArchived?: boolean } = {}) {
     )
     .order("name", { ascending: true });
   if (!opts.includeArchived) q.is("archived_at", null);
+  if (opts.search?.trim()) q.ilike("name", `%${escapeLike(opts.search.trim())}%`);
+  if (opts.limit && opts.limit > 0) {
+    const offset = opts.offset ?? 0;
+    q.range(offset, offset + opts.limit - 1);
+  }
   const { data, error } = await q;
   throwIfError(error);
   return (data ?? []).map((c) => {
@@ -59,19 +83,27 @@ export type ClientProjectRow = {
 };
 
 export const listClientProjects = reactCache(
-  async (clientId: string): Promise<ClientProjectRow[]> => {
+  async (
+    clientId: string,
+    opts: PaginationOptions = {},
+  ): Promise<ClientProjectRow[]> => {
     const sb = await createClient();
     // Two cheap queries instead of one big nested join. The prior version
     // pulled every activity row under the client just to compute done/total
     // counts in JS; `project_activity_counts` does that arithmetic in
     // Postgres and returns one scalar row per project.
-    const { data: projects, error } = await sb
+    const projectsQuery = sb
       .from("projects")
       .select(
         "id, name, code, status, archived_at, start_date, end_date",
       )
       .eq("client_id", clientId)
       .order("name", { ascending: true });
+    if (opts.limit && opts.limit > 0) {
+      const offset = opts.offset ?? 0;
+      projectsQuery.range(offset, offset + opts.limit - 1);
+    }
+    const { data: projects, error } = await projectsQuery;
     throwIfError(error);
     if (!projects?.length) return [];
 
@@ -121,7 +153,9 @@ export async function listProjects(
     includeArchived?: boolean;
     sort?: string;
     dir?: "asc" | "desc";
-  } = {},
+    /** Server-side ILIKE on name + code. Skip to fetch everything. */
+    search?: string;
+  } & PaginationOptions = {},
 ) {
   const sb = await createClient();
   // Allowlist sort column to prevent injection. Fall back to name asc.
@@ -137,6 +171,17 @@ export async function listProjects(
     )
     .order(sortColumn, { ascending });
   if (!opts.includeArchived) q.is("archived_at", null);
+  if (opts.search?.trim()) {
+    // `.or(...)` takes a comma-separated PostgREST filter expression, so the
+    // escaped term goes inline. escapeLike() already neutralised %/_/\, and
+    // PostgREST quotes the value, so injection via `,` / `)` is contained.
+    const term = escapeLike(opts.search.trim());
+    q.or(`name.ilike.%${term}%,code.ilike.%${term}%`);
+  }
+  if (opts.limit && opts.limit > 0) {
+    const offset = opts.offset ?? 0;
+    q.range(offset, offset + opts.limit - 1);
+  }
   const { data, error } = await q;
   throwIfError(error);
   return data ?? [];
@@ -155,13 +200,23 @@ export const getProject = reactCache(async (id: string) => {
   return data;
 });
 
-export async function listUsers(opts: { includeInactive?: boolean } = {}) {
+export async function listUsers(
+  opts: { includeInactive?: boolean; search?: string } & PaginationOptions = {},
+) {
   const sb = await createClient();
   const q = sb
     .from("profiles")
     .select(PROFILE_PUBLIC_WITH_STATUS_AND_CREATED)
     .order("full_name", { ascending: true });
   if (!opts.includeInactive) q.eq("is_active", true);
+  if (opts.search?.trim()) {
+    const term = escapeLike(opts.search.trim());
+    q.or(`full_name.ilike.%${term}%,email.ilike.%${term}%`);
+  }
+  if (opts.limit && opts.limit > 0) {
+    const offset = opts.offset ?? 0;
+    q.range(offset, offset + opts.limit - 1);
+  }
   const { data, error } = await q;
   throwIfError(error);
   return data ?? [];

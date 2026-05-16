@@ -18,10 +18,17 @@ export default async function EditClientPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const clientMaybe = await getClient(id);
+  // Parallel fetch: the project list and the client row are independent reads.
+  // We start both in flight and only branch on `client` after both resolve —
+  // the small wasted query in the 404 case is worth the latency win on the
+  // happy path where every detail-page render previously paid for serial
+  // round-trips.
+  const [clientMaybe, projects] = await Promise.all([
+    getClient(id),
+    listClientProjects(id),
+  ]);
   if (!clientMaybe) notFound();
   const client = clientMaybe;
-  const projects = await listClientProjects(id);
 
   return (
     <div className="max-w-5xl space-y-6">

@@ -9,7 +9,7 @@ import {
   budgetSetupSchema,
   expenseSchema,
 } from "@/lib/admin/schemas";
-import type { ActionResult } from "@/lib/admin/actions/projects";
+import type { ActionResult } from "@/lib/action-result";
 import { dbErrorMessage } from "@/lib/db-errors";
 
 function revalidateBudget(projectId: string) {

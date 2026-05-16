@@ -2,6 +2,12 @@ import "server-only";
 import { cache as reactCache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { throwIfError } from "@/lib/supabase/errors";
+import {
+  PROFILE_PUBLIC,
+  PROFILE_PUBLIC_WITH_STATUS,
+  PROFILE_PUBLIC_WITH_STATUS_AND_CREATED,
+  PROJECT_ACTIVITY_COUNTS,
+} from "@/lib/supabase/columns";
 
 export async function listClients(opts: { includeArchived?: boolean } = {}) {
   const sb = await createClient();
@@ -72,7 +78,7 @@ export const listClientProjects = reactCache(
     const projectIds = projects.map((p) => p.id);
     const { data: countsRaw } = await sb
       .from("project_activity_counts")
-      .select("project_id, total_count, done_count")
+      .select(PROJECT_ACTIVITY_COUNTS)
       .in("project_id", projectIds);
 
     const countsById = new Map<
@@ -153,7 +159,7 @@ export async function listUsers(opts: { includeInactive?: boolean } = {}) {
   const sb = await createClient();
   const q = sb
     .from("profiles")
-    .select("id, user_id, full_name, email, role, is_active, created_at")
+    .select(PROFILE_PUBLIC_WITH_STATUS_AND_CREATED)
     .order("full_name", { ascending: true });
   if (!opts.includeInactive) q.eq("is_active", true);
   const { data, error } = await q;
@@ -165,7 +171,7 @@ export async function getUserByProfileId(id: string) {
   const sb = await createClient();
   const { data, error } = await sb
     .from("profiles")
-    .select("id, user_id, full_name, email, role, is_active")
+    .select(PROFILE_PUBLIC_WITH_STATUS)
     .eq("id", id)
     .single();
   throwIfError(error);
@@ -199,7 +205,7 @@ export async function listProjectMembers(
   const ids = rows.map((r) => r.user_id);
   const { data: profiles, error: pe } = await sb
     .from("profiles")
-    .select("id, user_id, full_name, email, role")
+    .select(PROFILE_PUBLIC)
     .in("user_id", ids);
   throwIfError(pe);
   const byUserId = new Map((profiles ?? []).map((p) => [p.user_id, p]));
@@ -236,7 +242,7 @@ export async function listAssignableUsers(
 
   const { data, error } = await sb
     .from("profiles")
-    .select("id, user_id, full_name, email, role")
+    .select(PROFILE_PUBLIC)
     .in("role", targetRoles)
     .eq("is_active", true);
   throwIfError(error);

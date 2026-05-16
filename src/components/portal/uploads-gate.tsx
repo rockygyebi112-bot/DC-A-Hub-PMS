@@ -111,10 +111,11 @@ export function UploadsGate({
         toast.error(res.error);
         return;
       }
-      setDocuments(res.data);
+      const docs = res.data ?? [];
+      setDocuments(docs);
       setPassword("");
       toast.success(
-        `Unlocked ${res.data.length} document${res.data.length === 1 ? "" : "s"} — your access has been logged`,
+        `Unlocked ${docs.length} document${docs.length === 1 ? "" : "s"} — your access has been logged`,
       );
     });
   }

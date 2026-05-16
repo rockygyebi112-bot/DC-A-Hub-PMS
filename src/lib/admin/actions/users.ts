@@ -14,10 +14,8 @@ import {
   inviteUserSchema,
   setUserRoleSchema,
 } from "@/lib/admin/schemas";
-
-export type ActionResult<T = undefined> =
-  | { ok: true; data?: T }
-  | { ok: false; error: string };
+import type { ActionResult } from "@/lib/action-result";
+import { PROFILE_ROLE_STATUS } from "@/lib/supabase/columns";
 
 type InviteDelivery = "invite_sent" | "password_setup_sent";
 
@@ -199,7 +197,7 @@ export async function setUserRole(
   // the tenant (last-admin scenario is also enforced by a DB trigger).
   const { data: target } = await admin
     .from("profiles")
-    .select("user_id, role, is_active")
+    .select(PROFILE_ROLE_STATUS)
     .eq("id", profileId)
     .single();
   if (!target) return { ok: false, error: "User not found" };
@@ -279,7 +277,7 @@ export async function deleteUser(profileId: string): Promise<ActionResult> {
   const admin = createAdminClient();
   const { data: profile, error: getErr } = await admin
     .from("profiles")
-    .select("user_id, role, is_active")
+    .select(PROFILE_ROLE_STATUS)
     .eq("id", profileId)
     .single();
   if (getErr) return { ok: false, error: getErr.message };

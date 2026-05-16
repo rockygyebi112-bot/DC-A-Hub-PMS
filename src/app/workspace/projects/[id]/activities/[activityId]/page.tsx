@@ -17,6 +17,7 @@ import {
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { requireProjectWriter } from "@/lib/auth/guards";
+import { ACTIVITY_PROJECT_JOIN } from "@/lib/supabase/columns";
 
 export default async function WorkspaceActivityPage({
   params,
@@ -119,7 +120,7 @@ export default async function WorkspaceActivityPage({
     const sb = await createClient();
     const { data: row } = await sb
       .from("activities")
-      .select("phase:phases(project_id)")
+      .select(ACTIVITY_PROJECT_JOIN)
       .eq("id", activityId)
       .single();
     const phase = Array.isArray(row?.phase) ? row?.phase[0] : row?.phase;

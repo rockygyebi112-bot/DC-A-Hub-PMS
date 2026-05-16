@@ -5,10 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth/guards";
 import { clientFormSchema } from "@/lib/admin/schemas";
 import { dbErrorMessage } from "@/lib/db-errors";
-
-export type ActionResult<T = undefined> =
-  | { ok: true; data?: T }
-  | { ok: false; error: string };
+import type { ActionResult } from "@/lib/action-result";
 
 export async function createClientOrg(
   raw: unknown,

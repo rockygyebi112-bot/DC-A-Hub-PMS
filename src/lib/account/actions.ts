@@ -23,9 +23,7 @@ import {
   rateLimitMessage,
 } from "@/lib/rate-limit";
 
-export type ActionResult<T = undefined> =
-  | { ok: true; data?: T }
-  | { ok: false; error: string };
+import type { ActionResult } from "@/lib/action-result";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
 

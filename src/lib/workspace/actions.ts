@@ -22,10 +22,8 @@ import {
   phaseSchema,
 } from "@/lib/workspace/schemas";
 import { notifyClientViewersActivityDone } from "@/lib/workspace/notifications";
-
-type ActionResult<T = undefined> =
-  | { ok: true; data?: T }
-  | { ok: false; error: string };
+import type { ActionResult } from "@/lib/action-result";
+import { ACTIVITY_PROJECT_JOIN } from "@/lib/supabase/columns";
 
 async function currentUserId() {
   const sb = await createClient();
@@ -435,7 +433,7 @@ export async function deleteActivity(activityId: string): Promise<ActionResult<{
   const sb = await createClient();
   const { data: activity, error: lookupError } = await sb
     .from("activities")
-    .select("id, phase:phases(project_id)")
+    .select(`id, ${ACTIVITY_PROJECT_JOIN}`)
     .eq("id", activityId)
     .single();
   if (lookupError || !activity) return { ok: false, error: lookupError?.message ?? "Activity not found" };
@@ -522,7 +520,7 @@ export async function uploadProofs(activityId: string, formData: FormData): Prom
   const userId = await currentUserId();
   const { data: activity } = await sb
     .from("activities")
-    .select("phase:phases(project_id)")
+    .select(ACTIVITY_PROJECT_JOIN)
     .eq("id", activityId)
     .single();
   const phase = Array.isArray(activity?.phase) ? activity?.phase[0] : activity?.phase;

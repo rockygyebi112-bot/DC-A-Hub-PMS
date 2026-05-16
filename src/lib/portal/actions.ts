@@ -13,11 +13,10 @@ import {
   rateLimitMessage,
 } from "@/lib/rate-limit";
 
-const PORTAL_NOTE_MAX = 5000;
+import type { ActionResult } from "@/lib/action-result";
+import { ACTIVITY_PROJECT_JOIN } from "@/lib/supabase/columns";
 
-type ActionResult<T = undefined> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
+const PORTAL_NOTE_MAX = 5000;
 
 export type UnlockedDocument = {
   id: string;
@@ -210,7 +209,7 @@ async function resolveActivityProject(
   const sb = await createClient();
   const { data } = await sb
     .from("activities")
-    .select("phase:phases(project_id)")
+    .select(ACTIVITY_PROJECT_JOIN)
     .eq("id", activityId)
     .maybeSingle();
   const phase = Array.isArray(data?.phase) ? data?.phase[0] : data?.phase;

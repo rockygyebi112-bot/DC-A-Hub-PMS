@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth/guards";
 import { projectFormSchema } from "@/lib/admin/schemas";
 import { dbErrorMessage } from "@/lib/db-errors";
+import { ADMIN_CACHE_TAGS } from "@/lib/admin/queries";
 import type { ActionResult } from "@/lib/action-result";
 
 const GENERIC_DB_ERROR = "Operation failed";
@@ -34,8 +35,10 @@ export async function createProject(
   revalidatePath("/admin/projects");
   // Both shells (admin + workspace) render their sidebars from cached
   // layout payloads; bust them so the new project appears immediately.
+  // `admin-projects` is the cross-request snapshot the admin shell reads.
   revalidateTag("admin-layout", "max");
   revalidateTag("workspace-layout", "max");
+  revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true, data: { id: data.id } };
 }
 
@@ -65,6 +68,7 @@ export async function updateProject(
   revalidatePath(`/admin/projects/${id}`);
   revalidateTag("admin-layout", "max");
   revalidateTag("workspace-layout", "max");
+  revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true };
 }
 
@@ -80,6 +84,7 @@ export async function archiveProject(id: string): Promise<ActionResult> {
   revalidatePath("/admin/projects");
   revalidateTag("admin-layout", "max");
   revalidateTag("workspace-layout", "max");
+  revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true };
 }
 
@@ -95,6 +100,7 @@ export async function restoreProject(id: string): Promise<ActionResult> {
   revalidatePath("/admin/projects");
   revalidateTag("admin-layout", "max");
   revalidateTag("workspace-layout", "max");
+  revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true };
 }
 
@@ -110,5 +116,6 @@ export async function deleteProject(id: string): Promise<ActionResult> {
   revalidatePath("/admin");
   revalidateTag("admin-layout", "max");
   revalidateTag("workspace-layout", "max");
+  revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true };
 }

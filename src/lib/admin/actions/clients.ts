@@ -30,10 +30,8 @@ export async function createClientOrg(
     .single();
   if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidatePath("/admin/clients");
-  // Admin sidebar/search render straight from the cached layout payload;
-  // bust the shared tag so the new client shows up immediately.
-  // `admin-clients` is the cross-request snapshot the admin shell reads.
-  revalidateTag("admin-layout", "max");
+  // Bust the cross-request cached admin clients snapshot used by the admin
+  // shell so the new row shows up on the next navigation.
   revalidateTag(ADMIN_CACHE_TAGS.clients, "max");
   return { ok: true, data: { id: data.id } };
 }
@@ -61,7 +59,6 @@ export async function updateClientOrg(
   if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidatePath("/admin/clients");
   revalidatePath(`/admin/clients/${id}`);
-  revalidateTag("admin-layout", "max");
   revalidateTag(ADMIN_CACHE_TAGS.clients, "max");
   // Project rows embed `client:clients(id, name)` so a client rename or
   // archive shows up in the cached projects snapshot too. Always bust both.
@@ -80,7 +77,6 @@ export async function archiveClient(id: string): Promise<ActionResult> {
   if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidatePath("/admin/clients");
   revalidatePath(`/admin/clients/${id}`);
-  revalidateTag("admin-layout", "max");
   revalidateTag(ADMIN_CACHE_TAGS.clients, "max");
   revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true };
@@ -97,7 +93,6 @@ export async function restoreClient(id: string): Promise<ActionResult> {
   if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidatePath("/admin/clients");
   revalidatePath(`/admin/clients/${id}`);
-  revalidateTag("admin-layout", "max");
   revalidateTag(ADMIN_CACHE_TAGS.clients, "max");
   revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true };
@@ -127,7 +122,6 @@ export async function deleteClientOrg(id: string): Promise<ActionResult> {
   if (error) return { ok: false, error: dbErrorMessage(error) };
 
   revalidatePath("/admin/clients");
-  revalidateTag("admin-layout", "max");
   revalidateTag(ADMIN_CACHE_TAGS.clients, "max");
   revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true };

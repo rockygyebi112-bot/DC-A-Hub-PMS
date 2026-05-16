@@ -145,7 +145,7 @@ export function NextMilestonesCard({
           No upcoming milestones
         </div>
       ) : (
-        <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3">
           {milestones.map((m) => {
             const days = Math.ceil(
               (m.date.getTime() - now) / (1000 * 60 * 60 * 24),

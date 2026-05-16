@@ -457,7 +457,7 @@ function DashboardSkeleton() {
           />
         ))}
       </div>
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <div className="h-[280px] animate-pulse rounded-2xl border bg-muted/40" />
         <div className="h-[280px] animate-pulse rounded-2xl border bg-muted/40" />
       </div>
@@ -506,8 +506,11 @@ async function DashboardBody({ period }: { period: DashboardPeriod }) {
         />
       </div>
 
-      {/* Main 2-column grid */}
-      <div className="grid gap-5 xl:grid-cols-2">
+      {/* Main 2-column grid. `grid-cols-1` is critical on mobile: a bare
+          `grid` without a template lets the single implicit column expand
+          to the natural width of its content (e.g. a long task title),
+          which pushes the whole card past the viewport on phones. */}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         {/* Left column */}
         <div className="space-y-5">
           <ProjectHealthSummary buckets={healthBuckets} />

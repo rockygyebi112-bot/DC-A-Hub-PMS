@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { PROFILE_SESSION_WITH_STATUS } from "@/lib/supabase/columns";
 import type { AppRole } from "./require-role";
 
 /**
@@ -31,7 +32,7 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
 
   const { data: profile, error } = await sb
     .from("profiles")
-    .select("user_id, email, full_name, role, avatar_url, is_active")
+    .select(PROFILE_SESSION_WITH_STATUS)
     .eq("user_id", user.id)
     .single();
   if (error || !profile) return null;

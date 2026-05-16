@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { throwIfError } from "@/lib/supabase/errors";
+import { PROFILE_SESSION } from "@/lib/supabase/columns";
 import type { AppRole } from "@/lib/auth/require-role";
 
 export type AccountSummary = {
@@ -27,7 +28,7 @@ export async function getMyAccount(): Promise<AccountSummary | null> {
 
   const { data: profile, error } = await sb
     .from("profiles")
-    .select("user_id, email, full_name, role, avatar_url")
+    .select(PROFILE_SESSION)
     .eq("user_id", user.id)
     .maybeSingle();
   throwIfError(error);

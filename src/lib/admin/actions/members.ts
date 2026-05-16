@@ -11,10 +11,7 @@ import {
   setProjectManagerSchema,
 } from "@/lib/admin/schemas";
 import { inviteUser } from "./users";
-
-export type ActionResult<T = undefined> =
-  | { ok: true; data?: T }
-  | { ok: false; error: string };
+import type { ActionResult } from "@/lib/action-result";
 
 const GENERIC_DB_ERROR = "Operation failed";
 

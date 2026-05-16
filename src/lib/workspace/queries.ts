@@ -3,6 +3,13 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { throwIfError } from "@/lib/supabase/errors";
+import {
+  ACTIVITY_LOG_ROW,
+  ACTIVITY_PROOF_ROW,
+  ACTIVITY_ROW,
+  PHASE_ROW,
+  PROJECT_ACTIVITY_COUNTS,
+} from "@/lib/supabase/columns";
 
 export type WorkspaceProject = {
   id: string;
@@ -141,7 +148,7 @@ export const listWorkspaceProjects = cache(
     const projectIds = (projects as ProjectRow[]).map((p) => p.id);
     const { data: countsRaw, error: countsError } = await sb
       .from("project_activity_counts")
-      .select("project_id, total_count, done_count")
+      .select(PROJECT_ACTIVITY_COUNTS)
       .in("project_id", projectIds);
     throwIfError(countsError);
 
@@ -202,7 +209,7 @@ export const listProjectPhases = cache(async (projectId: string): Promise<Worksp
   const sb = await createClient();
   const { data: phases, error } = await sb
     .from("phases")
-    .select("id, project_id, name, description, start_date, end_date, order_index")
+    .select(PHASE_ROW)
     .eq("project_id", projectId)
     .order("order_index", { ascending: true });
   throwIfError(error);
@@ -211,7 +218,7 @@ export const listProjectPhases = cache(async (projectId: string): Promise<Worksp
   const phaseIds = phases.map((phase) => phase.id);
   const { data: activities, error: activityError } = await sb
     .from("activities")
-    .select("id, phase_id, name, description, deliverable, planned_date, completed_date, status, narrative_note, responsible, order_index")
+    .select(ACTIVITY_ROW)
     .in("phase_id", phaseIds)
     .order("order_index", { ascending: true });
   throwIfError(activityError);
@@ -267,7 +274,7 @@ export async function getPhase(phaseId: string) {
   const sb = await createClient();
   const { data, error } = await sb
     .from("phases")
-    .select("id, project_id, name, description, start_date, end_date, order_index")
+    .select(PHASE_ROW)
     .eq("id", phaseId)
     .single();
   throwIfError(error);
@@ -278,7 +285,7 @@ export const getActivity = cache(async (activityId: string) => {
   const sb = await createClient();
   const { data, error } = await sb
     .from("activities")
-    .select("id, phase_id, name, description, deliverable, planned_date, completed_date, status, narrative_note, responsible, order_index, phase:phases(id, name, project_id, project:projects(id, name, code))")
+    .select(`${ACTIVITY_ROW}, phase:phases(id, name, project_id, project:projects(id, name, code))`)
     .eq("id", activityId)
     .single();
   throwIfError(error);
@@ -315,7 +322,7 @@ export const listActivityTimeline = cache(async (
   const sb = await createClient();
   const { data: rows, error } = await sb
     .from("activity_log")
-    .select("id, action, created_at, actor_user_id, meta")
+    .select(ACTIVITY_LOG_ROW)
     .eq("activity_id", activityId)
     .order("created_at", { ascending: true });
   throwIfError(error);
@@ -342,7 +349,7 @@ export const listActivityProofs = cache(async (activityId: string): Promise<Work
   const sb = await createClient();
   const { data, error } = await sb
     .from("activity_proofs")
-    .select("id, activity_id, kind, file_path, file_name, mime_type, size_bytes, caption, url, created_at")
+    .select(ACTIVITY_PROOF_ROW)
     .eq("activity_id", activityId)
     .order("created_at", { ascending: false });
   throwIfError(error);

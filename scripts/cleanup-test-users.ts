@@ -28,6 +28,51 @@ if (!SUPABASE_URL || !SERVICE_ROLE) {
   process.exit(1);
 }
 
+// HARD STOP for production. This script matches `@example.com` and assorted
+// test-fixture names — running it with prod credentials would delete any real
+// user/client whose name happens to fit those patterns. The combination of
+// service-role key + bulk delete + pattern match is too dangerous to ship
+// without a defence-in-depth interlock.
+//
+// To run against prod (don't), the operator must explicitly set
+// CONFIRM_TEST_CLEANUP=yes AND ensure NODE_ENV is not "production".
+if (APPLY) {
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      "Refusing to --apply: NODE_ENV=production. This script is for dev/test fixtures only.",
+    );
+    process.exit(1);
+  }
+  if (process.env.CONFIRM_TEST_CLEANUP !== "yes") {
+    console.error(
+      "Refusing to --apply: set CONFIRM_TEST_CLEANUP=yes to acknowledge that the\n" +
+        "configured SUPABASE_URL points at a non-production project. This script\n" +
+        "matches @example.com and bulk-deletes via the service-role key.",
+    );
+    process.exit(1);
+  }
+  // Bail if the URL looks like an obvious production host. Project owners can
+  // extend this denylist if they keep their prod ref in env.
+  const PROD_HOST_DENYLIST = (process.env.PROD_SUPABASE_HOSTS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (PROD_HOST_DENYLIST.length) {
+    try {
+      const host = new URL(SUPABASE_URL).host;
+      if (PROD_HOST_DENYLIST.some((p) => host === p || host.endsWith(`.${p}`))) {
+        console.error(
+          `Refusing to --apply: SUPABASE_URL host '${host}' matches PROD_SUPABASE_HOSTS denylist.`,
+        );
+        process.exit(1);
+      }
+    } catch {
+      console.error("SUPABASE_URL is not a valid URL");
+      process.exit(1);
+    }
+  }
+}
+
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { autoRefreshToken: false, persistSession: false },
 });

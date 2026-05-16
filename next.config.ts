@@ -13,8 +13,10 @@ const CSP = [
   "default-src 'self'",
   // Next.js + React runtime requires inline scripts for hydration; nonces
   // would be cleaner but require per-request injection. Revisit once the
-  // upgrade path is clear.
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  // upgrade path is clear. 'unsafe-eval' is intentionally NOT included —
+  // Next 16 / React 19 production runtimes do not need eval, and allowing
+  // it defeats the bulk of CSP's value.
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",

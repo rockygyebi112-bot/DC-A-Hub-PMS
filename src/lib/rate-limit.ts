@@ -6,6 +6,53 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export type RateLimitResult = { ok: true } | { ok: false; retryAfterSeconds: number };
 
 /**
+ * Security-sensitive buckets that MUST fail closed if the rate-limit path
+ * itself errors. For these flows an attacker could otherwise induce DB
+ * errors (or wait for a Supabase incident) and brute-force the underlying
+ * gate with no friction. Non-security buckets remain fail-open so a transient
+ * outage doesn't lock users out of ordinary product features.
+ */
+const FAIL_CLOSED_BUCKETS = new Set<string>([
+  "pwd-verify",
+  "pwd-reset",
+  "email-change",
+  "invite",
+  "otp-verify",
+  "auth-callback",
+]);
+
+function failureResult(bucket: string, windowSeconds: number): RateLimitResult {
+  if (FAIL_CLOSED_BUCKETS.has(bucket)) {
+    return { ok: false, retryAfterSeconds: Math.max(windowSeconds, 60) };
+  }
+  return { ok: true };
+}
+
+/**
+ * Extract the originating client IP from request headers. The first hop in
+ * `x-forwarded-for` is attacker-controlled on most platforms (the client can
+ * just send the header and the proxy appends to it), so we prefer the
+ * platform-provided single-value headers and fall back to the RIGHTMOST
+ * `x-forwarded-for` entry (the hop closest to our server, which the trusted
+ * edge proxy wrote). Returns `null` if nothing usable is present.
+ */
+export function extractClientIp(hdrs: Headers): string | null {
+  const realIp = hdrs.get("x-real-ip");
+  if (realIp && realIp.trim()) return realIp.trim();
+  const vercel = hdrs.get("x-vercel-forwarded-for");
+  if (vercel && vercel.trim()) {
+    const parts = vercel.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1];
+  }
+  const fwd = hdrs.get("x-forwarded-for");
+  if (fwd) {
+    const parts = fwd.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1];
+  }
+  return null;
+}
+
+/**
  * Sliding-window rate limit backed by the `rate_limit_events` table
  * (migration 0027). Calls the SECURITY DEFINER `try_consume` function via
  * the service-role client. The function is the only thing that ever reads
@@ -14,14 +61,17 @@ export type RateLimitResult = { ok: true } | { ok: false; retryAfterSeconds: num
  * Use composite keys like `pwd-verify:${userId}` or `pwd-reset:${email}`.
  *
  * Buckets are conventionally one of:
- *   - "pwd-verify"   — re-auth via signInWithPassword
- *   - "pwd-reset"    — forgot-password mail
- *   - "email-change" — updateMyEmail
- *   - "invite"       — admin inviteUser
+ *   - "pwd-verify"    — re-auth via signInWithPassword
+ *   - "pwd-reset"     — forgot-password mail
+ *   - "email-change"  — updateMyEmail
+ *   - "invite"        — admin inviteUser
+ *   - "otp-verify"    — /auth/confirm OTP verification
+ *   - "auth-callback" — /auth/callback code exchange
  *
- * Failures (e.g. DB unreachable) are treated as `{ ok: true }` so a
- * transient outage in the rate-limit path does not lock everyone out.
- * The audit and authn checks downstream are still enforced.
+ * Failure handling: security-sensitive buckets (see FAIL_CLOSED_BUCKETS)
+ * fail CLOSED if the underlying RPC errors — an outage in the limiter must
+ * not silently disable brute-force protection. Non-security buckets fail
+ * open so a transient outage doesn't lock users out of normal product flows.
  */
 export async function checkRateLimit(
   bucket: string,
@@ -51,15 +101,15 @@ export async function checkRateLimit(
       p_window_seconds: windowSeconds,
     });
     if (error) {
-      console.error("[rate-limit] try_consume failed", error);
-      return { ok: true };
+      console.error("[rate-limit] try_consume failed", { bucket, error });
+      return failureResult(bucket, windowSeconds);
     }
     const row = Array.isArray(data) ? data[0] : data;
     if (row?.ok) return { ok: true };
     return { ok: false, retryAfterSeconds: row?.retry_after_seconds ?? windowSeconds };
   } catch (err) {
-    console.error("[rate-limit] try_consume threw", err);
-    return { ok: true };
+    console.error("[rate-limit] try_consume threw", { bucket, err });
+    return failureResult(bucket, windowSeconds);
   }
 }
 
@@ -77,8 +127,7 @@ export async function logPasswordVerifyAttempt(args: {
   try {
     const hdrs = await headers();
     const userAgent = hdrs.get("user-agent");
-    const fwd = hdrs.get("x-forwarded-for");
-    const ip = fwd ? fwd.split(",")[0]?.trim() || null : null;
+    const ip = extractClientIp(hdrs);
     const admin = createAdminClient();
     // Same generated-types story as try_consume above.
     const adminAny = admin as unknown as {

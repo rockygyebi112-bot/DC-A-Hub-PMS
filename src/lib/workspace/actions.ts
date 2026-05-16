@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { dbErrorMessage } from "@/lib/db-errors";
 import {
   checkRateLimit,
+  extractClientIp,
   logPasswordVerifyAttempt,
   rateLimitMessage,
 } from "@/lib/rate-limit";
@@ -276,6 +277,12 @@ export async function importWorkplanSheet(
 }
 
 export async function updatePhase(phaseId: string, formData: FormData): Promise<ActionResult> {
+  // Defense in depth: identify the caller before we touch the DB. The
+  // project-scoped check below relies on RLS to keep an unauthenticated
+  // user from probing phase IDs via the lookup query; we'd rather not.
+  const baseAuth = await requireAuth();
+  if (!baseAuth.ok) return baseAuth;
+
   const parsed = phaseSchema.safeParse({
     name: formValue(formData, "name"),
     description: formValue(formData, "description"),
@@ -430,6 +437,9 @@ async function removeStorageFiles(
 }
 
 export async function deleteActivity(activityId: string): Promise<ActionResult<{ projectId: string }>> {
+  const baseAuth = await requireAuth();
+  if (!baseAuth.ok) return baseAuth;
+
   const sb = await createClient();
   const { data: activity, error: lookupError } = await sb
     .from("activities")
@@ -456,6 +466,9 @@ export async function deleteActivity(activityId: string): Promise<ActionResult<{
 }
 
 export async function deletePhase(phaseId: string): Promise<ActionResult<{ projectId: string }>> {
+  const baseAuth = await requireAuth();
+  if (!baseAuth.ok) return baseAuth;
+
   const sb = await createClient();
   const { data: phase, error: lookupError } = await sb
     .from("phases")
@@ -672,8 +685,7 @@ export async function requestProofAccess(
   try {
     const hdrs = await headers();
     const userAgent = hdrs.get("user-agent");
-    const fwd = hdrs.get("x-forwarded-for");
-    const ip = fwd ? fwd.split(",")[0]?.trim() || null : null;
+    const ip = extractClientIp(hdrs);
     const { error: logErr } = await sb.from("proof_access_log").insert({
       proof_id: proof.id,
       project_id: projectId,

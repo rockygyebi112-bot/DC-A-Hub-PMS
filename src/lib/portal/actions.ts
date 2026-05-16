@@ -9,6 +9,7 @@ import { validateUpload, sanitizeFileName } from "@/lib/uploads";
 import { dbErrorMessage } from "@/lib/db-errors";
 import {
   checkRateLimit,
+  extractClientIp,
   logPasswordVerifyAttempt,
   rateLimitMessage,
 } from "@/lib/rate-limit";
@@ -137,8 +138,7 @@ export async function unlockProjectDocuments(
   try {
     const hdrs = await headers();
     const userAgent = hdrs.get("user-agent");
-    const fwd = hdrs.get("x-forwarded-for");
-    const ip = fwd ? fwd.split(",")[0]?.trim() || null : null;
+    const ip = extractClientIp(hdrs);
     const { error: logErr } = await sb.from("proof_access_log").insert(
       proofs.map((p) => ({
         proof_id: p.id,
@@ -206,6 +206,12 @@ export async function unlockProjectDocuments(
 async function resolveActivityProject(
   activityId: string,
 ): Promise<{ projectId: string } | null> {
+  // Identity check before any DB read. Callers immediately follow up with
+  // `requireProjectReader`, but we should never let an unauthenticated user
+  // probe activity IDs against the DB at all.
+  const auth = await requireAuth();
+  if (!auth.ok) return null;
+
   const sb = await createClient();
   const { data } = await sb
     .from("activities")

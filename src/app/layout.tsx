@@ -33,10 +33,12 @@ const dmMono = DM_Mono({
 // Tailwind responsive variant (sm:, md:, lg:) silently activate on phones,
 // breaking every mobile-specific layout. This tells the browser to use the
 // device's actual width (e.g. 390px on iPhone 14) so breakpoints work.
+// Do NOT set `maximumScale` or `userScalable: false`. Capping zoom violates
+// WCAG 1.4.4 (Resize Text) and is an accessibility anti-pattern — users who
+// need to zoom must be able to do so without limit.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5,
   viewportFit: "cover",
 };
 

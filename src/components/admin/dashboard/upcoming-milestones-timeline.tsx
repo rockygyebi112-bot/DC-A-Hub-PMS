@@ -94,7 +94,14 @@ export function UpcomingMilestonesTimeline({
                     className="flex min-w-0 flex-1 flex-col items-start gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{m.name}</p>
+                      {/* line-clamp-2 instead of truncate — milestone names
+                          are the primary content of this card, so two-line
+                          wrap is more useful than chopping the end of the
+                          name where the meaning lives ("Build and submit
+                          Youth in Work Dashboard implementation…"). */}
+                      <p className="line-clamp-2 text-sm font-medium leading-snug">
+                        {m.name}
+                      </p>
                       <p className="truncate text-xs text-muted-foreground">
                         {m.projectName}
                       </p>

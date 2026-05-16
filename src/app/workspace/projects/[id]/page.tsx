@@ -152,7 +152,7 @@ export default async function WorkspaceProjectPage({
         }
       />
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         <MetricCard title="Progress">
           <ProjectProgress done={project.doneCount} total={project.totalCount} />
         </MetricCard>
@@ -175,7 +175,7 @@ export default async function WorkspaceProjectPage({
         </MetricCard>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
         <Tabs defaultValue="phases" className="min-w-0">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <TabsList>
@@ -427,7 +427,7 @@ function ProjectBoard({
   }
 
   return (
-    <div className="grid gap-3 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
       {BOARD_COLUMNS.map((column) => {
         const Icon = column.icon;
         const rows = activities.filter((activity) => activity.status === column.key);

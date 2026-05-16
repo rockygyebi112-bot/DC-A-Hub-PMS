@@ -318,7 +318,7 @@ function ListView({ projects }: { projects: Awaited<ReturnType<typeof listWorksp
 
 function CardsView({ projects }: { projects: Awaited<ReturnType<typeof listWorkspaceProjects>> }) {
   return (
-    <div className="grid gap-4 p-4 md:grid-cols-2 md:p-6 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 md:p-6 xl:grid-cols-3">
       {projects.map((p) => (
         <Link
           key={p.id}

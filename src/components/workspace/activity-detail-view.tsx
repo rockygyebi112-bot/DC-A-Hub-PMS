@@ -205,7 +205,7 @@ export function ActivityDetailView({
       </div>
 
       {/* STATUS STRIP ------------------------------------------------ */}
-      <section className="mb-6 grid divide-y divide-border rounded-2xl border bg-card shadow-sm sm:grid-cols-3 sm:divide-y-0 sm:[&>*:not(:first-child)]:border-l">
+      <section className="mb-6 grid grid-cols-1 divide-y divide-border rounded-2xl border bg-card shadow-sm sm:grid-cols-3 sm:divide-y-0 sm:[&>*:not(:first-child)]:border-l">
         <StripCell label="Status">
           <ActivityStatus status={activity.status} />
         </StripCell>
@@ -247,7 +247,7 @@ export function ActivityDetailView({
       </section>
 
       {/* MAIN GRID --------------------------------------------------- */}
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px]">
         {/* LEFT COLUMN */}
         <div className="space-y-5">
           {isEditing && canEdit ? (
@@ -627,7 +627,7 @@ function EditCard({
         successMessage="Activity saved"
         className="space-y-4"
       >
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="grid gap-2 text-sm font-medium">
             Phase
             <select
@@ -676,7 +676,7 @@ function EditCard({
             defaultValue={activity.responsible ?? ""}
           />
         </label>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="grid gap-2 text-sm font-medium">
             Start date
             <Input

@@ -228,7 +228,7 @@ export function AddTeamMemberForm({
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {inviteSectionTitle}
           </p>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Input
               type="email"
               placeholder="email@example.com"

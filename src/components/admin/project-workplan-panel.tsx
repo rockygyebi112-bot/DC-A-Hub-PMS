@@ -72,7 +72,7 @@ export function ProjectWorkplanPanel({ projectId, phases }: Props) {
         </div>
       }
     >
-      <div className="grid gap-5 lg:grid-cols-[340px_1fr]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[340px_1fr]">
         <div className="space-y-4">
           <div className="rounded-lg border bg-background p-4">
             <p className="mb-3 text-xs font-medium uppercase text-muted-foreground">
@@ -111,7 +111,7 @@ export function ProjectWorkplanPanel({ projectId, phases }: Props) {
             />
           ) : (
             <div className="space-y-3">
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div className="rounded-lg border bg-background p-4">
                   <p className="text-xs font-medium text-muted-foreground">Next item</p>
                   <p className="mt-1 truncate text-sm font-semibold">

@@ -100,7 +100,7 @@ export function ClientForm({ mode, initial }: Props) {
           title="Basics"
           description="Used throughout the admin console and future client portal."
         >
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
               name="name"

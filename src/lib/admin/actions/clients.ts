@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth/guards";
 import { clientFormSchema } from "@/lib/admin/schemas";
 import { dbErrorMessage } from "@/lib/db-errors";
+import { ADMIN_CACHE_TAGS } from "@/lib/admin/queries";
 import type { ActionResult } from "@/lib/action-result";
 
 export async function createClientOrg(
@@ -31,7 +32,9 @@ export async function createClientOrg(
   revalidatePath("/admin/clients");
   // Admin sidebar/search render straight from the cached layout payload;
   // bust the shared tag so the new client shows up immediately.
+  // `admin-clients` is the cross-request snapshot the admin shell reads.
   revalidateTag("admin-layout", "max");
+  revalidateTag(ADMIN_CACHE_TAGS.clients, "max");
   return { ok: true, data: { id: data.id } };
 }
 
@@ -59,6 +62,10 @@ export async function updateClientOrg(
   revalidatePath("/admin/clients");
   revalidatePath(`/admin/clients/${id}`);
   revalidateTag("admin-layout", "max");
+  revalidateTag(ADMIN_CACHE_TAGS.clients, "max");
+  // Project rows embed `client:clients(id, name)` so a client rename or
+  // archive shows up in the cached projects snapshot too. Always bust both.
+  revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true };
 }
 
@@ -74,6 +81,8 @@ export async function archiveClient(id: string): Promise<ActionResult> {
   revalidatePath("/admin/clients");
   revalidatePath(`/admin/clients/${id}`);
   revalidateTag("admin-layout", "max");
+  revalidateTag(ADMIN_CACHE_TAGS.clients, "max");
+  revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true };
 }
 
@@ -89,6 +98,8 @@ export async function restoreClient(id: string): Promise<ActionResult> {
   revalidatePath("/admin/clients");
   revalidatePath(`/admin/clients/${id}`);
   revalidateTag("admin-layout", "max");
+  revalidateTag(ADMIN_CACHE_TAGS.clients, "max");
+  revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true };
 }
 
@@ -117,5 +128,7 @@ export async function deleteClientOrg(id: string): Promise<ActionResult> {
 
   revalidatePath("/admin/clients");
   revalidateTag("admin-layout", "max");
+  revalidateTag(ADMIN_CACHE_TAGS.clients, "max");
+  revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true };
 }

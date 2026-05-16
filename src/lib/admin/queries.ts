@@ -1,6 +1,8 @@
 import "server-only";
 import { cache as reactCache } from "react";
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { throwIfError } from "@/lib/supabase/errors";
 import {
   PROFILE_PUBLIC,
@@ -8,6 +10,23 @@ import {
   PROFILE_PUBLIC_WITH_STATUS_AND_CREATED,
   PROJECT_ACTIVITY_COUNTS,
 } from "@/lib/supabase/columns";
+
+/**
+ * Tag identifiers for cross-request cached admin reads. Mutations bust these
+ * via `revalidateTag()` after writing. Keep this list authoritative — adding
+ * a new cached read elsewhere should also add its tag here so the mutation
+ * sites have a single source of truth to grep.
+ */
+export const ADMIN_CACHE_TAGS = {
+  projects: "admin-projects",
+  clients: "admin-clients",
+} as const;
+
+// Hard ceiling on staleness when tag invalidation misses (cross-region cache
+// propagation, future code paths that mutate via raw SQL, etc.). One minute
+// is invisible to humans but bounds the worst case to "you might briefly see
+// the prior snapshot after a write."
+const ADMIN_CACHE_TTL_SECONDS = 60;
 
 // Reserved Postgres LIKE/ILIKE wildcards. Escape before interpolating any
 // attacker-controlled value into an `.ilike(...)` or `.or(...)` filter so
@@ -185,6 +204,103 @@ export async function listProjects(
   const { data, error } = await q;
   throwIfError(error);
   return data ?? [];
+}
+
+/**
+ * Cached, cross-request admin view of every project. Returns the same shape
+ * as `listProjects({ includeArchived, sort, dir })` but reuses one snapshot
+ * across all admin sessions instead of issuing per-request reads.
+ *
+ * SECURITY CONTRACT: this function uses the service-role client and bypasses
+ * RLS. Every caller MUST be inside a route that has already invoked
+ * `requireAdmin()` (today: anything under `/admin/*` is gated by
+ * `app/admin/layout.tsx`). Do not call from non-admin contexts — there is
+ * no per-user filtering happening here.
+ *
+ * The `search` path is deliberately not cached (high cardinality, near-zero
+ * hit rate) and falls back to the cookie-aware `listProjects`.
+ */
+export async function getAdminProjectsCached(
+  opts: {
+    includeArchived?: boolean;
+    sort?: string;
+    dir?: "asc" | "desc";
+    search?: string;
+  } = {},
+) {
+  // Search is unbounded user input — caching would just bloat the cache with
+  // entries that get one hit each. Route it through the RLS-aware path.
+  if (opts.search?.trim()) return listProjects(opts);
+
+  const sortColumn: ProjectSortColumn = isProjectSortColumn(opts.sort)
+    ? opts.sort
+    : "name";
+  const ascending = opts.dir !== "desc";
+  const includeArchived = !!opts.includeArchived;
+
+  // Cache key must encode every option that changes the returned shape, or
+  // a request with different opts will silently see the wrong snapshot.
+  const loader = unstable_cache(
+    async () => {
+      const sb = createAdminClient();
+      const q = sb
+        .from("projects")
+        .select(
+          "id, name, code, status, archived_at, start_date, end_date, created_at, client:clients(id, name)",
+        )
+        .order(sortColumn, { ascending });
+      if (!includeArchived) q.is("archived_at", null);
+      const { data, error } = await q;
+      throwIfError(error);
+      return data ?? [];
+    },
+    ["admin-projects", sortColumn, ascending ? "asc" : "desc", String(includeArchived)],
+    { tags: [ADMIN_CACHE_TAGS.projects], revalidate: ADMIN_CACHE_TTL_SECONDS },
+  );
+  return loader();
+}
+
+/**
+ * Cached counterpart to `listClients`. Same security contract as
+ * {@link getAdminProjectsCached}: service-role client, admin-only by
+ * convention enforced at the route layer.
+ */
+export async function getAdminClientsCached(
+  opts: { includeArchived?: boolean; search?: string } = {},
+) {
+  if (opts.search?.trim()) return listClients(opts);
+  const includeArchived = !!opts.includeArchived;
+
+  const loader = unstable_cache(
+    async () => {
+      const sb = createAdminClient();
+      const q = sb
+        .from("clients")
+        .select(
+          "id, name, contact_email, logo_url, archived_at, created_at, projects(id, archived_at)",
+        )
+        .order("name", { ascending: true });
+      if (!includeArchived) q.is("archived_at", null);
+      const { data, error } = await q;
+      throwIfError(error);
+      return (data ?? []).map((c) => {
+        const projects = (c.projects ?? []) as { id: string; archived_at: string | null }[];
+        const projectCount = projects.filter((p) => p.archived_at === null).length;
+        const rest = {
+          id: c.id,
+          name: c.name,
+          contact_email: c.contact_email,
+          logo_url: c.logo_url,
+          archived_at: c.archived_at,
+          created_at: c.created_at,
+        };
+        return { ...rest, project_count: projectCount };
+      });
+    },
+    ["admin-clients", String(includeArchived)],
+    { tags: [ADMIN_CACHE_TAGS.clients], revalidate: ADMIN_CACHE_TTL_SECONDS },
+  );
+  return loader();
 }
 
 export const getProject = reactCache(async (id: string) => {
@@ -425,10 +541,16 @@ export const getAdminLayoutData = reactCache(
   async (_userId: string): Promise<AdminLayoutData> => {
     const today = new Date().toISOString().slice(0, 10);
     const sb = await createClient();
+    // Clients + projects come from the cross-request cached variants — the
+    // admin layout fires on every navigation, and the dataset is identical
+    // for every admin, so reusing one snapshot beats re-querying per nav.
+    // `getAdminCounts` and the overdue HEAD count stay on the cookie-aware
+    // client: the RPC enforces `is_admin()` via `auth.uid()`, and the
+    // overdue read benefits from RLS automatically scoping inactive admins.
     const [counts, clients, projects, overdueRes] = await Promise.all([
       getAdminCounts(),
-      listClients().catch(() => [] as AdminClientRow[]),
-      listProjects().catch(() => [] as AdminProjectRow[]),
+      getAdminClientsCached().catch(() => [] as AdminClientRow[]),
+      getAdminProjectsCached().catch(() => [] as AdminProjectRow[]),
       sb
         .from("activities")
         .select("id", { count: "exact", head: true })

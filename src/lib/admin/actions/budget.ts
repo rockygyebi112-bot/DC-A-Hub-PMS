@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin/schemas";
 import type { ActionResult } from "@/lib/action-result";
 import { dbErrorMessage } from "@/lib/db-errors";
+import { insertBudgetCategoryOrdered } from "@/lib/supabase/rpcs";
 
 function revalidateBudget(projectId: string) {
   revalidatePath(`/admin/projects/${projectId}`);
@@ -56,29 +57,15 @@ export async function createBudgetCategory(
   const parsed = budgetCategorySchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
+  // Atomic ordered insert (migration 0029) — replaces the previous
+  // SELECT-max + INSERT pair that raced under concurrent creates.
   const sb = await createClient();
-
-  // Determine next order_index
-  const { data: lastRow } = await sb
-    .from("budget_categories")
-    .select("order_index")
-    .eq("project_id", projectId)
-    .order("order_index", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const nextOrder = (lastRow?.order_index ?? -1) + 1;
-
-  const { data, error } = await sb
-    .from("budget_categories")
-    .insert({
-      project_id: projectId,
-      name: parsed.data.name,
-      allocated_amount: parsed.data.allocated_amount,
-      order_index: nextOrder,
-    })
-    .select("id")
-    .single();
-  if (error) return { ok: false, error: dbErrorMessage(error) };
+  const { data, error } = await insertBudgetCategoryOrdered(sb, {
+    project_id: projectId,
+    name: parsed.data.name,
+    allocated_amount: parsed.data.allocated_amount,
+  });
+  if (error || !data) return { ok: false, error: dbErrorMessage(error) };
   revalidateBudget(projectId);
   return { ok: true, data: { id: data.id } };
 }

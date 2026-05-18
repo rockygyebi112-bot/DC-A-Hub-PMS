@@ -45,9 +45,12 @@ export type PaginationOptions = {
   offset?: number;
 };
 
-export async function listClients(
-  opts: { includeArchived?: boolean; search?: string } & PaginationOptions = {},
-) {
+export type ListClientsOptions = {
+  includeArchived?: boolean;
+  search?: string;
+} & PaginationOptions;
+
+export async function listClients(opts: ListClientsOptions = {}) {
   const sb = await createClient();
   const q = sb
     .from("clients")
@@ -56,7 +59,10 @@ export async function listClients(
     )
     .order("name", { ascending: true });
   if (!opts.includeArchived) q.is("archived_at", null);
-  if (opts.search?.trim()) q.ilike("name", `%${escapeLike(opts.search.trim())}%`);
+  if (opts.search?.trim()) {
+    const term = escapeLike(opts.search.trim());
+    q.or(`name.ilike.%${term}%,contact_email.ilike.%${term}%`);
+  }
   if (opts.limit && opts.limit > 0) {
     const offset = opts.offset ?? 0;
     q.range(offset, offset + opts.limit - 1);
@@ -167,15 +173,26 @@ export function isProjectSortColumn(value: unknown): value is ProjectSortColumn 
   );
 }
 
-export async function listProjects(
-  opts: {
-    includeArchived?: boolean;
-    sort?: string;
-    dir?: "asc" | "desc";
-    /** Server-side ILIKE on name + code. Skip to fetch everything. */
-    search?: string;
-  } & PaginationOptions = {},
-) {
+const PROJECT_STATUSES = ["planning", "active", "paused", "completed"] as const;
+type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+function isProjectStatus(value: unknown): value is ProjectStatus {
+  return (
+    typeof value === "string" &&
+    (PROJECT_STATUSES as readonly string[]).includes(value)
+  );
+}
+
+export type ListProjectsOptions = {
+  includeArchived?: boolean;
+  sort?: string;
+  dir?: "asc" | "desc";
+  /** Server-side ILIKE on name + code + client name. */
+  search?: string;
+  /** Allowlisted status filter; anything else is ignored. */
+  status?: string;
+} & PaginationOptions;
+
+export async function listProjects(opts: ListProjectsOptions = {}) {
   const sb = await createClient();
   // Allowlist sort column to prevent injection. Fall back to name asc.
   const sortColumn: ProjectSortColumn = isProjectSortColumn(opts.sort)
@@ -197,6 +214,9 @@ export async function listProjects(
     const term = escapeLike(opts.search.trim());
     q.or(`name.ilike.%${term}%,code.ilike.%${term}%`);
   }
+  if (isProjectStatus(opts.status)) {
+    q.eq("status", opts.status);
+  }
   if (opts.limit && opts.limit > 0) {
     const offset = opts.offset ?? 0;
     q.range(offset, offset + opts.limit - 1);
@@ -204,6 +224,44 @@ export async function listProjects(
   const { data, error } = await q;
   throwIfError(error);
   return data ?? [];
+}
+
+/** Fast head-only count matching `listProjects` filters. */
+export async function countProjects(
+  opts: Omit<ListProjectsOptions, "limit" | "offset" | "sort" | "dir"> = {},
+): Promise<number> {
+  const sb = await createClient();
+  const q = sb.from("projects").select("id", { count: "exact", head: true });
+  if (!opts.includeArchived) q.is("archived_at", null);
+  if (opts.search?.trim()) {
+    const term = escapeLike(opts.search.trim());
+    q.or(`name.ilike.%${term}%,code.ilike.%${term}%`);
+  }
+  if (isProjectStatus(opts.status)) {
+    q.eq("status", opts.status);
+  }
+  const { count, error } = await q;
+  throwIfError(error);
+  return count ?? 0;
+}
+
+/**
+ * Per-status counts for the FilterChips strip on the projects list page.
+ * Issues four parallel HEAD count queries — small payloads, one round-trip
+ * worth of latency rather than four sequential — so the chips stay accurate
+ * even as the underlying list paginates.
+ */
+export async function getProjectsStatusCounts(
+  opts: Pick<ListProjectsOptions, "includeArchived" | "search"> = {},
+): Promise<Record<ProjectStatus, number>> {
+  const results = await Promise.all(
+    PROJECT_STATUSES.map((status) => countProjects({ ...opts, status })),
+  );
+  const out = {} as Record<ProjectStatus, number>;
+  PROJECT_STATUSES.forEach((status, i) => {
+    out[status] = results[i];
+  });
+  return out;
 }
 
 /**
@@ -316,9 +374,22 @@ export const getProject = reactCache(async (id: string) => {
   return data;
 });
 
-export async function listUsers(
-  opts: { includeInactive?: boolean; search?: string } & PaginationOptions = {},
-) {
+const USER_ROLES = ["admin", "staff", "client"] as const;
+type UserRole = (typeof USER_ROLES)[number];
+function isUserRole(value: unknown): value is UserRole {
+  return (
+    typeof value === "string" && (USER_ROLES as readonly string[]).includes(value)
+  );
+}
+
+export type ListUsersOptions = {
+  includeInactive?: boolean;
+  search?: string;
+  /** Allowlisted role filter; anything else is ignored. */
+  role?: string;
+} & PaginationOptions;
+
+export async function listUsers(opts: ListUsersOptions = {}) {
   const sb = await createClient();
   const q = sb
     .from("profiles")
@@ -329,6 +400,9 @@ export async function listUsers(
     const term = escapeLike(opts.search.trim());
     q.or(`full_name.ilike.%${term}%,email.ilike.%${term}%`);
   }
+  if (isUserRole(opts.role)) {
+    q.eq("role", opts.role);
+  }
   if (opts.limit && opts.limit > 0) {
     const offset = opts.offset ?? 0;
     q.range(offset, offset + opts.limit - 1);
@@ -336,6 +410,39 @@ export async function listUsers(
   const { data, error } = await q;
   throwIfError(error);
   return data ?? [];
+}
+
+export async function countUsers(
+  opts: Omit<ListUsersOptions, "limit" | "offset"> = {},
+): Promise<number> {
+  const sb = await createClient();
+  const q = sb.from("profiles").select("id", { count: "exact", head: true });
+  if (!opts.includeInactive) q.eq("is_active", true);
+  if (opts.search?.trim()) {
+    const term = escapeLike(opts.search.trim());
+    q.or(`full_name.ilike.%${term}%,email.ilike.%${term}%`);
+  }
+  if (isUserRole(opts.role)) {
+    q.eq("role", opts.role);
+  }
+  const { count, error } = await q;
+  throwIfError(error);
+  return count ?? 0;
+}
+
+export async function countClients(
+  opts: Omit<ListClientsOptions, "limit" | "offset"> = {},
+): Promise<number> {
+  const sb = await createClient();
+  const q = sb.from("clients").select("id", { count: "exact", head: true });
+  if (!opts.includeArchived) q.is("archived_at", null);
+  if (opts.search?.trim()) {
+    const term = escapeLike(opts.search.trim());
+    q.or(`name.ilike.%${term}%,contact_email.ilike.%${term}%`);
+  }
+  const { count, error } = await q;
+  throwIfError(error);
+  return count ?? 0;
 }
 
 export async function getUserByProfileId(id: string) {
@@ -423,6 +530,7 @@ export async function listAssignableUsers(
 export type AdminCounts = {
   activeClients: number;
   activeProjects: number;
+  totalProjects: number;
   totalUsers: number;
   pendingInvites: number;
   deltas: {
@@ -477,6 +585,7 @@ export const getAdminCounts = reactCache(async (): Promise<AdminCounts> => {
     return {
       activeClients: 0,
       activeProjects: 0,
+      totalProjects: 0,
       totalUsers: 0,
       pendingInvites: 0,
       deltas: {
@@ -492,6 +601,7 @@ export const getAdminCounts = reactCache(async (): Promise<AdminCounts> => {
   return {
     activeClients: safe(row.active_clients),
     activeProjects: safe(row.active_projects),
+    totalProjects: safe(row.total_projects_current),
     totalUsers: safe(row.total_users),
     pendingInvites: safe(row.pending_invites),
     deltas: {

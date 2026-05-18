@@ -100,7 +100,6 @@ export function MobileNav({
                   width={40}
                   height={40}
                   className="h-10 w-10 object-contain"
-                  unoptimized={displayLogo.startsWith("http")}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">
@@ -151,7 +150,6 @@ export function MobileNav({
                   width={40}
                   height={40}
                   className="h-10 w-10 object-contain"
-                  unoptimized={defaultLogoUrl.startsWith("http")}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">

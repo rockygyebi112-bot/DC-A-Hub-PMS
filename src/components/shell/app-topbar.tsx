@@ -19,6 +19,7 @@ export function AppTopbar({
   mobileNav,
   searchItems,
   searchActivityHrefBase = "/workspace",
+  searchOrgsHrefBase = "/admin",
   showBreadcrumbs = true,
 }: {
   name: string;
@@ -37,6 +38,9 @@ export function AppTopbar({
   /** Base path used when navigating to activity matches in the search
    *  dropdown. Defaults to `/workspace`; portal-facing shells pass `/portal`. */
   searchActivityHrefBase?: "/workspace" | "/portal";
+  /** Base path for project/client matches loaded lazily from
+   *  `/api/search/orgs`. Defaults to `/admin`. */
+  searchOrgsHrefBase?: "/admin" | "/workspace" | "/portal";
   /** Hide the path-based breadcrumb trail (e.g. for client-facing surfaces). */
   showBreadcrumbs?: boolean;
 }) {
@@ -45,6 +49,9 @@ export function AppTopbar({
   void greeting;
   void greetingSubtitle;
   void greetingPath;
+  // Search items are now loaded lazily by TopbarSearch via /api/search/orgs.
+  // Layouts may still pass a small `items` array as a pre-fetch hint; treat
+  // the dropdown as enabled regardless of its size.
   const items = searchItems ?? [];
   return (
     <header
@@ -60,10 +67,16 @@ export function AppTopbar({
         <div className="min-w-0 flex-1 overflow-hidden">
           {showBreadcrumbs ? <Breadcrumbs /> : null}
         </div>
-        {showSearch && items.length > 0 && (
-          /* Desktop only: live-search dropdown over the user's projects. */
+        {showSearch && (
+          /* Desktop only: live-search dropdown. Projects + clients load on
+              first focus via /api/search/orgs; the fallback `items` array
+              is shown until that resolves. */
           <div className="hidden md:block">
-            <TopbarSearch items={items} activityHrefBase={searchActivityHrefBase} />
+            <TopbarSearch
+              items={items}
+              activityHrefBase={searchActivityHrefBase}
+              orgsHrefBase={searchOrgsHrefBase}
+            />
           </div>
         )}
         <div className="flex items-center gap-1 md:gap-2">

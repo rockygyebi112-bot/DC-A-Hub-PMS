@@ -86,7 +86,6 @@ export function RecentProjectsList({
                           width={28}
                           height={24}
                           className="max-h-6 w-auto max-w-7 object-contain"
-                          unoptimized={p.clientLogoUrl.startsWith("http")}
                         />
                       ) : (
                         <span className="text-[10px] font-semibold tracking-tight">

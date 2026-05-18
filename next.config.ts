@@ -64,6 +64,19 @@ const nextConfig: NextConfig = {
     // on average; both are universally supported by modern browsers and
     // Next.js falls back to the original PNG/JPG for older clients.
     formats: ["image/avif", "image/webp"],
+    // Allow next/image to optimise Supabase storage URLs (client logos,
+    // avatars, etc). Without this every remote image had to opt out via
+    // `unoptimized` which bypassed AVIF/WebP transformation entirely and
+    // burned bandwidth on full-size PNGs. The wildcard covers project and
+    // preview Supabase refs alike; storage paths always sit under the
+    // `/storage/v1/object/...` prefix.
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/**",
+      },
+    ],
   },
   async headers() {
     return [

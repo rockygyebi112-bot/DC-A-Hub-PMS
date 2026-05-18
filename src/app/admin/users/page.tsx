@@ -3,11 +3,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ArchiveToggle } from "@/components/admin/archive-toggle";
 import { InviteUserForm } from "@/components/admin/forms/invite-user-form";
 import { FilterChips } from "@/components/admin/ui/filter-chips";
+import { ListPagination } from "@/components/admin/ui/list-pagination";
 import { ListSearch } from "@/components/admin/ui/list-search";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { UsersTable, type UsersTableRow } from "@/components/admin/ui/users-table";
-import { listUsers } from "@/lib/admin/queries";
+import { countUsers, listUsers } from "@/lib/admin/queries";
+import { computePageInfo, DEFAULT_PAGE_SIZE, parsePage } from "@/lib/pagination";
 
 const ROLE_OPTIONS = [
   { value: "admin", label: "Admin" },
@@ -18,19 +20,31 @@ const ROLE_OPTIONS = [
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archived?: string; q?: string; role?: string }>;
+  searchParams: Promise<{
+    archived?: string;
+    q?: string;
+    role?: string;
+    page?: string;
+  }>;
 }) {
   const sp = await searchParams;
   const includeInactive = sp.archived === "1";
-  const q = (sp.q ?? "").toLowerCase().trim();
+  const search = (sp.q ?? "").trim();
   const roleFilter = sp.role ?? "";
-  const allRows = await listUsers({ includeInactive });
-  const rows = allRows.filter((user) => {
-    if (q && !`${user.full_name} ${user.email}`.toLowerCase().includes(q)) {
-      return false;
-    }
-    if (roleFilter && user.role !== roleFilter) return false;
-    return true;
+
+  const requestedPage = parsePage(sp.page);
+  const totalCount = await countUsers({
+    includeInactive,
+    search: search || undefined,
+    role: roleFilter || undefined,
+  });
+  const pageInfo = computePageInfo(requestedPage, totalCount, DEFAULT_PAGE_SIZE);
+  const rows = await listUsers({
+    includeInactive,
+    search: search || undefined,
+    role: roleFilter || undefined,
+    limit: pageInfo.pageSize,
+    offset: pageInfo.offset,
   });
 
   return (
@@ -51,20 +65,23 @@ export default async function UsersPage({
 
       <SectionCard
         title="User directory"
-        description={`${rows.length} shown from ${allRows.length} loaded`}
+        description={`${totalCount.toLocaleString()} matching`}
       >
         {rows.length === 0 ? (
           <EmptyState
             icon={Users}
-            title={q || roleFilter ? "No users match" : "No users yet"}
+            title={search || roleFilter ? "No users match" : "No users yet"}
             description={
-              q || roleFilter
+              search || roleFilter
                 ? "Adjust your search or role filter."
                 : "Invite staff and client viewers when they need access."
             }
           />
         ) : (
-          <UsersTable rows={rows as UsersTableRow[]} />
+          <>
+            <UsersTable rows={rows as UsersTableRow[]} />
+            <ListPagination info={pageInfo} />
+          </>
         )}
       </SectionCard>
     </div>

@@ -52,3 +52,47 @@ export async function listSearchableActivities(
   }
   return out;
 }
+
+export type SearchableOrg = { id: string; name: string };
+export type SearchableOrgs = {
+  projects: SearchableOrg[];
+  clients: SearchableOrg[];
+};
+
+/**
+ * Slim project + client list for the topbar search dropdown. RLS scopes
+ * results to what the caller can see, so admins get the full roster while
+ * staff / client users only see projects they belong to. The previous
+ * implementation pre-loaded these in the layout and serialised them into
+ * the RSC payload on every navigation; this is called once per dropdown
+ * open instead.
+ */
+export async function listSearchableOrgs(
+  limit = 500,
+): Promise<SearchableOrgs> {
+  const sb = await createClient();
+  const [projectsRes, clientsRes] = await Promise.all([
+    sb
+      .from("projects")
+      .select("id, name")
+      .is("archived_at", null)
+      .order("name", { ascending: true })
+      .limit(limit),
+    sb
+      .from("clients")
+      .select("id, name")
+      .is("archived_at", null)
+      .order("name", { ascending: true })
+      .limit(limit),
+  ]);
+  return {
+    projects: (projectsRes.data ?? []).map((p) => ({
+      id: p.id as string,
+      name: p.name as string,
+    })),
+    clients: (clientsRes.data ?? []).map((c) => ({
+      id: c.id as string,
+      name: c.name as string,
+    })),
+  };
+}

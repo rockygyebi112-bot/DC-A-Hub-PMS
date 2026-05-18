@@ -26,6 +26,7 @@ export function AppShell({
   bottomNavItems,
   searchItems,
   searchActivityHrefBase,
+  searchOrgsHrefBase,
   showBreadcrumbs,
   breadcrumbSeed,
 }: {
@@ -54,6 +55,9 @@ export function AppShell({
    *  dropdown. Workspace + admin shells default to `/workspace`; the
    *  portal shell overrides this to `/portal`. */
   searchActivityHrefBase?: "/workspace" | "/portal";
+  /** Base path used when navigating to project/client matches lazily
+   *  fetched from `/api/search/orgs`. Admin defaults to `/admin`. */
+  searchOrgsHrefBase?: "/admin" | "/workspace" | "/portal";
   /** Hide the path-based breadcrumb trail in the topbar. */
   showBreadcrumbs?: boolean;
   /** Seed map for breadcrumb label resolution. Keys are URL segments
@@ -98,6 +102,7 @@ export function AppShell({
           greetingPath={greetingPath}
           searchItems={searchItems}
           searchActivityHrefBase={searchActivityHrefBase}
+          searchOrgsHrefBase={searchOrgsHrefBase}
           showBreadcrumbs={showBreadcrumbs}
           mobileNav={
             <MobileNav

@@ -54,14 +54,7 @@ type ActivityRow = {
   completed_date: string | null;
 };
 
-type DashboardData = {
-  totals: {
-    total: number;
-    active: number;
-    completed: number;
-    paused: number;
-    planning: number;
-  };
+type DashboardGridData = {
   health: {
     on_track: number;
     at_risk: number;
@@ -74,7 +67,6 @@ type DashboardData = {
   };
   recentProjects: RecentProjectRow[];
   milestones: MilestoneRow[];
-  activity: ActivityFeedRow[];
 };
 
 // ---------------------------------------------------------------------------
@@ -124,7 +116,7 @@ function priorityFromName(name: string): TaskRow["priority"] {
 function classifyHealth(
   project: ProjectRow,
   today: string,
-): keyof DashboardData["health"] {
+): keyof DashboardGridData["health"] {
   if (project.status === "planning") return "not_started";
   if (project.status === "paused") return "at_risk";
   if (project.status === "completed") return "on_track";
@@ -138,10 +130,6 @@ function activityCompletion(activities: ActivityRow[]) {
   const done = activities.filter((a) => a.status === "done").length;
   return Math.round((done / activities.length) * 100);
 }
-
-// ---------------------------------------------------------------------------
-// Data loader
-// ---------------------------------------------------------------------------
 
 function periodStartDate(period: DashboardPeriod, now = new Date()): string {
   const y = now.getFullYear();
@@ -159,9 +147,15 @@ function periodStartDate(period: DashboardPeriod, now = new Date()): string {
   return start.toISOString();
 }
 
-async function getDashboardData(
-  period: DashboardPeriod = "month",
-): Promise<DashboardData> {
+// ---------------------------------------------------------------------------
+// Data loaders — split into independent fetches so per-card Suspense
+// boundaries can stream in as each one resolves rather than blocking on the
+// slowest single query.
+// ---------------------------------------------------------------------------
+
+async function getDashboardGridData(
+  period: DashboardPeriod,
+): Promise<DashboardGridData> {
   const sb = await createClient();
   const today = new Date().toISOString().slice(0, 10);
   const inSevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -169,45 +163,18 @@ async function getDashboardData(
     .slice(0, 10);
   const periodStart = periodStartDate(period);
 
-  const [{ data: projectsRaw }, logRes] = await Promise.all([
-    sb
-      .from("projects")
-      .select("id, name, code, status, start_date, end_date, archived_at, client:clients(name, logo_url)")
-      .is("archived_at", null)
-      .gte("created_at", periodStart)
-      .order("created_at", { ascending: false }),
-    sb
-      .from("activity_log")
-      .select("id, action, created_at, project_id, actor_user_id")
-      .order("created_at", { ascending: false })
-      .limit(8),
-  ]);
+  const { data: projectsRaw } = await sb
+    .from("projects")
+    .select(
+      "id, name, code, status, start_date, end_date, archived_at, client:clients(name, logo_url)",
+    )
+    .is("archived_at", null)
+    .gte("created_at", periodStart)
+    .order("created_at", { ascending: false });
 
   const projects = (projectsRaw ?? []) as ProjectRow[];
   const projectIds = projects.map((p) => p.id);
 
-  // Kick off the activity-log enrichment (profiles + project names) in
-  // parallel with the activities query below — it only depends on logRes,
-  // which we already have, so there's no reason to wait.
-  const logRows = logRes.data ?? [];
-  const actorIds = Array.from(
-    new Set(logRows.map((r) => r.actor_user_id).filter(Boolean) as string[]),
-  );
-  const projectsForLog = Array.from(
-    new Set(logRows.map((r) => r.project_id).filter(Boolean)),
-  );
-  const logEnrichmentPromise = Promise.all([
-    actorIds.length
-      ? sb.from("profiles").select("user_id, full_name").in("user_id", actorIds)
-      : Promise.resolve({ data: [] as { user_id: string; full_name: string }[] }),
-    projectsForLog.length
-      ? sb.from("projects").select("id, name").in("id", projectsForLog)
-      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
-  ]);
-
-  // Pull activities + their parent phase's project_id in a single round-trip
-  // via PostgREST's embedded resource filter, instead of fetching phases first
-  // and then activities (which adds an unnecessary serial hop).
   type ActivityWithPhase = ActivityRow & { phases: { project_id: string } | null };
   const { data: activitiesRaw } = projectIds.length
     ? await sb
@@ -228,7 +195,6 @@ async function getDashboardData(
       .map((a) => [a.phase_id, a.phases!.project_id]),
   );
 
-  // Per-project activity grouping
   const byProject = new Map<string, ActivityRow[]>();
   for (const a of activities) {
     const projectId = phaseToProject.get(a.phase_id);
@@ -238,20 +204,9 @@ async function getDashboardData(
     byProject.set(projectId, list);
   }
 
-  // Totals
-  const totals = {
-    total: projects.length,
-    active: projects.filter((p) => p.status === "active").length,
-    completed: projects.filter((p) => p.status === "completed").length,
-    paused: projects.filter((p) => p.status === "paused").length,
-    planning: projects.filter((p) => p.status === "planning").length,
-  };
-
-  // Health distribution
   const health = { on_track: 0, at_risk: 0, delayed: 0, not_started: 0 };
   for (const p of projects) health[classifyHealth(p, today)] += 1;
 
-  // Tasks (mapped from activity rows that aren't done OR recently completed)
   const projectById = new Map(projects.map((p) => [p.id, p]));
   const taskCandidates = activities
     .map((a) => {
@@ -274,8 +229,6 @@ async function getDashboardData(
   const completedRows = taskCandidates.filter((r) => r.activity.status === "done");
   const allOpenRows = taskCandidates.filter((r) => r.activity.status !== "done");
 
-  // Build per-filter task lists so the filter pills actually swap between
-  // disjoint row sets rather than all showing the same pre-picked handful.
   function toTaskRow(
     row: { activity: ActivityRow; project: ProjectRow },
     isCompleted: boolean,
@@ -304,7 +257,6 @@ async function getDashboardData(
     (b.activity.completed_date ?? "").localeCompare(a.activity.completed_date ?? ""),
   );
 
-  // "All" mixes overdue + due-this-week + other open + recently completed.
   const allSeen = new Set<string>();
   const allList: TaskRow[] = [];
   function pushAll(row: { activity: ActivityRow; project: ProjectRow }, done: boolean) {
@@ -332,7 +284,6 @@ async function getDashboardData(
     completed: completedRows.length,
   };
 
-  // Recent projects with progress
   const recentProjects: RecentProjectRow[] = projects.slice(0, 5).map((p) => {
     const visual = visualForProject(p.name);
     const completion = activityCompletion(byProject.get(p.id) ?? []);
@@ -348,7 +299,6 @@ async function getDashboardData(
     };
   });
 
-  // Upcoming milestones — next-five activities in the future
   const milestones: MilestoneRow[] = activities
     .filter((a) => a.status !== "done" && a.planned_date && a.planned_date >= today)
     .sort((a, b) => (a.planned_date ?? "").localeCompare(b.planned_date ?? ""))
@@ -369,10 +319,43 @@ async function getDashboardData(
       };
     });
 
-  // Activity feed — enrichment was kicked off in parallel earlier.
-  const [profilesRes, projectNamesRes] = await logEnrichmentPromise;
+  return {
+    health,
+    tasks: { byFilter: tasksByFilter, counts: taskCounts },
+    recentProjects,
+    milestones,
+  };
+}
+
+async function getDashboardActivityFeed(): Promise<ActivityFeedRow[]> {
+  const sb = await createClient();
+  const { data: logRows } = await sb
+    .from("activity_log")
+    .select("id, action, created_at, project_id, actor_user_id")
+    .order("created_at", { ascending: false })
+    .limit(8);
+
+  const rows = logRows ?? [];
+  if (rows.length === 0) return [];
+
+  const actorIds = Array.from(
+    new Set(rows.map((r) => r.actor_user_id).filter(Boolean) as string[]),
+  );
+  const projectIds = Array.from(
+    new Set(rows.map((r) => r.project_id).filter(Boolean) as string[]),
+  );
+
+  const [profilesRes, projectsRes] = await Promise.all([
+    actorIds.length
+      ? sb.from("profiles").select("user_id, full_name").in("user_id", actorIds)
+      : Promise.resolve({ data: [] as { user_id: string; full_name: string }[] }),
+    projectIds.length
+      ? sb.from("projects").select("id, name").in("id", projectIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
+
   const actorById = new Map((profilesRes.data ?? []).map((p) => [p.user_id, p.full_name]));
-  const projNameById = new Map((projectNamesRes.data ?? []).map((p) => [p.id, p.name]));
+  const projNameById = new Map((projectsRes.data ?? []).map((p) => [p.id, p.name]));
 
   const ACTION_VERB: Record<string, string> = {
     created: "created",
@@ -382,7 +365,7 @@ async function getDashboardData(
     proof_deleted: "removed a document from",
     proof_commented: "commented on a document in",
   };
-  const activityFeed: ActivityFeedRow[] = logRows.map((row) => {
+  return rows.map((row) => {
     const actor = (row.actor_user_id && actorById.get(row.actor_user_id)) || "System";
     const projName = (row.project_id && projNameById.get(row.project_id)) || "a project";
     const verb = ACTION_VERB[row.action] ?? row.action.replaceAll("_", " ");
@@ -399,15 +382,6 @@ async function getDashboardData(
       createdAt: row.created_at,
     };
   });
-
-  return {
-    totals,
-    health,
-    tasks: { byFilter: tasksByFilter, counts: taskCounts },
-    recentProjects,
-    milestones,
-    activity: activityFeed,
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -425,51 +399,86 @@ export default async function AdminOverview({
 
   return (
     <div className="space-y-5">
-      {/* Shell renders immediately — period selector is interactive even
-          while the data-heavy body below is still streaming. */}
       <div className="flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
         <h1 className="font-heading text-xl font-bold tracking-tight text-foreground">
           Dashboard
         </h1>
       </div>
-      <Suspense
-        key={period}
-        fallback={<DashboardSkeleton />}
-      >
-        <DashboardBody period={period} />
+
+      {/* KPI strip — independent Suspense around the cheap admin_counts RPC,
+          so the headline numbers paint as soon as that returns rather than
+          waiting on the slower per-period grid below. */}
+      <Suspense fallback={<KpiSkeleton />}>
+        <KpiStrip />
+      </Suspense>
+
+      {/* Main grid — health + tasks + recent + milestones, all derived from
+          one projects + activities snapshot scoped to the selected period. */}
+      <Suspense key={`grid:${period}`} fallback={<GridSkeleton />}>
+        <DashboardGrid period={period} />
+      </Suspense>
+
+      {/* Activity feed — its own Suspense + own query (activity_log + a small
+          enrichment join). Independent of the period scope, so it doesn't
+          re-fetch when the user flips the period selector. */}
+      <Suspense fallback={<ActivityFeedSkeleton />}>
+        <ActivityFeedSection />
       </Suspense>
     </div>
   );
 }
 
-function DashboardSkeleton() {
-  // Simple shimmer placeholders so the dashboard area doesn't pop in with a
-  // jarring layout shift while the data resolves. Heights are tuned to roughly
-  // match the real KPI row + cards so the page doesn't reflow when content
-  // streams in.
+function KpiSkeleton() {
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-[92px] animate-pulse rounded-2xl border bg-muted/40"
-          />
-        ))}
-      </div>
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <div className="h-[280px] animate-pulse rounded-2xl border bg-muted/40" />
-        <div className="h-[280px] animate-pulse rounded-2xl border bg-muted/40" />
-      </div>
+    <div className="grid grid-cols-3 gap-2 sm:gap-4">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div
+          key={i}
+          className="h-[92px] animate-pulse rounded-2xl border bg-muted/40"
+        />
+      ))}
     </div>
   );
 }
 
-async function DashboardBody({ period }: { period: DashboardPeriod }) {
-  const [counts, data] = await Promise.all([
-    getAdminCounts(),
-    getDashboardData(period),
-  ]);
+function GridSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+      <div className="h-[280px] animate-pulse rounded-2xl border bg-muted/40" />
+      <div className="h-[280px] animate-pulse rounded-2xl border bg-muted/40" />
+    </div>
+  );
+}
+
+function ActivityFeedSkeleton() {
+  return <div className="h-[200px] animate-pulse rounded-2xl border bg-muted/40" />;
+}
+
+async function KpiStrip() {
+  const counts = await getAdminCounts();
+  return (
+    <div className="grid grid-cols-3 gap-2 sm:gap-4">
+      <KpiCard
+        label="Total Projects"
+        value={counts.totalProjects}
+        icon={FolderKanban}
+      />
+      <KpiCard
+        label="Active Projects"
+        value={counts.activeProjects}
+        icon={Activity}
+      />
+      <KpiCard
+        label="Total Users"
+        value={counts.totalUsers}
+        icon={Users}
+      />
+    </div>
+  );
+}
+
+async function DashboardGrid({ period }: { period: DashboardPeriod }) {
+  const data = await getDashboardGridData(period);
 
   const healthBuckets: HealthBucket[] = [
     { key: "on_track", label: "On Track", value: data.health.on_track },
@@ -478,61 +487,31 @@ async function DashboardBody({ period }: { period: DashboardPeriod }) {
     { key: "not_started", label: "Not Started", value: data.health.not_started },
   ];
 
-  // Default the task list to "overdue" so the most urgent items are visible
-  // on first paint — replaces the old standalone "Needs attention" card.
   const defaultTaskFilter = data.tasks.counts.overdue > 0 ? "overdue" : "all";
 
   return (
-    <div className="space-y-5">
-      {/* KPI summary row. Project status breakdown lives in the Health
-          summary below, so the strip stays focused on top-level totals.
-          On phones we keep these on a single horizontal row so they read
-          as a compact summary band rather than three stacked tiles. */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
-        <KpiCard
-          label="Total Projects"
-          value={data.totals.total}
-          icon={FolderKanban}
-        />
-        <KpiCard
-          label="Active Projects"
-          value={data.totals.active}
-          icon={Activity}
-        />
-        <KpiCard
-          label="Total Users"
-          value={counts.totalUsers}
-          icon={Users}
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+      <div className="space-y-5">
+        <ProjectHealthSummary buckets={healthBuckets} />
+        <TasksOverview
+          tasksByFilter={data.tasks.byFilter}
+          counts={data.tasks.counts}
+          defaultFilter={defaultTaskFilter}
+          viewAllHref="/admin/projects"
         />
       </div>
-
-      {/* Main 2-column grid. `grid-cols-1` is critical on mobile: a bare
-          `grid` without a template lets the single implicit column expand
-          to the natural width of its content (e.g. a long task title),
-          which pushes the whole card past the viewport on phones. */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        {/* Left column */}
-        <div className="space-y-5">
-          <ProjectHealthSummary buckets={healthBuckets} />
-          <TasksOverview
-            tasksByFilter={data.tasks.byFilter}
-            counts={data.tasks.counts}
-            defaultFilter={defaultTaskFilter}
-            viewAllHref="/admin/projects"
-          />
-        </div>
-
-        {/* Right column */}
-        <div className="space-y-5">
-          <RecentProjectsList projects={data.recentProjects} viewAllHref="/admin/projects" />
-          <UpcomingMilestonesTimeline
-            milestones={data.milestones}
-            viewAllHref="/admin/projects"
-          />
-        </div>
+      <div className="space-y-5">
+        <RecentProjectsList projects={data.recentProjects} viewAllHref="/admin/projects" />
+        <UpcomingMilestonesTimeline
+          milestones={data.milestones}
+          viewAllHref="/admin/projects"
+        />
       </div>
-
-      <ActivityFeedCard items={data.activity} viewAllHref="/admin/projects" />
     </div>
   );
+}
+
+async function ActivityFeedSection() {
+  const feed = await getDashboardActivityFeed();
+  return <ActivityFeedCard items={feed} viewAllHref="/admin/projects" />;
 }

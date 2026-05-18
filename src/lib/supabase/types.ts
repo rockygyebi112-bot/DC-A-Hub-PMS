@@ -57,6 +57,7 @@ export type Database = {
           responsible: string | null
           status: string
           updated_at: string
+          visibility: string
         }
         Insert: {
           completed_date?: string | null
@@ -75,6 +76,7 @@ export type Database = {
           responsible?: string | null
           status?: string
           updated_at?: string
+          visibility?: string
         }
         Update: {
           completed_date?: string | null
@@ -93,6 +95,7 @@ export type Database = {
           responsible?: string | null
           status?: string
           updated_at?: string
+          visibility?: string
         }
         Relationships: [
           {
@@ -142,6 +145,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "activities"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_activity_counts"
+            referencedColumns: ["project_id"]
           },
           {
             foreignKeyName: "activity_log_project_id_fkey"
@@ -202,41 +212,6 @@ export type Database = {
           },
         ]
       }
-      proof_comments: {
-        Row: {
-          author_user_id: string
-          body: string
-          created_at: string
-          id: string
-          proof_id: string
-          updated_at: string
-        }
-        Insert: {
-          author_user_id: string
-          body: string
-          created_at?: string
-          id?: string
-          proof_id: string
-          updated_at?: string
-        }
-        Update: {
-          author_user_id?: string
-          body?: string
-          created_at?: string
-          id?: string
-          proof_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "proof_comments_proof_id_fkey"
-            columns: ["proof_id"]
-            isOneToOne: false
-            referencedRelation: "activity_proofs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       budget_categories: {
         Row: {
           allocated_amount: number
@@ -266,6 +241,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "budget_categories_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_activity_counts"
+            referencedColumns: ["project_id"]
+          },
           {
             foreignKeyName: "budget_categories_project_id_fkey"
             columns: ["project_id"]
@@ -366,10 +348,50 @@ export type Database = {
             foreignKeyName: "expenses_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "project_activity_counts"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "expenses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
+      }
+      password_verify_attempts: {
+        Row: {
+          context: string | null
+          created_at: string
+          email: string | null
+          id: number
+          ip_address: string | null
+          success: boolean
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          email?: string | null
+          id?: number
+          ip_address?: string | null
+          success: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          email?: string | null
+          id?: number
+          ip_address?: string | null
+          success?: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       phases: {
         Row: {
@@ -406,6 +428,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "phases_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_activity_counts"
+            referencedColumns: ["project_id"]
+          },
           {
             foreignKeyName: "phases_project_id_fkey"
             columns: ["project_id"]
@@ -484,6 +513,13 @@ export type Database = {
             foreignKeyName: "project_budgets_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: true
+            referencedRelation: "project_activity_counts"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_budgets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -512,6 +548,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_activity_counts"
+            referencedColumns: ["project_id"]
+          },
           {
             foreignKeyName: "project_members_project_id_fkey"
             columns: ["project_id"]
@@ -610,6 +653,13 @@ export type Database = {
             foreignKeyName: "proof_access_log_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "project_activity_counts"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "proof_access_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -621,6 +671,62 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      proof_comments: {
+        Row: {
+          author_user_id: string
+          body: string
+          created_at: string
+          id: string
+          proof_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_user_id: string
+          body: string
+          created_at?: string
+          id?: string
+          proof_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_user_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          proof_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proof_comments_proof_id_fkey"
+            columns: ["proof_id"]
+            isOneToOne: false
+            referencedRelation: "activity_proofs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rate_limit_events: {
+        Row: {
+          bucket: string
+          created_at: string
+          id: number
+          key: string
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          id?: number
+          key: string
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          id?: number
+          key?: string
+        }
+        Relationships: []
       }
       user_notification_reads: {
         Row: {
@@ -642,26 +748,168 @@ export type Database = {
       }
     }
     Views: {
-      // Hand-added — covered by migration 0021. Re-running `npm run db:types`
-      // against the linked Supabase project will regenerate this block; the
-      // shape below mirrors that output so the regen is a no-op.
       project_activity_counts: {
         Row: {
-          project_id: string
-          total_count: number | null
+          client_done_count: number | null
+          client_in_progress_count: number | null
+          client_not_started_count: number | null
+          client_total_count: number | null
           done_count: number | null
           in_progress_count: number | null
           not_started_count: number | null
+          project_id: string | null
+          total_count: number | null
         }
         Relationships: []
       }
     }
     Functions: {
+      add_project_member_as_manager: {
+        Args: { p_project_id: string; p_user_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          project_id: string
+          project_role: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "project_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_counts: {
+        Args: never
+        Returns: {
+          active_clients: number
+          active_projects: number
+          active_projects_current: number
+          active_projects_prev: number
+          completed_projects_current: number
+          completed_projects_prev: number
+          paused_projects_current: number
+          paused_projects_prev: number
+          pending_invites: number
+          total_projects_current: number
+          total_projects_prev: number
+          total_users: number
+          total_users_current: number
+          total_users_prev: number
+        }[]
+      }
       can_access_project: { Args: { p_project_id: string }; Returns: boolean }
       can_write_project: { Args: { p_project_id: string }; Returns: boolean }
+      insert_activity_ordered: {
+        Args: {
+          p_completed_date?: string
+          p_created_by?: string
+          p_deliverable?: string
+          p_description?: string
+          p_name: string
+          p_phase_id: string
+          p_planned_date?: string
+          p_responsible?: string
+          p_status?: string
+        }
+        Returns: {
+          completed_date: string | null
+          created_at: string
+          created_by: string | null
+          deliverable: string | null
+          description: string | null
+          id: string
+          location: string | null
+          name: string
+          narrative_note: string | null
+          order_index: number
+          participants_count: number | null
+          phase_id: string
+          planned_date: string | null
+          responsible: string | null
+          status: string
+          updated_at: string
+          visibility: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "activities"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      insert_budget_category_ordered: {
+        Args: {
+          p_allocated_amount?: number
+          p_name: string
+          p_project_id: string
+        }
+        Returns: {
+          allocated_amount: number
+          created_at: string
+          id: string
+          name: string
+          order_index: number
+          project_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "budget_categories"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      insert_phase_ordered: {
+        Args: {
+          p_description?: string
+          p_end_date?: string
+          p_name: string
+          p_project_id: string
+          p_start_date?: string
+        }
+        Returns: {
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          order_index: number
+          project_id: string
+          start_date: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "phases"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       is_admin: { Args: never; Returns: boolean }
       project_id_from_path: { Args: { object_name: string }; Returns: string }
       receipt_project_id: { Args: { object_name: string }; Returns: string }
+      shares_project_with: {
+        Args: { target_user_id: string }
+        Returns: boolean
+      }
+      transfer_project_manager: {
+        Args: { p_member_id: string; p_project_id: string }
+        Returns: undefined
+      }
+      try_consume: {
+        Args: {
+          p_bucket: string
+          p_key: string
+          p_limit: number
+          p_window_seconds: number
+        }
+        Returns: {
+          ok: boolean
+          retry_after_seconds: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

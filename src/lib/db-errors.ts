@@ -48,3 +48,42 @@ export function dbErrorMessage(
       return "Operation failed";
   }
 }
+
+/**
+ * Map a Supabase auth / admin-API error to a short, user-safe message.
+ *
+ * The raw `.message` from auth-js often contains Supabase internals
+ * ("Email rate limit exceeded", "User already registered",
+ * "Database error saving new user") that we don't want leaking into UI
+ * toasts — they expose backend state and on the invite/reset flows they
+ * leak account-existence (enumeration).
+ *
+ * We log the full error server-side so support can still trace it, and
+ * return a short generic to the caller. Pass `context` to differentiate
+ * the source in logs.
+ */
+export function authErrorMessage(
+  error: { message?: string; code?: string; status?: number } | null | undefined,
+  context: string,
+): string {
+  if (!error) return "Operation failed";
+  console.error(`[auth:${context}]`, {
+    code: error.code,
+    status: error.status,
+    message: error.message,
+  });
+  const msg = (error.message ?? "").toLowerCase();
+  if (msg.includes("rate") && msg.includes("limit")) {
+    return "Too many attempts. Try again in a few minutes.";
+  }
+  if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+    return "That email is already in use.";
+  }
+  if (msg.includes("invalid") && msg.includes("token")) {
+    return "Link is invalid or has expired.";
+  }
+  if (msg.includes("expired")) {
+    return "Link has expired.";
+  }
+  return "Operation failed";
+}

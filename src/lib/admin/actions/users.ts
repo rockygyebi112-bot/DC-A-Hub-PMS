@@ -2,9 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth/guards";
-import { dbErrorMessage } from "@/lib/db-errors";
+import { authErrorMessage, dbErrorMessage } from "@/lib/db-errors";
 import { checkRateLimit, rateLimitMessage } from "@/lib/rate-limit";
 import { getAppUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email/send";
@@ -86,7 +85,7 @@ export async function inviteUser(
       msg.includes("registered") ||
       msg.includes("exists");
     if (!alreadyExists) {
-      return { ok: false, error: inviteLink.error.message };
+      return { ok: false, error: authErrorMessage(inviteLink.error, "invite_generate") };
     }
     delivery = "password_setup_sent";
     const recoveryLink = await admin.auth.admin.generateLink({
@@ -97,7 +96,7 @@ export async function inviteUser(
       },
     });
     if (recoveryLink.error) {
-      return { ok: false, error: recoveryLink.error.message };
+      return { ok: false, error: authErrorMessage(recoveryLink.error, "invite_recovery") };
     }
     userId = recoveryLink.data.user?.id;
     hashedToken = recoveryLink.data.properties?.hashed_token;
@@ -132,7 +131,7 @@ export async function inviteUser(
       })
       .select("id")
       .single();
-    if (profileErr) return { ok: false, error: profileErr.message };
+    if (profileErr) return { ok: false, error: dbErrorMessage(profileErr) };
     profile = inserted;
   }
   if (!profile) return { ok: false, error: "Could not resolve profile" };
@@ -168,7 +167,10 @@ export async function inviteUser(
         : `password-setup/${userId}/${Math.floor(Date.now() / 60_000)}`,
     extraTags: [{ name: "delivery", value: delivery }],
   });
-  if (!sendResult.ok) return { ok: false, error: sendResult.error };
+  if (!sendResult.ok) {
+    console.error("[invite] sendEmail failed", { error: sendResult.error });
+    return { ok: false, error: "Could not send invitation email. Try again." };
+  }
 
   revalidatePath("/admin/users");
   return {
@@ -242,7 +244,7 @@ export async function deactivateUser(profileId: string): Promise<ActionResult> {
     .select("user_id")
     .eq("id", profileId)
     .single();
-  if (getErr) return { ok: false, error: getErr.message };
+  if (getErr) return { ok: false, error: dbErrorMessage(getErr) };
   if (profile.user_id === callerId) {
     return { ok: false, error: "You cannot deactivate yourself" };
   }
@@ -251,13 +253,13 @@ export async function deactivateUser(profileId: string): Promise<ActionResult> {
     profile.user_id,
     { ban_duration: "876000h" },
   );
-  if (banErr) return { ok: false, error: banErr.message };
+  if (banErr) return { ok: false, error: authErrorMessage(banErr, "deactivate_ban") };
 
   const { error: updErr } = await admin
     .from("profiles")
     .update({ is_active: false })
     .eq("id", profileId);
-  if (updErr) return { ok: false, error: updErr.message };
+  if (updErr) return { ok: false, error: dbErrorMessage(updErr) };
 
   revalidatePath("/admin/users");
   revalidatePath(`/admin/users/${profileId}`);
@@ -277,7 +279,7 @@ export async function deleteUser(profileId: string): Promise<ActionResult> {
     .select(PROFILE_ROLE_STATUS)
     .eq("id", profileId)
     .single();
-  if (getErr) return { ok: false, error: getErr.message };
+  if (getErr) return { ok: false, error: dbErrorMessage(getErr) };
   if (profile.user_id === callerId) {
     return { ok: false, error: "You cannot delete your own account" };
   }
@@ -297,7 +299,7 @@ export async function deleteUser(profileId: string): Promise<ActionResult> {
   const { error: delAuthErr } = await admin.auth.admin.deleteUser(
     profile.user_id,
   );
-  if (delAuthErr) return { ok: false, error: delAuthErr.message };
+  if (delAuthErr) return { ok: false, error: authErrorMessage(delAuthErr, "delete_user_auth") };
 
   // The auth FK should cascade to profiles/project_members. Keep this explicit
   // cleanup as a safety net for projects whose database FK was not applied.
@@ -305,20 +307,20 @@ export async function deleteUser(profileId: string): Promise<ActionResult> {
     .from("project_members")
     .delete()
     .eq("user_id", profile.user_id);
-  if (delMembershipErr) return { ok: false, error: delMembershipErr.message };
+  if (delMembershipErr) return { ok: false, error: dbErrorMessage(delMembershipErr) };
 
   const { error: delProfileErr } = await admin
     .from("profiles")
     .delete()
     .or(`id.eq.${profileId},user_id.eq.${profile.user_id}`);
-  if (delProfileErr) return { ok: false, error: delProfileErr.message };
+  if (delProfileErr) return { ok: false, error: dbErrorMessage(delProfileErr) };
 
   const { data: remainingProfile, error: verifyProfileErr } = await admin
     .from("profiles")
     .select("id")
     .eq("user_id", profile.user_id)
     .maybeSingle();
-  if (verifyProfileErr) return { ok: false, error: verifyProfileErr.message };
+  if (verifyProfileErr) return { ok: false, error: dbErrorMessage(verifyProfileErr) };
   if (remainingProfile) {
     return {
       ok: false,
@@ -340,19 +342,19 @@ export async function reactivateUser(profileId: string): Promise<ActionResult> {
     .select("user_id")
     .eq("id", profileId)
     .single();
-  if (getErr) return { ok: false, error: getErr.message };
+  if (getErr) return { ok: false, error: dbErrorMessage(getErr) };
 
   const { error: unbanErr } = await admin.auth.admin.updateUserById(
     profile.user_id,
     { ban_duration: "none" },
   );
-  if (unbanErr) return { ok: false, error: unbanErr.message };
+  if (unbanErr) return { ok: false, error: authErrorMessage(unbanErr, "reactivate_unban") };
 
   const { error: updErr } = await admin
     .from("profiles")
     .update({ is_active: true })
     .eq("id", profileId);
-  if (updErr) return { ok: false, error: updErr.message };
+  if (updErr) return { ok: false, error: dbErrorMessage(updErr) };
 
   revalidatePath("/admin/users");
   revalidatePath(`/admin/users/${profileId}`);

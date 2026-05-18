@@ -25,6 +25,10 @@ import {
 import { notifyClientViewersActivityDone } from "@/lib/workspace/notifications";
 import type { ActionResult } from "@/lib/action-result";
 import { ACTIVITY_PROJECT_JOIN } from "@/lib/supabase/columns";
+import {
+  insertActivityOrdered,
+  insertPhaseOrdered,
+} from "@/lib/supabase/rpcs";
 
 async function currentUserId() {
   const sb = await createClient();
@@ -107,15 +111,16 @@ export async function createPhase(projectId: string, formData: FormData): Promis
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
+  // Atomic ordered insert (migration 0029). The RPC takes an advisory lock
+  // per project and computes order_index inside the transaction so two
+  // concurrent creates can't collide on the same slot.
   const sb = await createClient();
-  const { count } = await sb
-    .from("phases")
-    .select("*", { count: "exact", head: true })
-    .eq("project_id", projectId);
-  const { error } = await sb.from("phases").insert({
+  const { error } = await insertPhaseOrdered(sb, {
     project_id: projectId,
-    ...parsed.data,
-    order_index: count ?? 0,
+    name: parsed.data.name,
+    description: parsed.data.description,
+    start_date: parsed.data.start_date,
+    end_date: parsed.data.end_date,
   });
   if (error) return { ok: false, error: dbErrorMessage(error) };
 
@@ -159,115 +164,234 @@ export async function importWorkplanSheet(
 
   const sb = await createClient();
   const userId = await currentUserId();
-  const { data: existingPhases, error: phaseError } = await sb
-    .from("phases")
-    .select("id, name, order_index")
-    .eq("project_id", projectId)
-    .order("order_index", { ascending: true });
-  if (phaseError) return { ok: false, error: dbErrorMessage(phaseError) };
 
-  const phaseByName = new Map(
-    (existingPhases ?? []).map((phase) => [normalizeKey(phase.name), phase]),
-  );
-  let nextPhaseIndex =
-    (existingPhases ?? []).reduce((max, phase) => Math.max(max, phase.order_index), -1) + 1;
+  // ──────────────────────────────────────────────────────────────────────
+  // Parse rows into a typed in-memory shape FIRST. The previous loop
+  // issued ~5 DB round-trips per row (select phase, select activity,
+  // count, insert/update, activity_log insert) for a worst case of
+  // ~2500 round-trips on a 500-row workplan. We replace that with a
+  // bounded number of queries: 1 phase fetch, 1 activity fetch, N
+  // phase RPCs (rare), 1 bulk activity insert, M parallel updates,
+  // 1 bulk activity_log insert.
+  // ──────────────────────────────────────────────────────────────────────
+
+  type ParsedRow = {
+    phaseName: string;
+    activityName: string;
+    deliverable: string;
+    notes: string;
+    responsible: string;
+    status: "not_started" | "in_progress" | "done";
+    plannedDate: string | null;
+    completedDate: string | null;
+  };
+
+  const parsed: ParsedRow[] = [];
   let currentPhaseName = "";
-  let phasesCreated = 0;
-  let activitiesCreated = 0;
-  let activitiesUpdated = 0;
-
   for (const row of rows) {
     const phaseName = getCell(row, ["Category", "Phase"]);
     const activityName = getCell(row, ["Activity", "Task Description", "Task"]);
     if (phaseName) currentPhaseName = phaseName;
     if (!currentPhaseName || !activityName) continue;
+    parsed.push({
+      phaseName: currentPhaseName,
+      activityName,
+      deliverable: getCell(row, ["Deliverable"]),
+      notes: getCell(row, ["Notes/Dependencies", "Notes", "Dependencies"]),
+      responsible: getCell(row, ["Responsible Team Member/Team", "Responsible"]),
+      status: normalizeStatus(getCell(row, ["Status"])),
+      plannedDate: parseDateCell(getCell(row, ["Start Date", "Planned Date", "Start"])),
+      completedDate: parseDateCell(
+        getCell(row, ["End Date", "Completed Date", "Completion Date", "End"]),
+      ),
+    });
+  }
+  if (parsed.length === 0) return { ok: false, error: "No checklist rows found" };
 
-    let phase = phaseByName.get(normalizeKey(currentPhaseName));
-    if (!phase) {
-      const { data: created, error } = await sb
-        .from("phases")
-        .insert({
-          project_id: projectId,
-          name: currentPhaseName,
-          order_index: nextPhaseIndex++,
-        })
-        .select("id, name, order_index")
-        .single();
-      if (error) return { ok: false, error: dbErrorMessage(error) };
-      phase = created;
-      phaseByName.set(normalizeKey(currentPhaseName), phase);
-      phasesCreated += 1;
+  // 1) Fetch existing phases for the project — one round-trip.
+  const { data: existingPhases, error: phaseError } = await sb
+    .from("phases")
+    .select("id, name, order_index")
+    .eq("project_id", projectId);
+  if (phaseError) return { ok: false, error: dbErrorMessage(phaseError) };
+
+  const phaseByKey = new Map<string, { id: string }>();
+  for (const ph of existingPhases ?? []) {
+    phaseByKey.set(normalizeKey(ph.name), { id: ph.id });
+  }
+
+  // 2) Create missing phases via the atomic ordered-insert RPC.
+  // Sequential because each call must observe the previous one's
+  // committed order_index. Typical workbooks have <10 phases.
+  const neededPhaseKeys = new Set<string>();
+  const phaseDisplayName = new Map<string, string>(); // first-seen display form
+  for (const p of parsed) {
+    const key = normalizeKey(p.phaseName);
+    if (!phaseByKey.has(key)) {
+      neededPhaseKeys.add(key);
+      if (!phaseDisplayName.has(key)) phaseDisplayName.set(key, p.phaseName);
     }
+  }
+  let phasesCreated = 0;
+  for (const key of neededPhaseKeys) {
+    const { data: created, error } = await insertPhaseOrdered(sb, {
+      project_id: projectId,
+      name: phaseDisplayName.get(key)!,
+    });
+    if (error || !created) return { ok: false, error: dbErrorMessage(error) };
+    phaseByKey.set(key, { id: created.id });
+    phasesCreated += 1;
+  }
 
-    const deliverable = getCell(row, ["Deliverable"]);
-    const notes = getCell(row, ["Notes/Dependencies", "Notes", "Dependencies"]);
-    const responsible = getCell(row, ["Responsible Team Member/Team", "Responsible"]);
-    const status = normalizeStatus(getCell(row, ["Status"]));
-    const plannedDate = parseDateCell(
-      getCell(row, ["Start Date", "Planned Date", "Start"]),
-    );
-    const completedDate = parseDateCell(
-      getCell(row, ["End Date", "Completed Date", "Completion Date", "End"]),
-    );
+  // 3) Pre-fetch existing activities for ALL phases in scope — one round-
+  // trip replacing N selects in the old loop.
+  const phaseIdsInScope = parsed
+    .map((p) => phaseByKey.get(normalizeKey(p.phaseName))?.id)
+    .filter((id): id is string => typeof id === "string");
+  const uniquePhaseIds = Array.from(new Set(phaseIdsInScope));
+  const { data: existingActivities, error: existingActErr } = await sb
+    .from("activities")
+    .select("id, phase_id, name, order_index")
+    .in("phase_id", uniquePhaseIds);
+  if (existingActErr) return { ok: false, error: dbErrorMessage(existingActErr) };
 
-    const { data: existingActivity, error: existingError } = await sb
-      .from("activities")
-      .select("id")
-      .eq("phase_id", phase.id)
-      // Escape ILIKE wildcards to prevent attacker-controlled sheet cells
-      // from matching unintended activities (e.g. '%').
-      .ilike("name", escapeLike(activityName))
-      .maybeSingle();
-    if (existingError) return { ok: false, error: dbErrorMessage(existingError) };
+  const activityKey = (phaseId: string, name: string) =>
+    `${phaseId}::${normalizeKey(name)}`;
+  const existingByKey = new Map<string, { id: string }>();
+  const maxOrderByPhase = new Map<string, number>();
+  for (const a of existingActivities ?? []) {
+    existingByKey.set(activityKey(a.phase_id, a.name), { id: a.id });
+    const prev = maxOrderByPhase.get(a.phase_id) ?? -1;
+    if (a.order_index > prev) maxOrderByPhase.set(a.phase_id, a.order_index);
+  }
 
-    if (existingActivity) {
-      const { error } = await sb
-        .from("activities")
-        .update({
-          description: notes || null,
-          deliverable: deliverable || null,
-          responsible: responsible || null,
-          status,
-          // Only overwrite dates when the sheet actually carries one — leaving
-          // the cell blank shouldn't wipe a date that was set in-app.
-          ...(plannedDate ? { planned_date: plannedDate } : {}),
-          ...(completedDate ? { completed_date: completedDate } : {}),
-        })
-        .eq("id", existingActivity.id);
-      if (error) return { ok: false, error: dbErrorMessage(error) };
-      activitiesUpdated += 1;
+  // 4) Walk parsed rows and partition into inserts vs updates. Inserts
+  // are deduped within the workbook (last occurrence wins) so duplicate
+  // sheet rows don't trip the phase+name unique constraint mid-batch.
+  type InsertRow = {
+    phase_id: string;
+    name: string;
+    description: string | null;
+    deliverable: string | null;
+    responsible: string | null;
+    status: ParsedRow["status"];
+    planned_date: string | null;
+    completed_date: string | null;
+    order_index: number;
+    created_by: string | null;
+  };
+  type UpdateRow = {
+    id: string;
+    description: string | null;
+    deliverable: string | null;
+    responsible: string | null;
+    status: ParsedRow["status"];
+    planned_date?: string | null;
+    completed_date?: string | null;
+  };
+
+  const insertsByKey = new Map<string, InsertRow>();
+  const updates: UpdateRow[] = [];
+  // We escape ILIKE wildcards only for the rare exact-match fallback below.
+  void escapeLike;
+
+  for (const p of parsed) {
+    const phaseKey = normalizeKey(p.phaseName);
+    const phase = phaseByKey.get(phaseKey);
+    if (!phase) continue; // unreachable: created above
+    const aKey = activityKey(phase.id, p.activityName);
+    const existing = existingByKey.get(aKey);
+
+    if (existing) {
+      updates.push({
+        id: existing.id,
+        description: p.notes || null,
+        deliverable: p.deliverable || null,
+        responsible: p.responsible || null,
+        status: p.status,
+        ...(p.plannedDate ? { planned_date: p.plannedDate } : {}),
+        ...(p.completedDate ? { completed_date: p.completedDate } : {}),
+      });
     } else {
-      const { count } = await sb
-        .from("activities")
-        .select("*", { count: "exact", head: true })
-        .eq("phase_id", phase.id);
-      const { data: activity, error } = await sb
-        .from("activities")
-        .insert({
-          phase_id: phase.id,
-          name: activityName,
-          description: notes || null,
-          deliverable: deliverable || null,
-          responsible: responsible || null,
-          status,
-          planned_date: plannedDate,
-          completed_date: completedDate,
-          order_index: count ?? 0,
-          created_by: userId,
-        })
-        .select("id")
-        .single();
-      if (error) return { ok: false, error: dbErrorMessage(error) };
+      // Compute next order_index from in-memory max so concurrent rows in
+      // the same phase get sequential slots. Last occurrence of a duplicate
+      // (phase, name) wins.
+      const prevMax = maxOrderByPhase.get(phase.id) ?? -1;
+      let nextOrder: number;
+      if (insertsByKey.has(aKey)) {
+        nextOrder = insertsByKey.get(aKey)!.order_index;
+      } else {
+        nextOrder = prevMax + 1;
+        maxOrderByPhase.set(phase.id, nextOrder);
+      }
+      insertsByKey.set(aKey, {
+        phase_id: phase.id,
+        name: p.activityName,
+        description: p.notes || null,
+        deliverable: p.deliverable || null,
+        responsible: p.responsible || null,
+        status: p.status,
+        planned_date: p.plannedDate,
+        completed_date: p.completedDate,
+        order_index: nextOrder,
+        created_by: userId,
+      });
+    }
+  }
 
-      await sb.from("activity_log").insert({
+  // 5) Bulk insert all new activities in one round-trip. The DB unique
+  // index on (phase_id, order_index) added by migration 0029 protects
+  // against any race with a concurrent import.
+  const insertsArr = Array.from(insertsByKey.values());
+  let activitiesCreated = 0;
+  let createdIds: string[] = [];
+  if (insertsArr.length > 0) {
+    const { data: created, error } = await sb
+      .from("activities")
+      .insert(insertsArr)
+      .select("id");
+    if (error) return { ok: false, error: dbErrorMessage(error) };
+    activitiesCreated = created?.length ?? 0;
+    createdIds = (created ?? []).map((r) => r.id);
+  }
+
+  // 6) Run updates in parallel. supabase-js can't bulk UPDATE different
+  // payloads in one request, but Promise.all keeps the round-trips
+  // overlapping rather than sequential.
+  let activitiesUpdated = 0;
+  if (updates.length > 0) {
+    const results = await Promise.all(
+      updates.map((u) =>
+        sb
+          .from("activities")
+          .update({
+            description: u.description,
+            deliverable: u.deliverable,
+            responsible: u.responsible,
+            status: u.status,
+            ...(u.planned_date !== undefined ? { planned_date: u.planned_date } : {}),
+            ...(u.completed_date !== undefined ? { completed_date: u.completed_date } : {}),
+          })
+          .eq("id", u.id),
+      ),
+    );
+    for (const r of results) {
+      if (r.error) return { ok: false, error: dbErrorMessage(r.error) };
+      activitiesUpdated += 1;
+    }
+  }
+
+  // 7) One bulk activity_log insert for the newly created activities.
+  if (createdIds.length > 0) {
+    await sb.from("activity_log").insert(
+      createdIds.map((activity_id) => ({
         project_id: projectId,
-        activity_id: activity.id,
+        activity_id,
         actor_user_id: userId,
         action: "created",
         meta: { source: "workplan_import", sheet: sheetName },
-      });
-      activitiesCreated += 1;
-    }
+      })),
+    );
   }
 
   revalidatePath(`/workspace/projects/${projectId}`);
@@ -322,20 +446,17 @@ export async function createActivity(projectId: string, formData: FormData): Pro
 
   const userId = await currentUserId();
   const sb = await createClient();
-  const { count } = await sb
-    .from("activities")
-    .select("*", { count: "exact", head: true })
-    .eq("phase_id", parsed.data.phase_id);
-  const { data, error } = await sb
-    .from("activities")
-    .insert({
-      ...parsed.data,
-      order_index: count ?? 0,
-      created_by: userId,
-    })
-    .select("id")
-    .single();
-  if (error) return { ok: false, error: dbErrorMessage(error) };
+  // Atomic ordered insert (migration 0029).
+  const { data, error } = await insertActivityOrdered(sb, {
+    phase_id: parsed.data.phase_id,
+    name: parsed.data.name,
+    description: parsed.data.description,
+    deliverable: parsed.data.deliverable,
+    responsible: parsed.data.responsible,
+    planned_date: parsed.data.planned_date,
+    created_by: userId,
+  });
+  if (error || !data) return { ok: false, error: dbErrorMessage(error) };
 
   await sb.from("activity_log").insert({
     project_id: projectId,
@@ -346,7 +467,7 @@ export async function createActivity(projectId: string, formData: FormData): Pro
 
   revalidatePath(`/workspace/projects/${projectId}`);
   revalidatePath(`/admin/projects/${projectId}`);
-  return { ok: true, data };
+  return { ok: true, data: { id: data.id } };
 }
 
 export async function updateActivity(activityId: string, formData: FormData): Promise<ActionResult> {

@@ -11,17 +11,7 @@ export async function markNotificationsRead() {
   if (!user) return { ok: false, error: "Not authenticated" };
 
   const now = new Date().toISOString();
-  // user_notification_reads not yet in generated types — cast to bypass.
-  const client = sb as unknown as {
-    from: (table: string) => {
-      upsert: (
-        row: { user_id: string; last_read_at: string; updated_at: string },
-        options?: { onConflict?: string },
-      ) => Promise<{ error: { message: string } | null }>;
-    };
-  };
-
-  const { error } = await client
+  const { error } = await sb
     .from("user_notification_reads")
     .upsert(
       { user_id: user.id, last_read_at: now, updated_at: now },

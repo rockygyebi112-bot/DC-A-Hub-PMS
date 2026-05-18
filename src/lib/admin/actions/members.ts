@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth/guards";
 import {
+  addProjectMemberAsManager,
+  transferProjectManager,
+} from "@/lib/supabase/rpcs";
+import {
   addTeamMembersSchema,
   assignMembersSchema,
   inviteClientViewerSchema,
@@ -230,26 +234,32 @@ export async function addTeamMembers(
   //    honour make_manager when staff are being added AND exactly one
   //    *new* member is in the batch — this keeps the at-most-one-PM
   //    invariant from accidentally being violated by bulk adds.
+  //
+  // The PM-promotion path uses an atomic RPC (`add_project_member_as_manager`,
+  // migration 0029) so the demote-current-PM + insert-new-PM pair runs in a
+  // single transaction. The previous two-step app-side flow could leave a
+  // project with zero managers if the process crashed between calls.
   let promotedManager = false;
-  if (kind === "staff" && make_manager && toInsert.length === 1) {
-    const { error: demoteErr } = await sb
-      .from("project_members")
-      .update({ project_role: "member" })
-      .eq("project_id", projectId)
-      .eq("project_role", "manager");
-    if (demoteErr) return { ok: false, error: GENERIC_DB_ERROR };
+  if (
+    kind === "staff" &&
+    make_manager &&
+    toInsert.length === 1
+  ) {
+    const promoteRes = await addProjectMemberAsManager(sb, {
+      project_id: projectId,
+      user_id: toInsert[0],
+    });
+    if (promoteRes.error) {
+      console.error("[members] add_project_member_as_manager failed", promoteRes.error);
+      return { ok: false, error: GENERIC_DB_ERROR };
+    }
     promotedManager = true;
-  }
-
-  if (toInsert.length > 0) {
-    const insertRole: "manager" | "member" | "viewer" = promotedManager
-      ? "manager"
-      : baseRole;
+  } else if (toInsert.length > 0) {
     const { error: insertErr } = await sb.from("project_members").insert(
       toInsert.map((user_id) => ({
         project_id: projectId,
         user_id,
-        project_role: insertRole,
+        project_role: baseRole,
       })),
     );
     if (insertErr) return { ok: false, error: GENERIC_DB_ERROR };
@@ -288,30 +298,24 @@ export async function setProjectManager(
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
   const sb = createAdminClient();
-  const { data: target } = await sb
-    .from("project_members")
-    .select("id, project_role")
-    .eq("id", parsed.data.member_id)
-    .eq("project_id", projectId)
-    .maybeSingle();
-  if (!target) return { ok: false, error: "Member not found" };
-  if (target.project_role === "viewer") {
-    return { ok: false, error: "Clients cannot be made project manager" };
+
+  // Atomic demote-old-PM + promote-new-PM via the RPC in migration 0029.
+  // The previous flow ran two separate UPDATEs from the app server; a crash
+  // between them could leave the project with zero managers.
+  const res = await transferProjectManager(sb, {
+    project_id: projectId,
+    member_id: parsed.data.member_id,
+  });
+  if (res.error) {
+    if (res.error.message?.includes("invalid_target_member")) {
+      return { ok: false, error: "Member not found" };
+    }
+    if (res.error.message?.includes("viewer_cannot_be_manager")) {
+      return { ok: false, error: "Clients cannot be made project manager" };
+    }
+    console.error("[members] transfer_project_manager failed", res.error);
+    return { ok: false, error: GENERIC_DB_ERROR };
   }
-  if (target.project_role === "manager") return { ok: true };
-
-  const { error: demoteErr } = await sb
-    .from("project_members")
-    .update({ project_role: "member" })
-    .eq("project_id", projectId)
-    .eq("project_role", "manager");
-  if (demoteErr) return { ok: false, error: GENERIC_DB_ERROR };
-
-  const { error: promoteErr } = await sb
-    .from("project_members")
-    .update({ project_role: "manager" })
-    .eq("id", parsed.data.member_id);
-  if (promoteErr) return { ok: false, error: GENERIC_DB_ERROR };
 
   revalidatePath(`/admin/projects/${projectId}/team`);
   return { ok: true };

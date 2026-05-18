@@ -44,14 +44,11 @@ export default async function PortalLayout({
     ]),
   );
 
-  // Search must see EVERY project the user can reach, not just the first
-  // 8 we render in the sidebar — otherwise typing the name of project #9
-  // returns "no matches".
-  const searchItems = projects.map((p) => ({
-    href: `/portal/projects/${p.id}`,
-    label: p.name,
-    group: "Your projects",
-  }));
+  // Search items (projects) are loaded lazily by TopbarSearch via
+  // /api/search/orgs the moment the user focuses the box. RLS scopes the
+  // result to the portal user's own projects, so this matches the prior
+  // behaviour without serialising the full list into the RSC payload on
+  // every navigation.
 
   return (
     <AppShell
@@ -62,8 +59,8 @@ export default async function PortalLayout({
       defaultLogoUrl="/logo.png"
       projectBrands={projectBrands}
       projectPathPrefix="/portal/projects"
-      searchItems={searchItems}
       searchActivityHrefBase="/portal"
+      searchOrgsHrefBase="/portal"
       showBreadcrumbs={false}
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
       topbarExtra={<NotificationsBell surface="portal" />}

@@ -4,11 +4,17 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ArchiveToggle } from "@/components/admin/archive-toggle";
 import { FilterChips } from "@/components/admin/ui/filter-chips";
+import { ListPagination } from "@/components/admin/ui/list-pagination";
 import { ListSearch } from "@/components/admin/ui/list-search";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { ProjectsTable, type ProjectsTableRow } from "@/components/admin/ui/projects-table";
-import { listProjects } from "@/lib/admin/queries";
+import {
+  countProjects,
+  getProjectsStatusCounts,
+  listProjects,
+} from "@/lib/admin/queries";
+import { computePageInfo, DEFAULT_PAGE_SIZE, parsePage } from "@/lib/pagination";
 
 const STATUS_OPTIONS = [
   { value: "planning", label: "Not started" },
@@ -26,41 +32,45 @@ export default async function ProjectsPage({
     status?: string;
     sort?: string;
     dir?: string;
+    page?: string;
   }>;
 }) {
   const sp = await searchParams;
   const includeArchived = sp.archived === "1";
-  const q = (sp.q ?? "").toLowerCase().trim();
+  const search = (sp.q ?? "").trim();
   const status = sp.status ?? "";
   const sort = sp.sort;
   const dir: "asc" | "desc" = sp.dir === "desc" ? "desc" : "asc";
-  const allRows = await listProjects({ includeArchived, sort, dir });
-  const rows = allRows.filter((p) => {
-    if (q) {
-      const haystack = `${p.name} ${p.code} ${p.client?.name ?? ""}`.toLowerCase();
-      if (!haystack.includes(q)) return false;
-    }
-    if (status && p.status !== status) return false;
-    return true;
-  });
 
-  // Live status counts (computed from search-matched rows so chip counts
-  // reflect what's actually navigable from the current view).
-  const statusSource = q
-    ? allRows.filter((p) => {
-        const haystack = `${p.name} ${p.code} ${p.client?.name ?? ""}`.toLowerCase();
-        return haystack.includes(q);
-      })
-    : allRows;
-  const statusCounts: Record<string, number> = {
-    planning: 0,
-    active: 0,
-    paused: 0,
-    completed: 0,
-  };
-  for (const p of statusSource) {
-    if (p.status in statusCounts) statusCounts[p.status] += 1;
-  }
+  // Server-side pagination — the previous implementation fetched every
+  // project then filtered in JS, which fell over past ~2k rows. Push the
+  // page slice + filters into Postgres and only ship the visible window.
+  const pageSize = DEFAULT_PAGE_SIZE;
+  const requestedPage = parsePage(sp.page);
+  const totalCount = await countProjects({
+    includeArchived,
+    search: search || undefined,
+    status: status || undefined,
+  });
+  const pageInfo = computePageInfo(requestedPage, totalCount, pageSize);
+
+  const [rows, statusCounts] = await Promise.all([
+    listProjects({
+      includeArchived,
+      search: search || undefined,
+      status: status || undefined,
+      sort,
+      dir,
+      limit: pageInfo.pageSize,
+      offset: pageInfo.offset,
+    }),
+    // Status-chip counts are scoped to the current search but ignore the
+    // active status filter so chips stay clickable across all values.
+    getProjectsStatusCounts({
+      includeArchived,
+      search: search || undefined,
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -85,19 +95,19 @@ export default async function ProjectsPage({
 
       <SectionCard
         title="Project roster"
-        description={`${rows.length} shown from ${allRows.length} loaded`}
+        description={`${totalCount.toLocaleString()} matching`}
       >
         {rows.length === 0 ? (
           <EmptyState
             icon={FolderKanban}
-            title={q || status ? "No projects match" : "No projects yet"}
+            title={search || status ? "No projects match" : "No projects yet"}
             description={
-              q || status
+              search || status
                 ? "Adjust search, status filters, or include archived projects."
                 : "Create a project shell once its client exists."
             }
             action={
-              !q &&
+              !search &&
               !status && (
                 <Button render={<Link href="/admin/projects/new" />}>
                   <Plus className="size-4" />
@@ -107,7 +117,10 @@ export default async function ProjectsPage({
             }
           />
         ) : (
-          <ProjectsTable rows={rows as ProjectsTableRow[]} />
+          <>
+            <ProjectsTable rows={rows as ProjectsTableRow[]} />
+            <ListPagination info={pageInfo} />
+          </>
         )}
       </SectionCard>
     </div>

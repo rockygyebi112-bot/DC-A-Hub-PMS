@@ -69,11 +69,7 @@ export default async function WorkspaceLayout({
       defaultLogoUrl="/logo.png"
       projectBrands={projectBrands}
       projectPathPrefix="/workspace/projects"
-      searchItems={projects.map((p) => ({
-        href: `/workspace/projects/${p.id}`,
-        label: p.name,
-        group: "Projects",
-      }))}
+      searchOrgsHrefBase="/workspace"
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
       breadcrumbSeed={breadcrumbSeed}
       topbarExtra={<NotificationsBell surface="workspace" />}

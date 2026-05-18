@@ -3,27 +3,36 @@ import { Building2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ArchiveToggle } from "@/components/admin/archive-toggle";
+import { ListPagination } from "@/components/admin/ui/list-pagination";
 import { ListSearch } from "@/components/admin/ui/list-search";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { ClientsTable } from "@/components/admin/ui/clients-table";
-import { listClients } from "@/lib/admin/queries";
+import { countClients, listClients } from "@/lib/admin/queries";
+import { computePageInfo, DEFAULT_PAGE_SIZE, parsePage } from "@/lib/pagination";
 
 export default async function ClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archived?: string; q?: string }>;
+  searchParams: Promise<{ archived?: string; q?: string; page?: string }>;
 }) {
   const sp = await searchParams;
   const includeArchived = sp.archived === "1";
-  const q = (sp.q ?? "").toLowerCase().trim();
-  const allRows = await listClients({ includeArchived });
-  const rows = allRows.filter((c) => {
-    if (!q) return true;
-    return (
-      c.name.toLowerCase().includes(q) ||
-      (c.contact_email ?? "").toLowerCase().includes(q)
-    );
+  const search = (sp.q ?? "").trim();
+
+  // Server-side pagination — see admin/projects/page.tsx for the same
+  // rationale. Search and contact_email match are pushed into PostgREST.
+  const requestedPage = parsePage(sp.page);
+  const totalCount = await countClients({
+    includeArchived,
+    search: search || undefined,
+  });
+  const pageInfo = computePageInfo(requestedPage, totalCount, DEFAULT_PAGE_SIZE);
+  const rows = await listClients({
+    includeArchived,
+    search: search || undefined,
+    limit: pageInfo.pageSize,
+    offset: pageInfo.offset,
   });
 
   return (
@@ -46,19 +55,19 @@ export default async function ClientsPage({
 
       <SectionCard
         title="Client directory"
-        description={`${rows.length} shown from ${allRows.length} loaded`}
+        description={`${totalCount.toLocaleString()} matching`}
       >
         {rows.length === 0 ? (
           <EmptyState
             icon={Building2}
-            title={q ? "No clients match" : "No clients yet"}
+            title={search ? "No clients match" : "No clients yet"}
             description={
-              q
+              search
                 ? "Adjust your search or include archived clients."
                 : "Create a client before adding project shells."
             }
             action={
-              !q && (
+              !search && (
                 <Button render={<Link href="/admin/clients/new" />}>
                   <Plus className="size-4" />
                   New client
@@ -67,7 +76,10 @@ export default async function ClientsPage({
             }
           />
         ) : (
-          <ClientsTable rows={rows} />
+          <>
+            <ClientsTable rows={rows} />
+            <ListPagination info={pageInfo} />
+          </>
         )}
       </SectionCard>
     </div>

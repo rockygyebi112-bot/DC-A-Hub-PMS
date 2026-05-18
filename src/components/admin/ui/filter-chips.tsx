@@ -23,6 +23,9 @@ export function FilterChips({
     const next = new URLSearchParams(Array.from(params.entries()));
     if (!value) next.delete(paramName);
     else next.set(paramName, value);
+    // Reset pagination on filter change — otherwise a user on page 5 of one
+    // chip lands on an empty page when switching to a chip with fewer rows.
+    next.delete("page");
     const qs = next.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }

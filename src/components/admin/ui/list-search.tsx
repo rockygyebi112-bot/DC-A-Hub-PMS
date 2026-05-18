@@ -22,6 +22,9 @@ export function ListSearch({
       const next = new URLSearchParams(Array.from(params.entries()));
       if (!value) next.delete(paramName);
       else next.set(paramName, value);
+      // Any change to the search term must reset pagination — otherwise a
+      // user typing on page 7 may land on an empty page of the new filter.
+      next.delete("page");
       const qs = next.toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname);
     }, 200);

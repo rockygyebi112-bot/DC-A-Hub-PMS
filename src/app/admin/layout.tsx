@@ -97,18 +97,7 @@ export default async function AdminLayout({
       groups={groups}
       storageKey="admin-sidebar-collapsed"
       defaultLogoUrl="/logo.png"
-      searchItems={[
-        ...projects.map((p) => ({
-          href: `/admin/projects/${p.id}`,
-          label: p.name,
-          group: "Projects",
-        })),
-        ...clients.map((c) => ({
-          href: `/admin/clients/${c.id}`,
-          label: c.name,
-          group: "Clients",
-        })),
-      ]}
+      searchOrgsHrefBase="/admin"
       user={{ name: profile.fullName, email: profile.email, avatarUrl: profile.avatarUrl }}
       sidebarFooter={
         <SidebarBrandCard

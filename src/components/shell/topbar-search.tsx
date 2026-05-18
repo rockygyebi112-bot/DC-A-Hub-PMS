@@ -27,6 +27,11 @@ type SearchableActivity = {
   phase_name: string | null;
 };
 
+type SearchableOrgs = {
+  projects: { id: string; name: string }[];
+  clients: { id: string; name: string }[];
+};
+
 /**
  * Topbar search with live dropdown. Filters across the navigation items
  * passed in (typically every project the user can access). Clicking a
@@ -40,9 +45,14 @@ type SearchableActivity = {
 export function TopbarSearch({
   items,
   activityHrefBase = "/workspace",
+  orgsHrefBase = "/admin",
 }: {
-  items: SearchItem[];
+  /** Optional fallback list of items rendered before the lazy fetch resolves. */
+  items?: SearchItem[];
   activityHrefBase?: "/workspace" | "/portal";
+  /** Path prefix for clicking a project / client result. Admin shell uses
+   *  `/admin`, portal/workspace surfaces use their respective project pages. */
+  orgsHrefBase?: "/admin" | "/workspace" | "/portal";
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -50,7 +60,9 @@ export function TopbarSearch({
   const [highlight, setHighlight] = useState(0);
   const [prevQuery, setPrevQuery] = useState("");
   const [activities, setActivities] = useState<SearchableActivity[]>([]);
+  const [orgs, setOrgs] = useState<SearchableOrgs | null>(null);
   const [activitiesLoaded, setActivitiesLoaded] = useState(false);
+  const [orgsLoaded, setOrgsLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const loadActivities = useCallback(async () => {
@@ -66,10 +78,42 @@ export function TopbarSearch({
     }
   }, [activitiesLoaded]);
 
-  // Defensive dedupe: layouts can stitch projects + activities + clients
-  // together, and any accidental duplicate href would otherwise produce a
-  // React "duplicate key" warning when the dropdown renders.
+  const loadOrgs = useCallback(async () => {
+    if (orgsLoaded) return;
+    setOrgsLoaded(true);
+    try {
+      const res = await fetch("/api/search/orgs", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as SearchableOrgs;
+      if (data && Array.isArray(data.projects) && Array.isArray(data.clients)) {
+        setOrgs(data);
+      }
+    } catch {
+      // best-effort: fallback `items` still drives the dropdown
+    }
+  }, [orgsLoaded]);
+
+  // Defensive dedupe: project + client + activity hrefs can overlap (e.g. a
+  // project shown twice via separate layout passes). Skip duplicates so React
+  // doesn't warn about repeated keys when the dropdown renders.
   const dedupedItems = useMemo(() => {
+    // Build orgs items from the lazy-loaded endpoint when available, else
+    // fall back to the props-passed `items` so the first frame still works.
+    const orgItems: SearchItem[] = orgs
+      ? [
+          ...orgs.projects.map((p) => ({
+            href: `${orgsHrefBase}/projects/${p.id}`,
+            label: p.name,
+            group: "Projects",
+          })),
+          ...orgs.clients.map((c) => ({
+            href: `${orgsHrefBase}/clients/${c.id}`,
+            label: c.name,
+            group: "Clients",
+          })),
+        ]
+      : (items ?? []);
+
     const activityItems: SearchItem[] = activities.map((a) => ({
       href: `${activityHrefBase}/projects/${a.project_id}/activities/${a.id}`,
       label: a.name,
@@ -77,13 +121,13 @@ export function TopbarSearch({
     }));
     const seen = new Set<string>();
     const out: SearchItem[] = [];
-    for (const it of [...items, ...activityItems]) {
+    for (const it of [...orgItems, ...activityItems]) {
       if (seen.has(it.href)) continue;
       seen.add(it.href);
       out.push(it);
     }
     return out;
-  }, [items, activities, activityHrefBase]);
+  }, [items, orgs, activities, activityHrefBase, orgsHrefBase]);
 
   // Defer the query used for filtering so fast typing doesn't block the input.
   // React keeps the previous filtered list visible until the new pass settles,
@@ -152,14 +196,17 @@ export function TopbarSearch({
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(true);
-            // First keystroke triggers the lazy activities fetch.
+            // First keystroke triggers the lazy fetches if they didn't fire
+            // on focus (e.g. autofill or programmatic value set).
             void loadActivities();
+            void loadOrgs();
           }}
           onFocus={() => {
             setOpen(true);
-            // Pre-warm activities the moment the user focuses the box so
+            // Pre-warm both lists the moment the user focuses the box so
             // results are already there by the time they finish typing.
             void loadActivities();
+            void loadOrgs();
           }}
           onKeyDown={onKeyDown}
           placeholder="Search projects..."

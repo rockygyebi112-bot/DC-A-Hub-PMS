@@ -14,6 +14,8 @@ export function ArchiveToggle({ label = "Show archived" }: { label?: string }) {
     const next = new URLSearchParams(Array.from(params.entries()));
     if (checked) next.set("archived", "1");
     else next.delete("archived");
+    // Reset pagination on filter change.
+    next.delete("page");
     const qs = next.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }

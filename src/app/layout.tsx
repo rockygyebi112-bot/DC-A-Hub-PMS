@@ -6,19 +6,17 @@ import { themeScript } from "@/lib/theme/script";
 import "./globals.css";
 
 // Inter — the de-facto enterprise SaaS UI font (Linear, Stripe, Notion).
-// We use the same family for body and headings to unify the visual system.
+// Same family for body and headings, loaded ONCE; both CSS variables point
+// at the single instance. Previously we instantiated `Inter()` twice which
+// downloaded two overlapping weight sets and shipped duplicate WOFF2 files.
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700", "800"],
+  // Multiple CSS variables resolving to the same font instance is supported
+  // natively by next/font. `--font-sans` powers body copy, `--font-heading`
+  // is referenced by the `.font-heading` utility in globals.css.
   variable: "--font-sans",
-});
-
-const interHeading = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["600", "700", "800"],
-  variable: "--font-heading",
 });
 
 const dmMono = DM_Mono({
@@ -65,7 +63,7 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
-      className={`${inter.variable} ${interHeading.variable} ${dmMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${dmMono.variable} h-full antialiased`}
     >
       <head>
         {/* Pre-paint theme application. A raw <script> in <head> runs before

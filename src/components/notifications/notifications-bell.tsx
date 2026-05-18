@@ -15,18 +15,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { markNotificationsRead } from "@/lib/notifications/actions";
+import { actionLabel } from "@/lib/notifications/labels";
 import type { NotificationFeed } from "@/lib/notifications/queries";
-
-const ACTION_LABELS: Record<string, string> = {
-  created: "New activity created",
-  updated: "Activity updated",
-  started: "Activity in progress",
-  marked_done: "Activity completed",
-  proof_added: "Document uploaded",
-  proof_deleted: "Document removed",
-  proof_commented: "New comment on document",
-  proof_mentioned: "You were mentioned",
-};
 
 function formatRelative(iso: string) {
   const now = Date.now();
@@ -266,7 +256,7 @@ export function NotificationsBell({
                 const isUnread = lastReadAt
                   ? entry.created_at > lastReadAt
                   : true;
-                const label = ACTION_LABELS[entry.action] ?? entry.action;
+                const label = actionLabel(entry.action);
                 // For proof_commented rows we surface the file the comment
                 // is attached to (instead of just the activity name) and
                 // the comment preview, so admins can triage from the bell.

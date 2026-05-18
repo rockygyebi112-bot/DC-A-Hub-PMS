@@ -77,6 +77,9 @@ export async function archiveProject(id: string): Promise<ActionResult> {
     .eq("id", id);
   if (error) return { ok: false, error: GENERIC_DB_ERROR };
   revalidatePath("/admin/projects");
+  // Mirror updateProject — archiving from the detail page otherwise left
+  // stale UI on /admin/projects/[id] until the next nav.
+  revalidatePath(`/admin/projects/${id}`);
   revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true };
 }
@@ -91,6 +94,7 @@ export async function restoreProject(id: string): Promise<ActionResult> {
     .eq("id", id);
   if (error) return { ok: false, error: GENERIC_DB_ERROR };
   revalidatePath("/admin/projects");
+  revalidatePath(`/admin/projects/${id}`);
   revalidateTag(ADMIN_CACHE_TAGS.projects, "max");
   return { ok: true };
 }

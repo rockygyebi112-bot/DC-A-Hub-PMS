@@ -1,19 +1,19 @@
+import { formatCurrency } from "@/lib/format/currency";
+import { formatDate as formatDateBase } from "@/lib/format/date";
+
+/**
+ * Budget surfaces previously concatenated `"GHS " + value.toFixed(2)` and
+ * called `toLocaleDateString(undefined, ...)` (which produced UTC-vs-local
+ * hydration mismatches near midnight). Both now delegate to the central
+ * `lib/format/*` helpers so the whole app shares one locale + timezone.
+ *
+ * Kept as named re-exports so existing call sites import unchanged.
+ */
 export function formatMoney(amount: number, currency = "GHS") {
-  const sign = amount < 0 ? "-" : "";
-  const abs = Math.abs(amount);
-  return `${sign}${currency} ${abs.toLocaleString(undefined, {
-    minimumFractionDigits: abs % 1 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  })}`;
+  return formatCurrency(amount, currency);
 }
 
 export function formatDate(value: string | null | undefined) {
   if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString(undefined, {
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-  });
+  return formatDateBase(value) || value;
 }

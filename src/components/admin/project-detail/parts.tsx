@@ -212,19 +212,25 @@ export function NextMilestonesCard({
    Helpers
    ---------------------------------------------------------------- */
 
+// Delegate to the central lib/format helpers (fixed timezone + locale)
+// so this surface and every other consumer agree on date / currency
+// presentation. Re-exports kept so existing imports don't break.
+import {
+  formatDate as formatDateBase,
+  formatRelative as formatRelativeBase,
+} from "@/lib/format/date";
+import { formatCurrency as formatCurrencyBase } from "@/lib/format/currency";
+
 export function formatDate(value: string | null | undefined) {
   if (!value) return "Not set";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-  });
+  return formatDateBase(value) || value;
 }
 
 export function formatRelative(value: string | null | undefined) {
   if (!value) return "—";
+  // "just now", "5m ago" — keep the precise short-window phrasing the UI
+  // already shows. Anything older falls back to the central relative
+  // formatter (so "2 weeks ago" / "last year" speak the same language).
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   const diff = Date.now() - date.getTime();
@@ -233,14 +239,12 @@ export function formatRelative(value: string | null | undefined) {
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
-  const days = Math.round(hours / 24);
-  if (days < 14) return `${days}d ago`;
-  return formatDate(value);
+  return formatRelativeBase(value);
 }
 
 export function formatCurrency(amount: number | null | undefined, currency = "GHS") {
   if (amount === null || amount === undefined) return "—";
-  return `${currency} ${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  return formatCurrencyBase(amount, currency);
 }
 
 export function daysBetween(from: Date, to: Date) {

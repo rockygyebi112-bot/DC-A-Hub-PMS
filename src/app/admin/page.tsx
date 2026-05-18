@@ -28,6 +28,7 @@ import {
 } from "@/components/admin/dashboard/activity-feed-card";
 import { getAdminCounts } from "@/lib/admin/queries";
 import { createClient } from "@/lib/supabase/server";
+import { actionVerb } from "@/lib/notifications/labels";
 import type { DashboardPeriod } from "@/components/admin/ui/dashboard-period-selector";
 
 // ---------------------------------------------------------------------------
@@ -357,18 +358,10 @@ async function getDashboardActivityFeed(): Promise<ActivityFeedRow[]> {
   const actorById = new Map((profilesRes.data ?? []).map((p) => [p.user_id, p.full_name]));
   const projNameById = new Map((projectsRes.data ?? []).map((p) => [p.id, p.name]));
 
-  const ACTION_VERB: Record<string, string> = {
-    created: "created",
-    updated: "updated",
-    marked_done: "marked done on",
-    proof_added: "uploaded a document to",
-    proof_deleted: "removed a document from",
-    proof_commented: "commented on a document in",
-  };
   return rows.map((row) => {
     const actor = (row.actor_user_id && actorById.get(row.actor_user_id)) || "System";
     const projName = (row.project_id && projNameById.get(row.project_id)) || "a project";
-    const verb = ACTION_VERB[row.action] ?? row.action.replaceAll("_", " ");
+    const verb = actionVerb(row.action);
     const message =
       row.action === "created"
         ? `created an entry on ${projName}`

@@ -48,6 +48,68 @@ function avatarExt(mime: string): string {
   }
 }
 
+type SniffedMime = "image/jpeg" | "image/png" | "image/webp" | "image/gif" | null;
+
+/**
+ * Inspect the first bytes of an upload and return the actual image type, or
+ * null if the bytes don't match any of our supported image signatures.
+ * `file.type` (the Content-Type the client sends) is fully attacker-controlled —
+ * a malicious client can claim `image/png` while shipping a PE / shell-script
+ * body, which lands in our public bucket at a predictable path. Magic-byte
+ * sniffing is the defense.
+ *
+ * Signatures:
+ *   - JPEG  : FF D8 FF
+ *   - PNG   : 89 50 4E 47 0D 0A 1A 0A
+ *   - GIF   : 47 49 46 38 (37|39) 61   ("GIF87a" / "GIF89a")
+ *   - WebP  : 52 49 46 46 .... 57 45 42 50  ("RIFF????WEBP")
+ */
+function sniffImageMime(bytes: Uint8Array): SniffedMime {
+  if (bytes.length < 12) return null;
+  // JPEG
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  // PNG
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+  // GIF87a / GIF89a
+  if (
+    bytes[0] === 0x47 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x38 &&
+    (bytes[4] === 0x37 || bytes[4] === 0x39) &&
+    bytes[5] === 0x61
+  ) {
+    return "image/gif";
+  }
+  // WebP: "RIFF" + 4 size bytes + "WEBP"
+  if (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+  return null;
+}
+
 function revalidateAll() {
   // Only the /account page needs server revalidation here. The forms in
   // `src/components/account/*` call `router.refresh()` on success, which
@@ -295,16 +357,37 @@ export async function uploadMyAvatar(formData: FormData): Promise<ActionResult> 
     return { ok: false, error: validation.error };
   }
 
-  const ext = avatarExt(file.type);
-  const objectPath = `${auth.userId}/avatar.${ext}`;
   const safeName = sanitizeFileName(file.name);
 
   const sb = await createClient();
   const arrayBuffer = await file.arrayBuffer();
+
+  // Magic-byte sniff. `file.type` is client-supplied and not trustworthy —
+  // a hostile uploader can claim `image/png` and ship an executable body,
+  // which would otherwise land in the public bucket at a predictable
+  // path. Reject anything whose actual bytes don't match one of our
+  // supported image formats, and use the SNIFFED mime for storage so
+  // downstream consumers can't be fooled by a mismatched header either.
+  const head = new Uint8Array(arrayBuffer.slice(0, 16));
+  const sniffed = sniffImageMime(head);
+  if (!sniffed) {
+    return { ok: false, error: "Use a JPG, PNG, WebP or GIF image" };
+  }
+  if (sniffed !== file.type.toLowerCase()) {
+    // Soft warning: the client lied about content-type. We still use the
+    // sniffed value below; this log helps spot abusive clients.
+    console.warn("[avatar] content-type mismatch", {
+      claimed: file.type,
+      sniffed,
+    });
+  }
+
+  const ext = avatarExt(sniffed);
+  const objectPath = `${auth.userId}/avatar.${ext}`;
   const { error: uploadError } = await sb.storage
     .from("avatars")
     .upload(objectPath, arrayBuffer, {
-      contentType: file.type,
+      contentType: sniffed,
       upsert: true,
       // Short cache: predictable path (userId/avatar.ext) means a privacy
       // bug or a deactivated user's old image can otherwise linger in CDN

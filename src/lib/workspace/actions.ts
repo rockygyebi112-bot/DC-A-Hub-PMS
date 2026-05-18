@@ -218,7 +218,7 @@ export async function importWorkplanSheet(
       // from matching unintended activities (e.g. '%').
       .ilike("name", escapeLike(activityName))
       .maybeSingle();
-    if (existingError) return { ok: false, error: existingError.message };
+    if (existingError) return { ok: false, error: dbErrorMessage(existingError) };
 
     if (existingActivity) {
       const { error } = await sb
@@ -446,7 +446,7 @@ export async function deleteActivity(activityId: string): Promise<ActionResult<{
     .select(`id, ${ACTIVITY_PROJECT_JOIN}`)
     .eq("id", activityId)
     .single();
-  if (lookupError || !activity) return { ok: false, error: lookupError?.message ?? "Activity not found" };
+  if (lookupError || !activity) return { ok: false, error: lookupError ? dbErrorMessage(lookupError) : "Activity not found" };
   const phase = Array.isArray(activity.phase) ? activity.phase[0] : activity.phase;
   const projectId = phase?.project_id;
   if (!projectId) return { ok: false, error: "Project not found" };
@@ -475,7 +475,7 @@ export async function deletePhase(phaseId: string): Promise<ActionResult<{ proje
     .select("id, project_id")
     .eq("id", phaseId)
     .single();
-  if (lookupError || !phase) return { ok: false, error: lookupError?.message ?? "Phase not found" };
+  if (lookupError || !phase) return { ok: false, error: lookupError ? dbErrorMessage(lookupError) : "Phase not found" };
 
   const auth = await requireProjectWriter(phase.project_id);
   if (!auth.ok) return auth;

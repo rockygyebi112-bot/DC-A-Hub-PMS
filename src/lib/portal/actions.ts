@@ -293,7 +293,10 @@ export async function portalUploadActivityDocuments(
       .upload(path, file, {
         contentType: file.type || "application/octet-stream",
       });
-    if (uploadError) return { ok: false, error: uploadError.message };
+    if (uploadError) {
+      console.error("[portal] proof upload failed", uploadError);
+      return { ok: false, error: "Could not upload file. Try again." };
+    }
 
     const { error: insertError } = await sb.from("activity_proofs").insert({
       activity_id: activityId,

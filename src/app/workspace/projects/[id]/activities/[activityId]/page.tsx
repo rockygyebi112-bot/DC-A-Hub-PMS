@@ -16,7 +16,8 @@ import {
 } from "@/lib/workspace/queries";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
-import { requireProjectWriter } from "@/lib/auth/guards";
+import { requireAuth, requireProjectWriter } from "@/lib/auth/guards";
+import { dbErrorMessage } from "@/lib/db-errors";
 import { ACTIVITY_PROJECT_JOIN } from "@/lib/supabase/columns";
 
 export default async function WorkspaceActivityPage({
@@ -117,6 +118,11 @@ export default async function WorkspaceActivityPage({
     const note = String(formData.get("note") ?? "").trim();
     if (!note) return { ok: false, error: "Write something first." };
 
+    // Defense in depth: identify the caller before any DB read so we don't
+    // probe activity rows for unauthenticated callers via RLS alone.
+    const baseAuth = await requireAuth();
+    if (!baseAuth.ok) return baseAuth;
+
     const sb = await createClient();
     const { data: row } = await sb
       .from("activities")
@@ -137,7 +143,7 @@ export default async function WorkspaceActivityPage({
       action: "updated",
       meta: { note },
     });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: dbErrorMessage(error) };
 
     revalidatePath(baseHref);
     return { ok: true };

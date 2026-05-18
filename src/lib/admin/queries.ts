@@ -143,7 +143,7 @@ export const listClientProjects = reactCache(
       { total_count: number | null; done_count: number | null }
     >();
     for (const row of countsRaw ?? []) {
-      countsById.set(row.project_id, row);
+      if (row.project_id) countsById.set(row.project_id, row);
     }
 
     return projects.map((project) => {

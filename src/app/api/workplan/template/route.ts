@@ -19,62 +19,53 @@ import { requireAuth } from "@/lib/auth/guards";
  *    "not_started".
  *
  * The sheet is named "Checklist" to match the importer's preferred sheet.
+ *
+ * Generator: exceljs. Previously this used the SheetJS CDN build; ExcelJS
+ * is the actively-maintained, npm-resolved equivalent with a smaller API
+ * surface that better fits our 5%-of-features use case.
  */
+
+const TEMPLATE_COLUMNS: { header: string; width: number }[] = [
+  { header: "Phase", width: 18 },
+  { header: "Activity", width: 32 },
+  { header: "Deliverable", width: 36 },
+  { header: "Responsible Team Member/Team", width: 28 },
+  { header: "Start Date", width: 14 },
+  { header: "End Date", width: 14 },
+  { header: "Status", width: 14 },
+  { header: "Notes/Dependencies", width: 36 },
+];
 
 // Module-level cache of the generated buffer. The template is deterministic
 // (no per-user data), so we build it once per server instance and reuse it
-// on every download. xlsx is loaded lazily on first request so cold starts
-// for unrelated routes in the same bundle don't pay the parse cost.
+// on every download. exceljs is loaded lazily on first request so cold
+// starts for unrelated routes in the same bundle don't pay the parse cost.
 let cachedBuffer: ArrayBuffer | null = null;
 
 async function buildTemplateBuffer(): Promise<ArrayBuffer> {
   if (cachedBuffer) return cachedBuffer;
 
-  const XLSX = await import("xlsx");
+  const ExcelJS = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Checklist");
 
-  const headerRow = [
-    "Phase",
-    "Activity",
-    "Deliverable",
-    "Responsible Team Member/Team",
-    "Start Date",
-    "End Date",
-    "Status",
-    "Notes/Dependencies",
-  ];
+  sheet.columns = TEMPLATE_COLUMNS.map((c) => ({
+    header: c.header,
+    key: c.header,
+    width: c.width,
+  }));
 
-  // Header-only blank template. We deliberately do NOT ship example rows so
-  // users don't have to delete fake data before uploading, and so nobody
-  // mistakes the seed content for activities tied to their project.
-  const aoa: string[][] = [headerRow];
+  // Bold the header row and freeze it. We deliberately do NOT ship example
+  // rows so users don't have to delete fake data before uploading.
+  const header = sheet.getRow(1);
+  header.font = { bold: true };
+  sheet.views = [{ state: "frozen", ySplit: 1 }];
 
-  const sheet = XLSX.utils.aoa_to_sheet(aoa);
-  sheet["!cols"] = [
-    { wch: 18 },
-    { wch: 32 },
-    { wch: 36 },
-    { wch: 28 },
-    { wch: 14 },
-    { wch: 14 },
-    { wch: 14 },
-    { wch: 36 },
-  ];
-  sheet["!freeze"] = { xSplit: 0, ySplit: 1 } as unknown as never;
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, sheet, "Checklist");
-
-  const buffer = XLSX.write(workbook, {
-    type: "buffer",
-    bookType: "xlsx",
-  }) as Buffer;
-
-  // Detach from the Node Buffer's pooled ArrayBuffer so we hand `Response`
-  // a plain ArrayBuffer slice it can keep alive without our pool reclaiming
-  // the bytes.
-  const view = new Uint8Array(buffer);
-  const detached = view.slice().buffer;
-  cachedBuffer = detached;
+  const arrayBuffer = (await workbook.xlsx.writeBuffer()) as ArrayBuffer;
+  // Detach into a fresh ArrayBuffer slice so the cached reference doesn't
+  // alias any pool/library-internal buffer that might be reused.
+  const view = new Uint8Array(arrayBuffer);
+  cachedBuffer = view.slice().buffer;
   return cachedBuffer;
 }
 

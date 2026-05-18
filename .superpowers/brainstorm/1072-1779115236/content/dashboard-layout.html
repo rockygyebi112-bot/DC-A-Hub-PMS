@@ -1,0 +1,155 @@
+<h2>SOCO Dashboard — proposed layout</h2>
+<p class="subtitle">Top: mode toggle. Below: the two modes side-by-side. Tell me if anything is missing or in the wrong spot.</p>
+
+<style>
+  .wf { background:#fff; border:1px solid #d8dde6; border-radius:10px; padding:14px; }
+  .wf h4 { margin:0 0 6px; font-size:13px; color:#2c3e50; }
+  .wf .sub { font-size:11px; color:#7a8599; margin-bottom:10px; }
+  .wf-toggle { display:flex; gap:6px; margin-bottom:10px; }
+  .wf-toggle div { padding:6px 12px; border:1px solid #c0c8d4; border-radius:999px; font-size:12px; background:#f6f8fb; color:#4a5568; }
+  .wf-toggle .active { background:#2563eb; color:#fff; border-color:#2563eb; }
+  .kpi-strip { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-bottom:10px; }
+  .kpi { border:1px solid #e2e6ed; padding:8px; border-radius:6px; background:#fafbfd; min-height:60px; }
+  .kpi .v { font-size:18px; font-weight:600; color:#111827; }
+  .kpi .l { font-size:10px; color:#6b7280; line-height:1.2; }
+  .filter-bar { display:flex; gap:6px; padding:6px 10px; background:#f3f5f9; border-radius:6px; margin-bottom:10px; font-size:11px; color:#475569; }
+  .filter-bar span { background:#fff; border:1px solid #d8dde6; padding:3px 8px; border-radius:4px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .chart { background:#fafbfd; border:1px solid #e2e6ed; border-radius:6px; padding:10px; height:130px; display:flex; flex-direction:column; }
+  .chart .ct { font-size:11px; color:#475569; margin-bottom:4px; }
+  .chart .cp { flex:1; display:flex; align-items:flex-end; gap:4px; }
+  .bar { flex:1; background:linear-gradient(180deg,#60a5fa,#2563eb); border-radius:3px 3px 0 0; }
+  .progress { height:8px; background:#e5e7eb; border-radius:4px; overflow:hidden; }
+  .progress > div { height:100%; background:#10b981; }
+  .map-placeholder { height:160px; background:repeating-linear-gradient(45deg,#eef2f7,#eef2f7 8px,#e2e8f0 8px,#e2e8f0 16px); border:1px solid #d8dde6; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#6b7280; font-size:12px; }
+  .section-divider { font-size:12px; font-weight:600; color:#1f2937; margin:14px 0 6px; padding-bottom:4px; border-bottom:1px solid #e5e7eb; }
+  .awaiting { font-size:10px; color:#92400e; background:#fef3c7; padding:2px 6px; border-radius:3px; display:inline-block; margin-left:6px; }
+  .ctxbar { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#6b7280; margin-bottom:10px; }
+  .ctxbar .sync { background:#2563eb; color:#fff; padding:4px 10px; border-radius:4px; }
+</style>
+
+<div class="split">
+
+  <!-- LEFT: PROGRESS MODE -->
+  <div class="mockup">
+    <div class="mockup-header">Mode: Fieldwork progress (auto-default until 80% collected)</div>
+    <div class="mockup-body">
+      <div class="wf">
+        <div class="ctxbar">
+          <span>Last sync: 14 min ago · Kobo HH form</span>
+          <span class="sync">Sync now</span>
+        </div>
+        <div class="wf-toggle">
+          <div class="active">Fieldwork progress</div>
+          <div>Findings</div>
+        </div>
+
+        <div class="kpi-strip">
+          <div class="kpi"><div class="v">1,247 / 2,000</div><div class="l">Interviews collected (62%)</div></div>
+          <div class="kpi"><div class="v">37<span class="awaiting">awaiting QC</span></div><div class="l">In QC queue</div></div>
+          <div class="kpi"><div class="v">48 / 6</div><div class="l">Districts active / total regions</div></div>
+          <div class="kpi"><div class="v">52% / 48%</div><div class="l">F / M split</div></div>
+          <div class="kpi"><div class="v">3.8%</div><div class="l">Refusal / replacement rate</div></div>
+          <div class="kpi"><div class="v">94%</div><div class="l">QC approval rate</div></div>
+        </div>
+
+        <div class="section-divider">Geographic coverage</div>
+        <div class="map-placeholder">Choropleth: Ghana, 6 northern regions, shaded by % of target N achieved</div>
+
+        <div class="section-divider">Collection over time + by enumerator</div>
+        <div class="grid">
+          <div class="chart"><div class="ct">Daily submissions (last 30d)</div>
+            <div class="cp"><div class="bar" style="height:40%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:70%"></div><div class="bar" style="height:60%"></div><div class="bar" style="height:80%"></div><div class="bar" style="height:75%"></div><div class="bar" style="height:90%"></div><div class="bar" style="height:65%"></div><div class="bar" style="height:85%"></div><div class="bar" style="height:95%"></div></div>
+          </div>
+          <div class="chart"><div class="ct">Top enumerators (interviews / approval rate)</div>
+            <div class="cp" style="flex-direction:column; gap:4px; justify-content:flex-end;">
+              <div style="display:flex;align-items:center;gap:4px;font-size:10px"><span style="width:70px">Fatima A.</span><div class="progress" style="flex:1"><div style="width:88%"></div></div></div>
+              <div style="display:flex;align-items:center;gap:4px;font-size:10px"><span style="width:70px">Kwame B.</span><div class="progress" style="flex:1"><div style="width:74%"></div></div></div>
+              <div style="display:flex;align-items:center;gap:4px;font-size:10px"><span style="width:70px">Ama D.</span><div class="progress" style="flex:1"><div style="width:69%"></div></div></div>
+              <div style="display:flex;align-items:center;gap:4px;font-size:10px"><span style="width:70px">Issah K.</span><div class="progress" style="flex:1"><div style="width:55%"></div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-divider">Per-region progress vs target</div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <div style="display:flex;align-items:center;gap:6px;font-size:10px"><span style="width:90px">Upper East</span><div class="progress" style="flex:1"><div style="width:78%"></div></div><span>78%</span></div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:10px"><span style="width:90px">Upper West</span><div class="progress" style="flex:1"><div style="width:64%"></div></div><span>64%</span></div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:10px"><span style="width:90px">Northern</span><div class="progress" style="flex:1"><div style="width:55%"></div></div><span>55%</span></div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:10px"><span style="width:90px">North East</span><div class="progress" style="flex:1"><div style="width:48%"></div></div><span>48%</span></div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:10px"><span style="width:90px">Savannah</span><div class="progress" style="flex:1"><div style="width:42%"></div></div><span>42%</span></div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:10px"><span style="width:90px">Oti</span><div class="progress" style="flex:1"><div style="width:38%"></div></div><span>38%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: FINDINGS MODE -->
+  <div class="mockup">
+    <div class="mockup-header">Mode: Findings (auto when ≥80% collected)</div>
+    <div class="mockup-body">
+      <div class="wf">
+        <div class="ctxbar">
+          <span>Showing approved n=1,168 · Awaiting QC: 37</span>
+          <span class="sync">Sync now</span>
+        </div>
+        <div class="wf-toggle">
+          <div>Fieldwork progress</div>
+          <div class="active">Findings</div>
+        </div>
+
+        <div class="filter-bar">
+          <span>Geography: All regions ▾</span>
+          <span>Gender: All ▾</span>
+          <span>SOCO exposure: All ▾</span>
+        </div>
+
+        <div class="kpi-strip">
+          <div class="kpi"><div class="v">78%</div><div class="l">Heard of SOCO</div></div>
+          <div class="kpi"><div class="v">41%</div><div class="l">Attended community meeting</div></div>
+          <div class="kpi"><div class="v">63%</div><div class="l">Felt involved in decisions</div></div>
+          <div class="kpi"><div class="v">71%</div><div class="l">Say SOCO benefited community</div></div>
+          <div class="kpi"><div class="v">85%</div><div class="l">Want to participate again</div></div>
+          <div class="kpi"><div class="v">+58</div><div class="l">Net helpful − harmful</div></div>
+        </div>
+
+        <div class="section-divider">1 · Project reach & participation</div>
+        <div class="grid">
+          <div class="chart"><div class="ct">Awareness by region</div><div class="cp"><div class="bar" style="height:90%"></div><div class="bar" style="height:75%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:48%"></div><div class="bar" style="height:42%"></div></div></div>
+          <div class="chart"><div class="ct">Meeting attendance by gender</div><div class="cp"><div class="bar" style="height:70%;background:linear-gradient(180deg,#f472b6,#db2777)"></div><div class="bar" style="height:55%;background:linear-gradient(180deg,#60a5fa,#2563eb)"></div></div></div>
+        </div>
+
+        <div class="section-divider">2 · Infrastructure investments (per MIS list)</div>
+        <div class="chart" style="height:90px"><div class="ct">Familiarity / use / satisfaction per investment</div><div class="cp">— horizontal bars per investment with 3 stacked metrics —</div></div>
+
+        <div class="section-divider">3 · Social cohesion activities · 4 · Perceptions & trust</div>
+        <div class="grid">
+          <div class="chart"><div class="ct">Participation in cohesion activities</div><div class="cp"><div class="bar" style="height:30%"></div><div class="bar" style="height:50%"></div><div class="bar" style="height:65%"></div></div></div>
+          <div class="chart"><div class="ct">Trust in district assembly (before vs now)</div><div class="cp"><div class="bar" style="height:40%"></div><div class="bar" style="height:65%"></div></div></div>
+        </div>
+
+        <div class="section-divider">5 · Service satisfaction · 6 · Shocks & conflict</div>
+        <div class="grid">
+          <div class="chart"><div class="ct">Water / market / road / education / health satisfaction</div><div class="cp"><div class="bar" style="height:55%"></div><div class="bar" style="height:48%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:70%"></div><div class="bar" style="height:65%"></div></div></div>
+          <div class="chart"><div class="ct">Climate shocks & SOCO's effect on coping</div><div class="cp"><div class="bar" style="height:30%"></div><div class="bar" style="height:60%"></div><div class="bar" style="height:45%"></div><div class="bar" style="height:80%"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="options" style="margin-top:24px">
+  <div class="option" data-choice="ok" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>Looks right — proceed</h3><p>Layout and section order make sense.</p></div>
+  </div>
+  <div class="option" data-choice="tweaks" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>Mostly right, but I want changes</h3><p>Tell me in chat what to adjust.</p></div>
+  </div>
+  <div class="option" data-choice="redo" onclick="toggleSelect(this)">
+    <div class="letter">↺</div>
+    <div class="content"><h3>Different direction needed</h3><p>Tell me what you'd rather see.</p></div>
+  </div>
+</div>

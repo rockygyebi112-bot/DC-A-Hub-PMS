@@ -60,6 +60,43 @@ function normalizeStatus(value: unknown): "not_started" | "in_progress" | "done"
   return "not_started";
 }
 
+/**
+ * Coerce an ExcelJS cell value to a plain string. ExcelJS surfaces several
+ * shapes depending on cell type:
+ *   - strings as-is
+ *   - numbers as numbers
+ *   - Date objects for date-typed cells
+ *   - { richText: [{ text }] } for styled text
+ *   - { formula, result } for formula cells
+ *   - { hyperlink, text } for hyperlinks
+ *   - null for empty cells
+ * We flatten all of them to a trimmed string so the downstream parsers
+ * (`parseDateCell`, `normalizeStatus`, `getCell`) keep working unchanged.
+ */
+function cellText(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (value instanceof Date) {
+    // Preserve the YYYY-MM-DD form parseDateCell expects on the ISO branch.
+    return value.toISOString();
+  }
+  if (typeof value === "object") {
+    const obj = value as {
+      richText?: { text?: string }[];
+      result?: unknown;
+      text?: string;
+      hyperlink?: string;
+    };
+    if (Array.isArray(obj.richText)) {
+      return obj.richText.map((part) => part.text ?? "").join("").trim();
+    }
+    if (obj.result !== undefined) return cellText(obj.result);
+    if (typeof obj.text === "string") return obj.text.trim();
+  }
+  return String(value).trim();
+}
+
 function getCell(row: Record<string, unknown>, names: string[]) {
   const entries = Object.entries(row);
   for (const name of names) {
@@ -145,20 +182,63 @@ export async function importWorkplanSheet(
   }
 
   const bytes = await file.arrayBuffer();
-  // Lazy-import xlsx so action invocations that don't touch Excel (the vast
-  // majority — every other action in this file) don't pay the ~300 KB
-  // parse/load cost on cold start.
-  const XLSX = await import("xlsx");
-  const workbook = XLSX.read(bytes, { type: "array", cellDates: true });
-  const sheetName =
-    workbook.SheetNames.find((name) => name.toLowerCase() === "checklist") ??
-    workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
+  // Lazy-import exceljs so action invocations that don't touch Excel (the
+  // vast majority — every other action in this file) don't pay the parse
+  // cost on cold start. ExcelJS replaces the previous SheetJS dependency:
+  // npm-resolved, narrower surface, easier to keep patched.
+  const ExcelJS = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  try {
+    // ExcelJS's `.xlsx.load` is typed against an older Node `Buffer` shape
+    // that differs from the current TS lib (resizable / detached members).
+    // At runtime it accepts any ArrayBufferLike — which is what `File.
+    // arrayBuffer()` returns. Cast at the boundary; the surrounding `try`
+    // converts a malformed workbook into a friendly error response.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await workbook.xlsx.load(bytes as any);
+  } catch (err) {
+    console.error("[workplan] xlsx parse failed", err);
+    return { ok: false, error: "Could not parse the uploaded workbook" };
+  }
+
+  // Prefer the "Checklist" sheet (template default) if present; otherwise
+  // fall back to the first worksheet. Case-insensitive match keeps user-
+  // saved variants like "checklist" or "CHECKLIST" working.
+  const sheet =
+    workbook.worksheets.find((ws) => ws.name.toLowerCase() === "checklist") ??
+    workbook.worksheets[0];
   if (!sheet) return { ok: false, error: "No worksheet found in the upload" };
 
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-    defval: "",
-    raw: false,
+  const sheetName = sheet.name;
+
+  // Build header → column-number map from row 1. ExcelJS rows/columns are
+  // 1-indexed; `sheet.getRow(1).values` returns a sparse array with `null`
+  // at index 0 and headers from index 1 onwards.
+  const headerRow = sheet.getRow(1);
+  const headerByCol = new Map<number, string>();
+  headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+    const text = cellText(cell.value);
+    if (text) headerByCol.set(colNumber, text);
+  });
+  if (headerByCol.size === 0) {
+    return { ok: false, error: "No column headers found in the upload" };
+  }
+
+  // Walk data rows (row 2 onwards) and surface as `{ header: value }` maps
+  // so the existing `getCell()` helper keeps working without changes.
+  const rows: Record<string, unknown>[] = [];
+  sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber === 1) return;
+    const out: Record<string, unknown> = {};
+    let nonEmpty = false;
+    row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+      const header = headerByCol.get(colNumber);
+      if (!header) return;
+      const value = cellText(cell.value);
+      out[header] = value;
+      if (value) nonEmpty = true;
+    });
+    if (nonEmpty) rows.push(out);
   });
   if (rows.length === 0) return { ok: false, error: "No checklist rows found" };
 

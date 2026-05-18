@@ -24,8 +24,10 @@ export const PROFILE_SESSION_WITH_STATUS =
 // profiles -- compact admin-check shape
 export const PROFILE_ROLE_STATUS = "user_id, role, is_active";
 
-// project_activity_counts view -- per-project totals
-export const PROJECT_ACTIVITY_COUNTS = "project_id, total_count, done_count";
+// project_activity_counts view -- per-project totals (overall + client_visible)
+export const PROJECT_ACTIVITY_COUNTS =
+  "project_id, total_count, done_count, in_progress_count, not_started_count, " +
+  "client_total_count, client_done_count, client_in_progress_count, client_not_started_count";
 
 // phases -- canonical row shape
 export const PHASE_ROW =

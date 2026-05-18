@@ -521,6 +521,7 @@ export async function createActivity(projectId: string, formData: FormData): Pro
     deliverable: formValue(formData, "deliverable"),
     planned_date: formValue(formData, "planned_date"),
     responsible: formValue(formData, "responsible"),
+    visibility: formValue(formData, "visibility"),
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
@@ -537,6 +538,17 @@ export async function createActivity(projectId: string, formData: FormData): Pro
     created_by: userId,
   });
   if (error || !data) return { ok: false, error: dbErrorMessage(error) };
+
+  // The ordered-insert RPC predates the visibility column (migration 0030) and
+  // hard-codes its column list, so it always inserts the default 'client_visible'.
+  // Patch the chosen visibility in a follow-up UPDATE when it differs from the
+  // default; avoids a new RPC-extending migration.
+  if (parsed.data.visibility !== "client_visible") {
+    await sb
+      .from("activities")
+      .update({ visibility: parsed.data.visibility })
+      .eq("id", data.id);
+  }
 
   await sb.from("activity_log").insert({
     project_id: projectId,
@@ -558,6 +570,7 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
     deliverable: formValue(formData, "deliverable"),
     planned_date: formValue(formData, "planned_date"),
     responsible: formValue(formData, "responsible"),
+    visibility: formValue(formData, "visibility"),
     status: formValue(formData, "status"),
     completed_date: formValue(formData, "completed_date"),
     narrative_note: formValue(formData, "narrative_note"),
@@ -568,7 +581,7 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
   const userId = await currentUserId();
   const { data: before } = await sb
     .from("activities")
-    .select("status, phase:phases(project_id)")
+    .select("status, visibility, phase:phases(project_id)")
     .eq("id", activityId)
     .single();
   const phase = Array.isArray(before?.phase) ? before?.phase[0] : before?.phase;
@@ -602,6 +615,22 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
       action,
       meta: notification.ok ? {} : { email_error: notification.reason },
     });
+
+    const visibilityChanged =
+      (before as { visibility?: string } | null)?.visibility !== undefined &&
+      (before as { visibility?: string }).visibility !== parsed.data.visibility;
+    if (visibilityChanged) {
+      await sb.from("activity_log").insert({
+        project_id: projectId,
+        activity_id: activityId,
+        actor_user_id: userId,
+        action: "updated",
+        meta: {
+          visibility_changed_from: (before as { visibility: string }).visibility,
+          visibility_changed_to: parsed.data.visibility,
+        },
+      });
+    }
 
     revalidatePath(`/workspace/projects/${projectId}`);
     revalidatePath(`/portal/projects/${projectId}`);

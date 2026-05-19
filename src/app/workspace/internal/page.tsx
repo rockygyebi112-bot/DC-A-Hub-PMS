@@ -6,7 +6,7 @@ import { NewTaskForm } from '@/components/internal/new-task-form';
 
 export default async function InternalWorkspacePage({
   searchParams,
-}: { searchParams: Promise<{ area?: string; status?: string }> }) {
+}: { searchParams: Promise<{ area?: string; status?: string; project?: string }> }) {
   const profile = await getCurrentProfile();
   if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
     redirect('/');
@@ -15,7 +15,7 @@ export default async function InternalWorkspacePage({
   const params = await searchParams;
   const [areas, tasks] = await Promise.all([
     listAreas(),
-    listTasks({ areaId: params.area, status: params.status }),
+    listTasks({ areaId: params.area, status: params.status, projectId: params.project }),
   ]);
 
   return (

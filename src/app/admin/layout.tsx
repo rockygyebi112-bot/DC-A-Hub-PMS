@@ -86,6 +86,11 @@ export default async function AdminLayout({
           icon: "users" as const,
           badge: counts.totalUsers,
         },
+        {
+          href: "/workspace/internal",
+          label: "Internal",
+          icon: "inbox" as const,
+        },
       ],
     },
   ];

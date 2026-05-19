@@ -133,7 +133,15 @@ export default async function WorkspaceProjectPage({
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         <ProjectMetricCard title="Progress">
-          <ProjectProgress done={project.doneCount} total={project.totalCount} />
+          <ProjectProgress
+            done={project.clientDoneCount}
+            total={project.clientTotalCount}
+          />
+          {project.totalCount !== project.clientTotalCount && (
+            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+              Overall (includes internal): {project.doneCount} / {project.totalCount}
+            </p>
+          )}
         </ProjectMetricCard>
         <ProjectMetricCard title="Status">
           <StatusPill status={project.status as "planning" | "active" | "paused" | "completed"} />

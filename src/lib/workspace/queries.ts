@@ -22,6 +22,8 @@ export type WorkspaceProject = {
   client: { id: string; name: string; logo_url: string | null } | null;
   doneCount: number;
   totalCount: number;
+  clientDoneCount: number;
+  clientTotalCount: number;
 };
 
 export type WorkspacePhase = {
@@ -97,6 +99,8 @@ type CountsRow = {
   project_id: string;
   total_count: number | null;
   done_count: number | null;
+  client_total_count: number | null;
+  client_done_count: number | null;
 };
 
 export const listWorkspaceProjects = cache(
@@ -166,6 +170,8 @@ export const listWorkspaceProjects = cache(
         client: Array.isArray(client) ? client[0] ?? null : client,
         doneCount: Number(counts?.done_count ?? 0),
         totalCount: Number(counts?.total_count ?? 0),
+        clientDoneCount: Number(counts?.client_done_count ?? 0),
+        clientTotalCount: Number(counts?.client_total_count ?? 0),
       };
     });
   },
@@ -193,7 +199,7 @@ export const getWorkspaceProject = cache(async (
   // One scalar row from the rollup view instead of every activity row.
   const { data: counts } = await sb
     .from("project_activity_counts")
-    .select("total_count, done_count")
+    .select(PROJECT_ACTIVITY_COUNTS)
     .eq("project_id", projectId)
     .maybeSingle();
 
@@ -203,6 +209,8 @@ export const getWorkspaceProject = cache(async (
     client: Array.isArray(project.client) ? project.client[0] ?? null : project.client,
     doneCount: Number(counts?.done_count ?? 0),
     totalCount: Number(counts?.total_count ?? 0),
+    clientDoneCount: Number(counts?.client_done_count ?? 0),
+    clientTotalCount: Number(counts?.client_total_count ?? 0),
   };
 });
 

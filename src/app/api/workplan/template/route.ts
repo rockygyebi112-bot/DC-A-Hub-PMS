@@ -63,6 +63,46 @@ async function buildTemplateBuffer(): Promise<ArrayBuffer> {
   header.font = { bold: true };
   sheet.views = [{ state: "frozen", ySplit: 1 }];
 
+  // Self-documenting dropdowns on the two enum-style columns so users can
+  // see accepted values without consulting docs or failing an import.
+  // Applied to a generous row range; ExcelJS writes one validation rule
+  // regardless of range size. Column letters track TEMPLATE_COLUMNS order.
+  const statusCol = sheet.getColumn("Status").letter;
+  const visibilityCol = sheet.getColumn("Visibility").letter;
+  // exceljs runtime exposes `worksheet.dataValidations.add(range, rule)` but
+  // the bundled .d.ts omits it; cast narrowly to the shape we use.
+  const validations = (sheet as unknown as {
+    dataValidations: {
+      add: (
+        range: string,
+        rule: {
+          type: string;
+          allowBlank?: boolean;
+          formulae: string[];
+          showErrorMessage?: boolean;
+          errorTitle?: string;
+          error?: string;
+        },
+      ) => void;
+    };
+  }).dataValidations;
+  validations.add(`${statusCol}2:${statusCol}1000`, {
+    type: "list",
+    allowBlank: true,
+    formulae: ['"not_started,in_progress,done"'],
+    showErrorMessage: true,
+    errorTitle: "Invalid status",
+    error: "Use one of: not_started, in_progress, done",
+  });
+  validations.add(`${visibilityCol}2:${visibilityCol}1000`, {
+    type: "list",
+    allowBlank: false,
+    formulae: ['"client_visible,internal"'],
+    showErrorMessage: true,
+    errorTitle: "Visibility required",
+    error: "Use one of: client_visible, internal",
+  });
+
   const arrayBuffer = (await workbook.xlsx.writeBuffer()) as ArrayBuffer;
   // Detach into a fresh ArrayBuffer slice so the cached reference doesn't
   // alias any pool/library-internal buffer that might be reused.

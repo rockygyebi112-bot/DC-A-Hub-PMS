@@ -44,10 +44,15 @@ export function SnapshotStrip(props: WorkspaceViewProps) {
           <ProgressDonut percent={percent} size={68} stroke={7} health={props.health} />
           <div className="min-w-0 space-y-1">
             <p className="text-[11px] leading-tight text-muted-foreground">
-              {props.doneCount} / {props.totalCount}
+              Client view: {props.clientDoneCount} / {props.clientTotalCount}
               <br />
               activities completed
             </p>
+            {props.totalCount !== props.clientTotalCount && (
+              <p className="text-[11px] leading-tight text-amber-700 dark:text-amber-300">
+                Overall (includes internal): {props.doneCount} / {props.totalCount}
+              </p>
+            )}
             {props.totalCount > 0 && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
                 <span className="size-1.5 rounded-full bg-emerald-500" />

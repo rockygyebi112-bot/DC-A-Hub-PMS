@@ -55,6 +55,8 @@ export type WorkspaceViewProps = {
   managerEmail: string | null;
   doneCount: number;
   totalCount: number;
+  clientDoneCount: number;
+  clientTotalCount: number;
   health: "on-track" | "at-risk" | "delayed" | "not-started";
   phases: WVPhase[];
   team: { name: string; email: string; avatarUrl?: string | null }[];

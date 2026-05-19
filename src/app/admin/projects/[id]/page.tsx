@@ -38,6 +38,11 @@ export default async function ProjectOverviewPage({
   );
   const totalActivities = allActivities.length;
   const doneActivities = allActivities.filter((a) => a.status === "done").length;
+  const clientActivities = allActivities.filter(
+    (a) => a.visibility === "client_visible",
+  );
+  const clientTotal = clientActivities.length;
+  const clientDone = clientActivities.filter((a) => a.status === "done").length;
   const percent =
     totalActivities === 0
       ? 0
@@ -202,6 +207,8 @@ export default async function ProjectOverviewPage({
       managerEmail={manager?.profile?.email ?? null}
       doneCount={doneActivities}
       totalCount={totalActivities}
+      clientDoneCount={clientDone}
+      clientTotalCount={clientTotal}
       health={health}
       phases={wvPhases}
       team={teamUsers}

@@ -360,6 +360,129 @@ export type Database = {
           },
         ]
       }
+      internal_areas: {
+        Row: {
+          archived_at: string | null
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      internal_task_assignees: {
+        Row: {
+          added_at: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_task_assignees_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "internal_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      internal_tasks: {
+        Row: {
+          archived_at: string | null
+          area_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string | null
+          project_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          area_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          project_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          area_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          project_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_tasks_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "internal_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_activity_counts"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "internal_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       password_verify_attempts: {
         Row: {
           context: string | null
@@ -888,6 +1011,11 @@ export type Database = {
         }
       }
       is_admin: { Args: never; Returns: boolean }
+      is_staff_or_admin: { Args: never; Returns: boolean }
+      is_task_assignee: {
+        Args: { p_task_id: string; p_user_id: string }
+        Returns: boolean
+      }
       project_id_from_path: { Args: { object_name: string }; Returns: string }
       receipt_project_id: { Args: { object_name: string }; Returns: string }
       shares_project_with: {

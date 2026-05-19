@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import { createClient } from '@/lib/supabase/server';
 import { currentUserId } from '@/lib/auth/session';
-import { requireRole } from '@/lib/auth/require-role';
+import { requireRole } from '@/lib/auth/require-role-server';
 import { dbErrorMessage } from '@/lib/db-errors';
 import { areaSchema, taskSchema } from './schemas';
 import type { ActionResult } from '@/lib/action-result';

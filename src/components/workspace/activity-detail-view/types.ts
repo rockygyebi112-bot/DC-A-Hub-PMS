@@ -20,6 +20,7 @@ export type ActivityForView = {
   completed_date: string | null;
   narrative_note: string | null;
   status: "not_started" | "in_progress" | "done";
+  visibility: "client_visible" | "internal";
   phase: {
     id: string;
     name: string;

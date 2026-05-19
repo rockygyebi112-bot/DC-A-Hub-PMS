@@ -49,7 +49,14 @@ export function ProjectTimeline({
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{activity.name}</p>
+                  <p className="flex items-center gap-2 truncate text-sm font-medium">
+                    <span className="truncate">{activity.name}</span>
+                    {activity.visibility === "internal" && (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                        Internal
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-muted-foreground">{activity.phaseName}</p>
                 </div>
                 <div className="flex items-center gap-2">

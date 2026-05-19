@@ -23,6 +23,18 @@ export type SessionUser = {
   isActive: boolean;
 };
 
+/**
+ * Convenience accessor for the authenticated user's id. Returns `null` when
+ * the request is unauthenticated or the profile is unusable, so server actions
+ * can `if (!userId) return { ok: false, ... }` without re-implementing the
+ * `auth.getUser()` round-trip. Shares the cached `getSessionUser()` lookup so
+ * adding this call to an action that already authed is free.
+ */
+export const currentUserId = async (): Promise<string | null> => {
+  const user = await getSessionUser();
+  return user?.userId ?? null;
+};
+
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const sb = await createClient();
   const {

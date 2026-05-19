@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   ClipboardList,
   FileText,
+  Inbox,
   Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export type IconName =
   | "check-circle-2"
   | "clipboard-list"
   | "file-text"
+  | "inbox"
   | "settings";
 
 const ICONS: Record<IconName, LucideIcon> = {
@@ -55,6 +57,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   "check-circle-2": CheckCircle2,
   "clipboard-list": ClipboardList,
   "file-text": FileText,
+  inbox: Inbox,
   settings: Settings,
 };
 

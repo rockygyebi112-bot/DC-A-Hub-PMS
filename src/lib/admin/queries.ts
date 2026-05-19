@@ -105,6 +105,8 @@ export type ClientProjectRow = {
   end_date: string | null;
   doneCount: number;
   totalCount: number;
+  clientDoneCount: number;
+  clientTotalCount: number;
 };
 
 export const listClientProjects = reactCache(
@@ -140,7 +142,12 @@ export const listClientProjects = reactCache(
 
     const countsById = new Map<
       string,
-      { total_count: number | null; done_count: number | null }
+      {
+        total_count: number | null;
+        done_count: number | null;
+        client_total_count: number | null;
+        client_done_count: number | null;
+      }
     >();
     for (const row of countsRaw ?? []) {
       if (row.project_id) countsById.set(row.project_id, row);
@@ -152,6 +159,8 @@ export const listClientProjects = reactCache(
         ...project,
         doneCount: Number(counts?.done_count ?? 0),
         totalCount: Number(counts?.total_count ?? 0),
+        clientDoneCount: Number(counts?.client_done_count ?? 0),
+        clientTotalCount: Number(counts?.client_total_count ?? 0),
       };
     });
   },

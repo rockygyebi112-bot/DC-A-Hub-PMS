@@ -45,9 +45,9 @@ export async function getPortalProjectDetail(projectId: string) {
     phases,
     manager,
     percentComplete:
-      project.totalCount === 0
+      project.clientTotalCount === 0
         ? 0
-        : Math.round((project.doneCount / project.totalCount) * 100),
+        : Math.round((project.clientDoneCount / project.clientTotalCount) * 100),
   };
 }
 

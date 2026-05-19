@@ -11,4 +11,14 @@ describe('evaluations core tables', () => {
     expect(b.error).toBeNull();
     expect(c.error).toBeNull();
   });
+
+  it('mis_investments / evaluation_responses / evaluation_response_investments exist', async () => {
+    const admin = adminClient();
+    const a = await admin.from('mis_investments').select('id').limit(1);
+    const b = await admin.from('evaluation_responses').select('id').limit(1);
+    const c = await admin.from('evaluation_response_investments').select('id').limit(1);
+    expect(a.error).toBeNull();
+    expect(b.error).toBeNull();
+    expect(c.error).toBeNull();
+  });
 });

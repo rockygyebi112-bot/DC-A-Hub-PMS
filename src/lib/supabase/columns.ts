@@ -34,7 +34,7 @@ export const PHASE_ROW =
 
 // activities -- canonical row shape used by phase/activity reads
 export const ACTIVITY_ROW =
-  "id, phase_id, name, description, deliverable, planned_date, completed_date, status, narrative_note, responsible, order_index";
+  "id, phase_id, name, description, deliverable, planned_date, completed_date, status, narrative_note, responsible, order_index, visibility";
 
 // activity_proofs -- canonical row shape for proof galleries
 export const ACTIVITY_PROOF_ROW =

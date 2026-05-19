@@ -51,6 +51,7 @@ export type WorkspaceActivity = {
   narrative_note: string | null;
   responsible: string | null;
   order_index: number;
+  visibility: "client_visible" | "internal";
   proofCount: number;
 };
 
@@ -238,6 +239,7 @@ export const listProjectPhases = cache(async (projectId: string): Promise<Worksp
     list.push({
       ...activity,
       status: activity.status as WorkspaceActivity["status"],
+      visibility: activity.visibility as WorkspaceActivity["visibility"],
       proofCount: proofCounts.get(activity.id) ?? 0,
     });
     byPhase.set(activity.phase_id, list);
@@ -292,6 +294,7 @@ export const getActivity = cache(async (activityId: string) => {
   return {
     ...data,
     status: data.status as WorkspaceActivity["status"],
+    visibility: data.visibility as WorkspaceActivity["visibility"],
     phase: Array.isArray(data.phase) ? data.phase[0] ?? null : data.phase,
   };
 });

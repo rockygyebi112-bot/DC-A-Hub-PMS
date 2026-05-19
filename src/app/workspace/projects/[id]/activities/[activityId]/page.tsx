@@ -89,6 +89,7 @@ export default async function WorkspaceActivityPage({
     fd.set("completed_date", activity.completed_date ?? "");
     fd.set("description", activity.description ?? "");
     fd.set("narrative_note", activity.narrative_note ?? "");
+    fd.set("visibility", activity.visibility);
     await updateActivity(activityId, fd);
   }
 
@@ -106,6 +107,7 @@ export default async function WorkspaceActivityPage({
     fd.set("completed_date", "");
     fd.set("description", activity.description ?? "");
     fd.set("narrative_note", activity.narrative_note ?? "");
+    fd.set("visibility", activity.visibility);
     await updateActivity(activityId, fd);
   }
 

@@ -544,10 +544,17 @@ export async function createActivity(projectId: string, formData: FormData): Pro
   // Patch the chosen visibility in a follow-up UPDATE when it differs from the
   // default; avoids a new RPC-extending migration.
   if (parsed.data.visibility !== "client_visible") {
-    await sb
+    const { error: visErr } = await sb
       .from("activities")
       .update({ visibility: parsed.data.visibility })
       .eq("id", data.id);
+    if (visErr) {
+      // Compensating delete: avoid leaving an activity in the wrong visibility
+      // (the user asked for 'internal'; falling back to 'client_visible' would
+      // be a privacy regression).
+      await sb.from("activities").delete().eq("id", data.id);
+      return { ok: false, error: dbErrorMessage(visErr) };
+    }
   }
 
   await sb.from("activity_log").insert({
@@ -608,29 +615,22 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
       : { ok: true };
 
     const action = markedDone ? "marked_done" : markedStarted ? "started" : "updated";
+    const prevVisibility = before?.visibility;
+    const visibilityChanged =
+      prevVisibility !== undefined && prevVisibility !== parsed.data.visibility;
+    const meta: Record<string, string> = {};
+    if (!notification.ok) meta.email_error = notification.reason ?? "unknown";
+    if (visibilityChanged) {
+      meta.visibility_changed_from = prevVisibility!;
+      meta.visibility_changed_to = parsed.data.visibility;
+    }
     await sb.from("activity_log").insert({
       project_id: projectId,
       activity_id: activityId,
       actor_user_id: userId,
       action,
-      meta: notification.ok ? {} : { email_error: notification.reason },
+      meta,
     });
-
-    const visibilityChanged =
-      (before as { visibility?: string } | null)?.visibility !== undefined &&
-      (before as { visibility?: string }).visibility !== parsed.data.visibility;
-    if (visibilityChanged) {
-      await sb.from("activity_log").insert({
-        project_id: projectId,
-        activity_id: activityId,
-        actor_user_id: userId,
-        action: "updated",
-        meta: {
-          visibility_changed_from: (before as { visibility: string }).visibility,
-          visibility_changed_to: parsed.data.visibility,
-        },
-      });
-    }
 
     revalidatePath(`/workspace/projects/${projectId}`);
     revalidatePath(`/portal/projects/${projectId}`);

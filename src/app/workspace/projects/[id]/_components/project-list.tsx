@@ -108,12 +108,19 @@ export function ProjectList({
               {activities.map((activity) => (
                 <TableRow key={activity.id} style={{ height: "var(--admin-row-h)" }}>
                   <TableCell>
-                    <Link
-                      href={`/workspace/projects/${projectId}/activities/${activity.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {activity.name}
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/workspace/projects/${projectId}/activities/${activity.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {activity.name}
+                      </Link>
+                      {activity.visibility === "internal" && (
+                        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                          Internal
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>{activity.phaseName}</TableCell>
                   <TableCell>

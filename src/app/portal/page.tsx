@@ -53,7 +53,10 @@ export default async function PortalHome() {
                 </div>
               </div>
               <div className="mt-5">
-                <ProjectProgress done={project.doneCount} total={project.totalCount} />
+                <ProjectProgress
+                  done={project.clientDoneCount}
+                  total={project.clientTotalCount}
+                />
               </div>
             </Link>
           ))}

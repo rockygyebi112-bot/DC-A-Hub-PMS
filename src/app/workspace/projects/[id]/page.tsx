@@ -23,6 +23,7 @@ import { ProjectProgress } from "@/components/workspace/project-progress";
 import { DeleteConfirm } from "@/components/workspace/delete-confirm";
 import { createActivity, createPhase, deleteWorkplan } from "@/lib/workspace/actions";
 import { getWorkspaceProject, listProjectPhases } from "@/lib/workspace/queries";
+import { listTasks } from "@/lib/internal/queries";
 import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 import { ProjectMetricCard } from "./_components/project-metric-card";
 import { ProjectPhases } from "./_components/project-phases";
@@ -53,9 +54,10 @@ export default async function WorkspaceProjectPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [projectMaybe, phases] = await Promise.all([
+  const [projectMaybe, phases, internalTasks] = await Promise.all([
     getWorkspaceProject(id),
     listProjectPhases(id),
+    listTasks({ projectId: id }),
   ]);
   if (!projectMaybe) notFound();
   const project = projectMaybe;
@@ -95,7 +97,15 @@ export default async function WorkspaceProjectPage({
         subtitle={`${project.client?.name ?? "Client"} · ${project.code}`}
         backFallbackHref="/workspace"
         action={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {internalTasks.length > 0 && (
+              <a
+                href={`/workspace/internal?project=${id}`}
+                className="rounded-full bg-amber-100 px-3 py-1 text-xs text-amber-900"
+              >
+                Internal tasks ({internalTasks.length})
+              </a>
+            )}
             <Button variant="outline" render={<Link href={`/workspace/projects/${id}/team`} />}>
               <Users className="size-4" />
               Team
@@ -133,7 +143,15 @@ export default async function WorkspaceProjectPage({
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         <ProjectMetricCard title="Progress">
-          <ProjectProgress done={project.doneCount} total={project.totalCount} />
+          <ProjectProgress
+            done={project.clientDoneCount}
+            total={project.clientTotalCount}
+          />
+          {project.totalCount !== project.clientTotalCount && (
+            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+              Overall (includes internal): {project.doneCount} / {project.totalCount}
+            </p>
+          )}
         </ProjectMetricCard>
         <ProjectMetricCard title="Status">
           <StatusPill status={project.status as "planning" | "active" | "paused" | "completed"} />
@@ -239,6 +257,24 @@ export default async function WorkspaceProjectPage({
               <Input name="name" placeholder="Activity name" required />
               <Input name="planned_date" type="date" />
               <Input name="location" placeholder="Location" />
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                  Visibility <span className="text-red-600">*</span>
+                </legend>
+                <p className="text-xs text-gray-500">
+                  Internal-only activities are hidden from the client portal but visible to admin and assigned staff.
+                </p>
+                <div className="flex gap-4">
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input type="radio" name="visibility" value="client_visible" required />
+                    Client-visible
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input type="radio" name="visibility" value="internal" required />
+                    Internal only
+                  </label>
+                </div>
+              </fieldset>
               <Button type="submit" className="w-full" disabled={phases.length === 0}>
                 Add activity
               </Button>

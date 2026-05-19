@@ -105,7 +105,26 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
         payload = null;
       }
       if (!payload || !payload.ok) {
-        toast.error(payload?.error ?? "Workplan import failed.");
+        const raw = payload?.error ?? "Workplan import failed.";
+        // The server aggregates per-row errors with `\n` (see
+        // `importWorkplanSheet` in actions.ts). Sonner collapses whitespace in
+        // the title, so split multi-line errors into the description with
+        // explicit <br/> rendering so the user can read every failing row.
+        const lines = raw.split("\n").filter(Boolean);
+        if (lines.length > 1) {
+          toast.error(`Workplan import failed (${lines.length} row issues)`, {
+            description: (
+              <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs">
+                {lines.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+            ),
+            duration: 10000,
+          });
+        } else {
+          toast.error(raw);
+        }
         reset();
         return;
       }
@@ -139,7 +158,10 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
           {fileName || "Upload Excel checklist"}
         </span>
         <span className="mt-1 text-xs text-muted-foreground">
-          Phase, activity, deliverable, notes, responsible, status
+          Phase, activity, deliverable, notes, responsible, status, visibility
+        </span>
+        <span className="mt-1 text-[11px] text-muted-foreground">
+          Visibility column required. Values: <code>client_visible</code> or <code>internal</code>.
         </span>
         {/* The template link is a sibling <a> rendered inside the dropzone
             label. stopPropagation prevents the parent label's click from

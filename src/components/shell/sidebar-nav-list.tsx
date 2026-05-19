@@ -10,6 +10,7 @@ import {
   ClipboardList,
   FileText,
   FolderKanban,
+  Inbox,
   LayoutDashboard,
   ListChecks,
   Settings,
@@ -32,6 +33,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "check-circle-2": CheckCircle2,
   "clipboard-list": ClipboardList,
   "file-text": FileText,
+  inbox: Inbox,
   settings: Settings,
 };
 

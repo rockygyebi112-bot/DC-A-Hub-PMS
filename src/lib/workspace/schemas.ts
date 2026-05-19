@@ -24,6 +24,9 @@ export const activitySchema = z.object({
   deliverable: z.string().trim().max(500).optional(),
   planned_date: optionalDate,
   responsible: z.string().trim().max(200).optional(),
+  visibility: z.enum(["client_visible", "internal"], {
+    error: "Pick client-visible or internal",
+  }),
 });
 
 export type ActivityInput = z.input<typeof activitySchema>;

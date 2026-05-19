@@ -23,6 +23,7 @@ import {
   phaseSchema,
 } from "@/lib/workspace/schemas";
 import { notifyClientViewersActivityDone } from "@/lib/workspace/notifications";
+import { parseWorkplanRowVisibility } from "./workplan-parse";
 import type { ActionResult } from "@/lib/action-result";
 import { ACTIVITY_PROJECT_JOIN } from "@/lib/supabase/columns";
 import {
@@ -264,15 +265,23 @@ export async function importWorkplanSheet(
     status: "not_started" | "in_progress" | "done";
     plannedDate: string | null;
     completedDate: string | null;
+    visibility: "client_visible" | "internal";
   };
 
   const parsed: ParsedRow[] = [];
+  const rowErrors: string[] = [];
   let currentPhaseName = "";
-  for (const row of rows) {
+  rows.forEach((row, idx) => {
     const phaseName = getCell(row, ["Category", "Phase"]);
     const activityName = getCell(row, ["Activity", "Task Description", "Task"]);
     if (phaseName) currentPhaseName = phaseName;
-    if (!currentPhaseName || !activityName) continue;
+    if (!currentPhaseName || !activityName) return;
+    const vis = parseWorkplanRowVisibility(getCell(row, ["Visibility"]));
+    if (!vis.ok) {
+      // idx + 2: spreadsheet row = header (row 1) + zero-based idx.
+      rowErrors.push(`Row ${idx + 2} (${activityName}): ${vis.error}`);
+      return;
+    }
     parsed.push({
       phaseName: currentPhaseName,
       activityName,
@@ -284,8 +293,10 @@ export async function importWorkplanSheet(
       completedDate: parseDateCell(
         getCell(row, ["End Date", "Completed Date", "Completion Date", "End"]),
       ),
+      visibility: vis.value,
     });
-  }
+  });
+  if (rowErrors.length > 0) return { ok: false, error: rowErrors.join("\n") };
   if (parsed.length === 0) return { ok: false, error: "No checklist rows found" };
 
   // 1) Fetch existing phases for the project — one round-trip.
@@ -359,6 +370,7 @@ export async function importWorkplanSheet(
     completed_date: string | null;
     order_index: number;
     created_by: string | null;
+    visibility: ParsedRow["visibility"];
   };
   type UpdateRow = {
     id: string;
@@ -366,6 +378,7 @@ export async function importWorkplanSheet(
     deliverable: string | null;
     responsible: string | null;
     status: ParsedRow["status"];
+    visibility: ParsedRow["visibility"];
     planned_date?: string | null;
     completed_date?: string | null;
   };
@@ -389,6 +402,7 @@ export async function importWorkplanSheet(
         deliverable: p.deliverable || null,
         responsible: p.responsible || null,
         status: p.status,
+        visibility: p.visibility,
         ...(p.plannedDate ? { planned_date: p.plannedDate } : {}),
         ...(p.completedDate ? { completed_date: p.completedDate } : {}),
       });
@@ -415,6 +429,7 @@ export async function importWorkplanSheet(
         completed_date: p.completedDate,
         order_index: nextOrder,
         created_by: userId,
+        visibility: p.visibility,
       });
     }
   }
@@ -449,6 +464,7 @@ export async function importWorkplanSheet(
             deliverable: u.deliverable,
             responsible: u.responsible,
             status: u.status,
+            visibility: u.visibility,
             ...(u.planned_date !== undefined ? { planned_date: u.planned_date } : {}),
             ...(u.completed_date !== undefined ? { completed_date: u.completed_date } : {}),
           })
@@ -521,6 +537,7 @@ export async function createActivity(projectId: string, formData: FormData): Pro
     deliverable: formValue(formData, "deliverable"),
     planned_date: formValue(formData, "planned_date"),
     responsible: formValue(formData, "responsible"),
+    visibility: formValue(formData, "visibility"),
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
@@ -537,6 +554,24 @@ export async function createActivity(projectId: string, formData: FormData): Pro
     created_by: userId,
   });
   if (error || !data) return { ok: false, error: dbErrorMessage(error) };
+
+  // The ordered-insert RPC predates the visibility column (migration 0030) and
+  // hard-codes its column list, so it always inserts the default 'client_visible'.
+  // Patch the chosen visibility in a follow-up UPDATE when it differs from the
+  // default; avoids a new RPC-extending migration.
+  if (parsed.data.visibility !== "client_visible") {
+    const { error: visErr } = await sb
+      .from("activities")
+      .update({ visibility: parsed.data.visibility })
+      .eq("id", data.id);
+    if (visErr) {
+      // Compensating delete: avoid leaving an activity in the wrong visibility
+      // (the user asked for 'internal'; falling back to 'client_visible' would
+      // be a privacy regression).
+      await sb.from("activities").delete().eq("id", data.id);
+      return { ok: false, error: dbErrorMessage(visErr) };
+    }
+  }
 
   await sb.from("activity_log").insert({
     project_id: projectId,
@@ -558,6 +593,7 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
     deliverable: formValue(formData, "deliverable"),
     planned_date: formValue(formData, "planned_date"),
     responsible: formValue(formData, "responsible"),
+    visibility: formValue(formData, "visibility"),
     status: formValue(formData, "status"),
     completed_date: formValue(formData, "completed_date"),
     narrative_note: formValue(formData, "narrative_note"),
@@ -568,7 +604,7 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
   const userId = await currentUserId();
   const { data: before } = await sb
     .from("activities")
-    .select("status, phase:phases(project_id)")
+    .select("status, visibility, phase:phases(project_id)")
     .eq("id", activityId)
     .single();
   const phase = Array.isArray(before?.phase) ? before?.phase[0] : before?.phase;
@@ -595,12 +631,21 @@ export async function updateActivity(activityId: string, formData: FormData): Pr
       : { ok: true };
 
     const action = markedDone ? "marked_done" : markedStarted ? "started" : "updated";
+    const prevVisibility = before?.visibility;
+    const visibilityChanged =
+      prevVisibility !== undefined && prevVisibility !== parsed.data.visibility;
+    const meta: Record<string, string> = {};
+    if (!notification.ok) meta.email_error = notification.reason ?? "unknown";
+    if (visibilityChanged) {
+      meta.visibility_changed_from = prevVisibility!;
+      meta.visibility_changed_to = parsed.data.visibility;
+    }
     await sb.from("activity_log").insert({
       project_id: projectId,
       activity_id: activityId,
       actor_user_id: userId,
       action,
-      meta: notification.ok ? {} : { email_error: notification.reason },
+      meta,
     });
 
     revalidatePath(`/workspace/projects/${projectId}`);

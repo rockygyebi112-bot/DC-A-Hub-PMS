@@ -23,6 +23,7 @@ import { ProjectProgress } from "@/components/workspace/project-progress";
 import { DeleteConfirm } from "@/components/workspace/delete-confirm";
 import { createActivity, createPhase, deleteWorkplan } from "@/lib/workspace/actions";
 import { getWorkspaceProject, listProjectPhases } from "@/lib/workspace/queries";
+import { listTasks } from "@/lib/internal/queries";
 import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 import { ProjectMetricCard } from "./_components/project-metric-card";
 import { ProjectPhases } from "./_components/project-phases";
@@ -53,9 +54,10 @@ export default async function WorkspaceProjectPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [projectMaybe, phases] = await Promise.all([
+  const [projectMaybe, phases, internalTasks] = await Promise.all([
     getWorkspaceProject(id),
     listProjectPhases(id),
+    listTasks({ projectId: id }),
   ]);
   if (!projectMaybe) notFound();
   const project = projectMaybe;
@@ -95,7 +97,15 @@ export default async function WorkspaceProjectPage({
         subtitle={`${project.client?.name ?? "Client"} · ${project.code}`}
         backFallbackHref="/workspace"
         action={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {internalTasks.length > 0 && (
+              <a
+                href={`/workspace/internal?project=${id}`}
+                className="rounded-full bg-amber-100 px-3 py-1 text-xs text-amber-900"
+              >
+                Internal tasks ({internalTasks.length})
+              </a>
+            )}
             <Button variant="outline" render={<Link href={`/workspace/projects/${id}/team`} />}>
               <Users className="size-4" />
               Team

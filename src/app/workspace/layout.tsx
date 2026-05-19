@@ -33,6 +33,11 @@ export default async function WorkspaceLayout({
           icon: "folder-kanban" as const,
           badge: projects.length || undefined,
         },
+        {
+          href: "/workspace/internal",
+          label: "Internal",
+          icon: "inbox" as const,
+        },
       ],
     },
     {

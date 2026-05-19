@@ -287,6 +287,151 @@ export type Database = {
         }
         Relationships: []
       }
+      evaluation_dashboard_configs: {
+        Row: {
+          created_at: string
+          evaluation_id: string
+          id: string
+          is_active: boolean
+          spec: Json
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          evaluation_id: string
+          id?: string
+          is_active?: boolean
+          spec: Json
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          evaluation_id?: string
+          id?: string
+          is_active?: boolean
+          spec?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_dashboard_configs_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "evaluations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_instruments: {
+        Row: {
+          created_at: string
+          evaluation_id: string
+          id: string
+          kind: string
+          kobo_api_token_encrypted: string | null
+          kobo_form_id: string
+          last_sync_error: string | null
+          last_sync_status: string | null
+          last_synced_at: string | null
+          name: string
+          schema_config: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          evaluation_id: string
+          id?: string
+          kind: string
+          kobo_api_token_encrypted?: string | null
+          kobo_form_id: string
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          name: string
+          schema_config?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          evaluation_id?: string
+          id?: string
+          kind?: string
+          kobo_api_token_encrypted?: string | null
+          kobo_form_id?: string
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          name?: string
+          schema_config?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_instruments_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "evaluations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluations: {
+        Row: {
+          collection_started_at: string | null
+          collection_target_n: number | null
+          created_at: string
+          dashboard_default_mode: string
+          description: string | null
+          id: string
+          name: string
+          project_id: string
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          collection_started_at?: string | null
+          collection_target_n?: number | null
+          created_at?: string
+          dashboard_default_mode?: string
+          description?: string | null
+          id?: string
+          name: string
+          project_id: string
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          collection_started_at?: string | null
+          collection_target_n?: number | null
+          created_at?: string
+          dashboard_default_mode?: string
+          description?: string | null
+          id?: string
+          name?: string
+          project_id?: string
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_activity_counts"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "evaluations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number

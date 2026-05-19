@@ -17,6 +17,7 @@ import { requireAuth } from "@/lib/auth/guards";
  *  - `Status` accepts: not_started, in_progress (or "ongoing"/"started"),
  *    done (or "complete"/"completed"/"closed"). Anything else falls back to
  *    "not_started".
+ *  - `Visibility` is required and must be `client_visible` or `internal`.
  *
  * The sheet is named "Checklist" to match the importer's preferred sheet.
  *
@@ -33,6 +34,7 @@ const TEMPLATE_COLUMNS: { header: string; width: number }[] = [
   { header: "Start Date", width: 14 },
   { header: "End Date", width: 14 },
   { header: "Status", width: 14 },
+  { header: "Visibility", width: 16 },
   { header: "Notes/Dependencies", width: 36 },
 ];
 

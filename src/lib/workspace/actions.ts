@@ -23,6 +23,7 @@ import {
   phaseSchema,
 } from "@/lib/workspace/schemas";
 import { notifyClientViewersActivityDone } from "@/lib/workspace/notifications";
+import { parseWorkplanRowVisibility } from "./workplan-parse";
 import type { ActionResult } from "@/lib/action-result";
 import { ACTIVITY_PROJECT_JOIN } from "@/lib/supabase/columns";
 import {
@@ -264,15 +265,22 @@ export async function importWorkplanSheet(
     status: "not_started" | "in_progress" | "done";
     plannedDate: string | null;
     completedDate: string | null;
+    visibility: "client_visible" | "internal";
   };
 
   const parsed: ParsedRow[] = [];
+  const rowErrors: string[] = [];
   let currentPhaseName = "";
-  for (const row of rows) {
+  rows.forEach((row, idx) => {
     const phaseName = getCell(row, ["Category", "Phase"]);
     const activityName = getCell(row, ["Activity", "Task Description", "Task"]);
     if (phaseName) currentPhaseName = phaseName;
-    if (!currentPhaseName || !activityName) continue;
+    if (!currentPhaseName || !activityName) return;
+    const vis = parseWorkplanRowVisibility(getCell(row, ["Visibility"]));
+    if (!vis.ok) {
+      rowErrors.push(`Row ${idx + 2} (${activityName}): ${vis.error}`);
+      return;
+    }
     parsed.push({
       phaseName: currentPhaseName,
       activityName,
@@ -284,8 +292,10 @@ export async function importWorkplanSheet(
       completedDate: parseDateCell(
         getCell(row, ["End Date", "Completed Date", "Completion Date", "End"]),
       ),
+      visibility: vis.value,
     });
-  }
+  });
+  if (rowErrors.length > 0) return { ok: false, error: rowErrors.join("\n") };
   if (parsed.length === 0) return { ok: false, error: "No checklist rows found" };
 
   // 1) Fetch existing phases for the project — one round-trip.
@@ -359,6 +369,7 @@ export async function importWorkplanSheet(
     completed_date: string | null;
     order_index: number;
     created_by: string | null;
+    visibility: ParsedRow["visibility"];
   };
   type UpdateRow = {
     id: string;
@@ -366,6 +377,7 @@ export async function importWorkplanSheet(
     deliverable: string | null;
     responsible: string | null;
     status: ParsedRow["status"];
+    visibility: ParsedRow["visibility"];
     planned_date?: string | null;
     completed_date?: string | null;
   };
@@ -389,6 +401,7 @@ export async function importWorkplanSheet(
         deliverable: p.deliverable || null,
         responsible: p.responsible || null,
         status: p.status,
+        visibility: p.visibility,
         ...(p.plannedDate ? { planned_date: p.plannedDate } : {}),
         ...(p.completedDate ? { completed_date: p.completedDate } : {}),
       });
@@ -415,6 +428,7 @@ export async function importWorkplanSheet(
         completed_date: p.completedDate,
         order_index: nextOrder,
         created_by: userId,
+        visibility: p.visibility,
       });
     }
   }
@@ -449,6 +463,7 @@ export async function importWorkplanSheet(
             deliverable: u.deliverable,
             responsible: u.responsible,
             status: u.status,
+            visibility: u.visibility,
             ...(u.planned_date !== undefined ? { planned_date: u.planned_date } : {}),
             ...(u.completed_date !== undefined ? { completed_date: u.completed_date } : {}),
           })

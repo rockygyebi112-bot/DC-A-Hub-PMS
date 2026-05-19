@@ -139,7 +139,10 @@ export function WorkplanImportForm({ projectId }: { projectId: string }) {
           {fileName || "Upload Excel checklist"}
         </span>
         <span className="mt-1 text-xs text-muted-foreground">
-          Phase, activity, deliverable, notes, responsible, status
+          Phase, activity, deliverable, notes, responsible, status, visibility
+        </span>
+        <span className="mt-1 text-[11px] text-muted-foreground">
+          Visibility column required. Values: <code>client_visible</code> or <code>internal</code>.
         </span>
         {/* The template link is a sibling <a> rendered inside the dropzone
             label. stopPropagation prevents the parent label's click from

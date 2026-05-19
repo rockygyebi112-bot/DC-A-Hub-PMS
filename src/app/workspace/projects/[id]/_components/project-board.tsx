@@ -102,7 +102,14 @@ function BoardActivityCard({
           href={`/workspace/projects/${projectId}/activities/${activity.id}`}
           className="min-w-0 flex-1"
         >
-          <p className="truncate text-sm font-medium hover:underline">{activity.name}</p>
+          <p className="flex items-center gap-2 truncate text-sm font-medium hover:underline">
+            <span className="truncate">{activity.name}</span>
+            {activity.visibility === "internal" && (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                Internal
+              </span>
+            )}
+          </p>
           <p className="mt-1 truncate text-xs text-muted-foreground">{activity.phaseName}</p>
         </Link>
         <ActivityStatus status={activity.status} />

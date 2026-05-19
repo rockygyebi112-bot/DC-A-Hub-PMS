@@ -101,6 +101,36 @@ export function EditCard({
             rows={4}
           />
         </label>
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium text-gray-800 dark:text-gray-100">
+            Visibility <span className="text-red-600">*</span>
+          </legend>
+          <p className="text-xs text-gray-500">
+            Internal-only activities are hidden from the client portal but visible to admin and assigned staff.
+          </p>
+          <div className="flex gap-4">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="visibility"
+                value="client_visible"
+                required
+                defaultChecked={activity.visibility === "client_visible"}
+              />
+              Client-visible
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="visibility"
+                value="internal"
+                required
+                defaultChecked={activity.visibility === "internal"}
+              />
+              Internal only
+            </label>
+          </div>
+        </fieldset>
         <label className="grid gap-2 text-sm font-medium">
           Completion narrative
           <Textarea

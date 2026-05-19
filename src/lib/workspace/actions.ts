@@ -278,6 +278,7 @@ export async function importWorkplanSheet(
     if (!currentPhaseName || !activityName) return;
     const vis = parseWorkplanRowVisibility(getCell(row, ["Visibility"]));
     if (!vis.ok) {
+      // idx + 2: spreadsheet row = header (row 1) + zero-based idx.
       rowErrors.push(`Row ${idx + 2} (${activityName}): ${vis.error}`);
       return;
     }

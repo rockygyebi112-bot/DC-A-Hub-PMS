@@ -1,10 +1,7 @@
-import { afterAll, describe, expect, it } from 'vitest';
-import { adminClient, createTestUser, cleanupTestData } from '../rls/setup';
+import { describe, expect, it } from 'vitest';
 import { parseWorkplanRowVisibility } from '@/lib/workspace/workplan-parse';
 
 describe('workplan import visibility column', () => {
-  afterAll(async () => { await cleanupTestData(); });
-
   it('accepts client_visible and internal', () => {
     expect(parseWorkplanRowVisibility('client_visible')).toEqual({ ok: true, value: 'client_visible' });
     expect(parseWorkplanRowVisibility('Client_Visible')).toEqual({ ok: true, value: 'client_visible' });

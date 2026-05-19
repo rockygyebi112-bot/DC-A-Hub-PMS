@@ -322,6 +322,107 @@ export type Database = {
           },
         ]
       }
+      evaluation_ingestion_issues: {
+        Row: {
+          created_at: string
+          details: Json
+          id: string
+          instrument_id: string
+          kind: string
+          kobo_submission_uuid: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          run_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          id?: string
+          instrument_id: string
+          kind: string
+          kobo_submission_uuid?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          run_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          id?: string
+          instrument_id?: string
+          kind?: string
+          kobo_submission_uuid?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_ingestion_issues_instrument_id_fkey"
+            columns: ["instrument_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_instruments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_ingestion_issues_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_ingestion_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_ingestion_runs: {
+        Row: {
+          error_message: string | null
+          fetched_count: number | null
+          finished_at: string | null
+          id: string
+          inserted_count: number | null
+          instrument_id: string
+          started_at: string
+          status: string
+          trigger: string
+          unmatched_investment_count: number | null
+          updated_count: number | null
+        }
+        Insert: {
+          error_message?: string | null
+          fetched_count?: number | null
+          finished_at?: string | null
+          id?: string
+          inserted_count?: number | null
+          instrument_id: string
+          started_at?: string
+          status: string
+          trigger: string
+          unmatched_investment_count?: number | null
+          updated_count?: number | null
+        }
+        Update: {
+          error_message?: string | null
+          fetched_count?: number | null
+          finished_at?: string | null
+          id?: string
+          inserted_count?: number | null
+          instrument_id?: string
+          started_at?: string
+          status?: string
+          trigger?: string
+          unmatched_investment_count?: number | null
+          updated_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_ingestion_runs_instrument_id_fkey"
+            columns: ["instrument_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_instruments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evaluation_instruments: {
         Row: {
           created_at: string

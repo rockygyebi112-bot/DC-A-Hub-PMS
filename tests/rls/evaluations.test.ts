@@ -32,7 +32,7 @@ describe('evaluations RLS', () => {
     const clientId = await createTestUser('client', clientEmail);
 
     const { data: org } = await admin
-      .from('clients').insert({ name: 'Org RLS Eval' }).select('id').single();
+      .from('clients').insert({ name: `PM-Test Org RLS Eval ${Date.now()}` }).select('id').single();
     const { data: project } = await admin
       .from('projects')
       .insert({ name: 'Eval Proj', code: `EV-${Date.now()}`, client_id: org!.id })

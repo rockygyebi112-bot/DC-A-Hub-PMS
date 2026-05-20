@@ -148,18 +148,18 @@ export async function ChartEngine(props: {
 
 function empty(title: string) {
   return (
-    <div className="rounded-lg border p-4">
+    <div className="rounded-lg border border-border p-4">
       <h3 className="mb-2 text-sm font-medium">{title}</h3>
-      <p className="text-xs text-slate-500">No data for this cut.</p>
+      <p className="text-xs text-muted-foreground">No data for this cut.</p>
     </div>
   );
 }
 
 function invalid(title: string, reason: string) {
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+    <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4">
       <h3 className="mb-1 text-sm font-medium">{title}</h3>
-      <p className="text-xs text-amber-700">Chart misconfigured: {reason}</p>
+      <p className="text-xs text-destructive">Chart misconfigured: {reason}</p>
     </div>
   );
 }

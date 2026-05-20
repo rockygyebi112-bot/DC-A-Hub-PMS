@@ -22,7 +22,7 @@ export async function DashboardView(props: {
   const cfg = await getActiveDashboardSpec(props.evaluationId);
   if (!cfg) {
     return (
-      <p className="p-6 text-sm text-slate-500">
+      <p className="p-6 text-sm text-muted-foreground">
         No dashboard config is active for this evaluation.
       </p>
     );
@@ -84,7 +84,7 @@ export async function DashboardView(props: {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold">Evaluation dashboard</h1>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted-foreground">
             {approvedCount ?? 0} approved / {targetN || '—'} target
           </span>
         </div>

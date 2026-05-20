@@ -6,7 +6,7 @@ export function HeatmapChart({ data, title }: { data: StackedRow[]; title: strin
   const max = Math.max(1, ...data.flatMap((r) => r.series.map((s) => s.count)));
 
   return (
-    <div className="rounded-lg border p-4">
+    <div className="rounded-lg border border-border p-4">
       <h3 className="mb-2 text-sm font-medium">{title}</h3>
       <div className="overflow-x-auto">
         <table className="text-xs">
@@ -24,8 +24,10 @@ export function HeatmapChart({ data, title }: { data: StackedRow[]; title: strin
                   const c = row.series.find((s) => s.label === l)?.count ?? 0;
                   const alpha = c / max;
                   return (
-                    <td key={l} className="px-3 py-2 text-center"
-                        style={{ background: `rgba(14, 165, 233, ${alpha})` }}>
+                    <td key={l} className="px-3 py-2 text-center text-foreground"
+                        style={{
+                          background: `color-mix(in srgb, var(--chart-1) ${Math.round(alpha * 100)}%, transparent)`,
+                        }}>
                       {c}
                     </td>
                   );

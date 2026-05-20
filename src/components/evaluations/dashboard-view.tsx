@@ -1,3 +1,4 @@
+import { fetchResponseRows } from '@/lib/evaluations/aggregate';
 import { getActiveDashboardSpec } from '@/lib/evaluations/queries';
 import { DashboardSpec } from '@/lib/evaluations/dashboard-spec';
 import type { FilterState } from '@/lib/evaluations/schemas';
@@ -21,7 +22,7 @@ export async function DashboardView(props: {
   const cfg = await getActiveDashboardSpec(props.evaluationId);
   if (!cfg) {
     return (
-      <p className="p-6 text-sm text-slate-500">
+      <p className="p-6 text-sm text-muted-foreground">
         No dashboard config is active for this evaluation.
       </p>
     );
@@ -83,7 +84,7 @@ export async function DashboardView(props: {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold">Evaluation dashboard</h1>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted-foreground">
             {approvedCount ?? 0} approved / {targetN || '—'} target
           </span>
         </div>
@@ -185,6 +186,13 @@ async function FindingsMode(props: {
   filters: FilterState;
   targetN: number;
 }) {
+  // Fetch the response set ONCE and share it across every row-based chart,
+  // instead of each ChartEngine re-querying the full table independently.
+  const rows = await fetchResponseRows({
+    instrumentId: props.instrumentId,
+    approvedOnly: props.approvedOnly,
+    filters: props.filters,
+  });
   return (
     <section className="space-y-8">
       {props.spec.sections.map((s) => (
@@ -199,6 +207,7 @@ async function FindingsMode(props: {
                 approvedOnly={props.approvedOnly}
                 filters={props.filters}
                 targetN={props.targetN}
+                rows={rows}
               />
             ))}
           </div>

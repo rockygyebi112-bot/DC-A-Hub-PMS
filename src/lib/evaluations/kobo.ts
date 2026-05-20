@@ -50,6 +50,11 @@ export async function decryptKoboToken(instrumentId: string): Promise<string> {
   return decryptToken(buf);
 }
 
+// Hard cap on pages fetched from the Kobo /data endpoint. At pageSize 200 this
+// allows 200k submissions — far above the ~2k expected — and exists purely to
+// break out if a misbehaving server ignores the `start` param.
+const MAX_PAGES = 1000;
+
 export async function* iterateKoboSubmissions(opts: {
   instrumentId: string;
   koboFormId: string;
@@ -59,8 +64,15 @@ export async function* iterateKoboSubmissions(opts: {
   const token = await decryptKoboToken(opts.instrumentId);
   const pageSize = opts.pageSize ?? 200;
   let start = 0;
+  let pages = 0;
 
   while (true) {
+    if (pages >= MAX_PAGES) {
+      throw new Error(
+        `Kobo pagination exceeded MAX_PAGES (${MAX_PAGES}) — server may be ignoring the start parameter`
+      );
+    }
+    pages += 1;
     const params = new URLSearchParams({
       start: String(start),
       limit: String(pageSize),
@@ -80,7 +92,16 @@ export async function* iterateKoboSubmissions(opts: {
         `Kobo fetch ${res.status}: ${await res.text().catch(() => "")}`
       );
     }
-    const body = (await res.json()) as { results?: KoboSubmission[] };
+    let body: { results?: KoboSubmission[] };
+    try {
+      body = (await res.json()) as { results?: KoboSubmission[] };
+    } catch (err) {
+      throw new Error(
+        `Kobo fetch ${url}: response body was not valid JSON (${
+          err instanceof Error ? err.message : String(err)
+        })`
+      );
+    }
     const batch = body.results ?? [];
     for (const s of batch) yield s;
     if (batch.length < pageSize) return;

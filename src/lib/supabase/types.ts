@@ -1410,6 +1410,19 @@ export type Database = {
         Args: { p_task_id: string; p_user_id: string }
         Returns: boolean
       }
+      match_mis_investment_fuzzy: {
+        Args: {
+          p_community: string
+          p_evaluation_id: string
+          p_raw_name: string
+          p_threshold: number
+        }
+        Returns: {
+          id: string
+          investment_name: string
+          similarity: number
+        }[]
+      }
       project_id_from_path: { Args: { object_name: string }; Returns: string }
       receipt_project_id: { Args: { object_name: string }; Returns: string }
       shares_project_with: {

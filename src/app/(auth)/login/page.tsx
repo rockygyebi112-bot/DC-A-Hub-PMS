@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,6 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const errorParam = searchParams.get("error");
@@ -46,7 +45,11 @@ function LoginForm() {
       return;
     }
 
-    router.push("/");
+    // Hard navigation, not router.push: a soft navigation would replay the
+    // App Router's cached RSC result for "/" — which, from the logged-out
+    // state, is a redirect back to /login — causing a login loop. A full
+    // load forces a fresh server request that sees the new auth cookie.
+    window.location.assign("/");
   }
 
   return (

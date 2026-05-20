@@ -5,7 +5,7 @@ export function ChoroplethChart(props: {
   title: string;
 }) {
   return (
-    <div className="rounded-lg border p-4">
+    <div className="rounded-lg border border-border p-4">
       <h3 className="mb-2 text-sm font-medium">{props.title}</h3>
       <ul className="space-y-2">
         {props.data.map((r) => (
@@ -14,8 +14,8 @@ export function ChoroplethChart(props: {
               <span>{r.region}</span>
               <span>{r.count} / {r.target} ({Math.round(r.pct)}%)</span>
             </div>
-            <div className="h-2 rounded bg-slate-100">
-              <div className="h-2 rounded bg-sky-500"
+            <div className="h-2 rounded bg-muted">
+              <div className="h-2 rounded bg-primary"
                    style={{ width: `${Math.min(100, r.pct)}%` }} />
             </div>
           </li>

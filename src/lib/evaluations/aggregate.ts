@@ -19,10 +19,6 @@ type BaseArgs = {
   client?: Client;
 };
 
-type DonutArgs = BaseArgs & { field: string };
-type BarArgs = DonutArgs;
-type StackedArgs = BaseArgs & { field: string; by: string };
-
 export type BucketCount = { label: string; count: number };
 export type BucketPct = { label: string; pct: number; count: number };
 export type StackedRow = { group: string; series: { label: string; count: number }[] };
@@ -33,7 +29,12 @@ async function resolveClient(injected?: Client): Promise<Client> {
   return injected ?? ((await createClient()) as unknown as Client);
 }
 
-async function fetchRows(args: BaseArgs): Promise<Record<string, unknown>[]> {
+/**
+ * Fetches the `evaluation_responses` rows that back the five row-based findings
+ * charts. Call this ONCE per dashboard render and share the result across all
+ * row-based aggregators rather than re-querying per chart.
+ */
+export async function fetchResponseRows(args: BaseArgs): Promise<Record<string, unknown>[]> {
   const sb = await resolveClient(args.client);
   let q = sb
     .from('evaluation_responses')
@@ -56,11 +57,17 @@ function readField(row: Record<string, unknown>, field: string): unknown {
   return raw?.[field];
 }
 
-export async function aggregateDonut(args: DonutArgs): Promise<BucketCount[]> {
-  const rows = await fetchRows(args);
+/**
+ * The five row-based aggregators below are synchronous pure functions: they
+ * take pre-fetched rows (see `fetchResponseRows`) and do in-memory grouping.
+ */
+export function aggregateDonut(
+  rows: Record<string, unknown>[],
+  field: string,
+): BucketCount[] {
   const counts = new Map<string, number>();
   for (const r of rows) {
-    const v = readField(r, args.field);
+    const v = readField(r, field);
     if (v === null || v === undefined) continue;
     const key = String(v);
     counts.set(key, (counts.get(key) ?? 0) + 1);
@@ -68,19 +75,25 @@ export async function aggregateDonut(args: DonutArgs): Promise<BucketCount[]> {
   return Array.from(counts.entries()).map(([label, count]) => ({ label, count }));
 }
 
-export async function aggregateBarPct(args: BarArgs): Promise<BucketPct[]> {
-  const buckets = await aggregateDonut(args);
+export function aggregateBarPct(
+  rows: Record<string, unknown>[],
+  field: string,
+): BucketPct[] {
+  const buckets = aggregateDonut(rows, field);
   const total = buckets.reduce((s, b) => s + b.count, 0);
   if (total === 0) return [];
   return buckets.map((b) => ({ ...b, pct: (b.count / total) * 100 }));
 }
 
-export async function aggregateStackedBar(args: StackedArgs): Promise<StackedRow[]> {
-  const rows = await fetchRows(args);
+export function aggregateStackedBar(
+  rows: Record<string, unknown>[],
+  field: string,
+  by: string,
+): StackedRow[] {
   const groups = new Map<string, Map<string, number>>();
   for (const r of rows) {
-    const grp = readField(r, args.by);
-    const val = readField(r, args.field);
+    const grp = readField(r, by);
+    const val = readField(r, field);
     if (grp === null || grp === undefined) continue;
     if (val === null || val === undefined) continue;
     const gKey = String(grp);
@@ -95,12 +108,19 @@ export async function aggregateStackedBar(args: StackedArgs): Promise<StackedRow
   }));
 }
 
-export async function aggregateHorizontalBar(args: BarArgs): Promise<BucketCount[]> {
-  return aggregateDonut(args);
+export function aggregateHorizontalBar(
+  rows: Record<string, unknown>[],
+  field: string,
+): BucketCount[] {
+  return aggregateDonut(rows, field);
 }
 
-export async function aggregateHeatmap(args: StackedArgs): Promise<StackedRow[]> {
-  return aggregateStackedBar(args);
+export function aggregateHeatmap(
+  rows: Record<string, unknown>[],
+  field: string,
+  by: string,
+): StackedRow[] {
+  return aggregateStackedBar(rows, field, by);
 }
 
 export async function aggregateProgressBars(args: {

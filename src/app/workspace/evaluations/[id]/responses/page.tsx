@@ -50,7 +50,7 @@ export default async function QcTablePage({
     <main className="space-y-6 p-6">
       <header>
         <h1 className="text-2xl font-semibold">QC: {ev.name}</h1>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-muted-foreground">
           Internal QC view. Names, phone numbers, and any PII visible here stay
           out of the dashboard.
         </p>
@@ -63,8 +63,8 @@ export default async function QcTablePage({
           <a
             key={s}
             href={`?qc_status=${s}`}
-            className={`rounded border px-2 py-1 ${
-              qcStatus === s ? 'border-sky-300 bg-sky-50' : ''
+            className={`rounded border border-border px-2 py-1 ${
+              qcStatus === s ? 'border-primary bg-accent' : ''
             }`}
           >
             {s}
@@ -72,8 +72,8 @@ export default async function QcTablePage({
         ))}
         <a
           href="?"
-          className={`rounded border px-2 py-1 ${
-            !qcStatus ? 'border-sky-300 bg-sky-50' : ''
+          className={`rounded border border-border px-2 py-1 ${
+            !qcStatus ? 'border-primary bg-accent' : ''
           }`}
         >
           All
@@ -81,13 +81,13 @@ export default async function QcTablePage({
       </div>
 
       {rows.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
+        <p className="rounded-lg border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
           No responses for this filter.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
           <table className="w-full text-sm">
-            <thead className="border-b border-gray-200 text-left text-xs uppercase text-gray-500">
+            <thead className="border-b border-border text-left text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="px-4 py-2">Submitted</th>
                 <th className="px-4 py-2">Region / District / Community</th>
@@ -99,7 +99,7 @@ export default async function QcTablePage({
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-t border-gray-100">
+                <tr key={r.id} className="border-t border-border">
                   <td className="px-4 py-2">
                     {new Date(r.submitted_at).toLocaleString()}
                   </td>

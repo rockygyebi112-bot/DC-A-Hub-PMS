@@ -32,7 +32,7 @@ export default async function StaffDashboardPage({
   );
   if (!hh) {
     return (
-      <p className="p-6 text-sm text-slate-500">No instrument configured.</p>
+      <p className="p-6 text-sm text-muted-foreground">No instrument configured.</p>
     );
   }
 

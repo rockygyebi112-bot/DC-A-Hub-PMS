@@ -21,15 +21,27 @@ export default async function EvaluationsIndexPage() {
       .from('evaluation_instruments')
       .select('id, evaluation_id')
       .in('evaluation_id', ids);
-    for (const inst of instruments ?? []) {
-      const { count } = await sb
+    const instrumentList = instruments ?? [];
+    const instrumentIds = instrumentList.map((i) => i.id);
+    if (instrumentIds.length > 0) {
+      const { data: responseRows } = await sb
         .from('evaluation_responses')
-        .select('id', { count: 'exact', head: true })
-        .eq('instrument_id', inst.id);
-      responseCountByEval.set(
-        inst.evaluation_id,
-        (responseCountByEval.get(inst.evaluation_id) ?? 0) + (count ?? 0),
-      );
+        .select('instrument_id')
+        .in('instrument_id', instrumentIds);
+      const countByInstrument = new Map<string, number>();
+      for (const row of responseRows ?? []) {
+        countByInstrument.set(
+          row.instrument_id,
+          (countByInstrument.get(row.instrument_id) ?? 0) + 1,
+        );
+      }
+      for (const inst of instrumentList) {
+        responseCountByEval.set(
+          inst.evaluation_id,
+          (responseCountByEval.get(inst.evaluation_id) ?? 0) +
+            (countByInstrument.get(inst.id) ?? 0),
+        );
+      }
     }
   }
 
@@ -37,17 +49,17 @@ export default async function EvaluationsIndexPage() {
     <main className="space-y-6 p-6">
       <header>
         <h1 className="text-2xl font-semibold">Evaluations</h1>
-        <p className="text-sm text-gray-600">All M&amp;E evaluations across projects.</p>
+        <p className="text-sm text-muted-foreground">All M&amp;E evaluations across projects.</p>
       </header>
 
       {evaluations.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
+        <p className="rounded-lg border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
           No evaluations yet.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
           <table className="w-full text-sm">
-            <thead className="border-b border-gray-200 text-left text-xs uppercase text-gray-500">
+            <thead className="border-b border-border text-left text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="px-4 py-2">Name</th>
                 <th className="px-4 py-2">Status</th>
@@ -59,7 +71,7 @@ export default async function EvaluationsIndexPage() {
               {evaluations.map((e) => {
                 const count = responseCountByEval.get(e.id) ?? 0;
                 return (
-                  <tr key={e.id} className="border-t border-gray-100">
+                  <tr key={e.id} className="border-t border-border">
                     <td className="px-4 py-2 font-medium">{e.name}</td>
                     <td className="px-4 py-2">{e.status}</td>
                     <td className="px-4 py-2">
@@ -68,14 +80,14 @@ export default async function EvaluationsIndexPage() {
                     <td className="px-4 py-2">
                       <Link
                         href={`/workspace/projects/${e.project_id}/dashboard`}
-                        className="text-sky-600 hover:underline"
+                        className="text-primary hover:underline"
                       >
                         Dashboard
                       </Link>
-                      <span className="mx-2 text-gray-300">&middot;</span>
+                      <span className="mx-2 text-muted-foreground/40">&middot;</span>
                       <Link
                         href={`/workspace/evaluations/${e.id}/responses`}
-                        className="text-sky-600 hover:underline"
+                        className="text-primary hover:underline"
                       >
                         QC table
                       </Link>

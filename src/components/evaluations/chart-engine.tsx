@@ -31,39 +31,34 @@ async function resolveChart(props: {
   approvedOnly: boolean;
   filters: FilterState;
   targetN?: number;
+  rows?: Record<string, unknown>[];
 }): Promise<
   | { kind: 'ok'; node: React.ReactElement }
   | { kind: 'empty' }
   | { kind: 'invalid'; reason: string }
 > {
-  const base = {
-    instrumentId: props.instrumentId,
-    approvedOnly: props.approvedOnly,
-    filters: props.filters,
-  };
   const { entry } = props;
+  // Row-based charts share a single pre-fetched response set; treat a missing
+  // `rows` prop as no data rather than crashing.
+  const rows = props.rows ?? [];
 
   try {
     switch (entry.type) {
       case 'donut': {
-        const d = await aggregateDonut({ ...base, field: entry.field });
+        const d = aggregateDonut(rows, entry.field);
         return d.length
           ? { kind: 'ok', node: <DonutChart data={d} title={entry.title} /> }
           : { kind: 'empty' };
       }
       case 'bar_pct': {
-        const d = await aggregateBarPct({ ...base, field: entry.field });
+        const d = aggregateBarPct(rows, entry.field);
         return d.length
           ? { kind: 'ok', node: <BarPctChart data={d} title={entry.title} /> }
           : { kind: 'empty' };
       }
       case 'stacked_bar': {
         if (!entry.by) return { kind: 'invalid', reason: 'missing "by"' };
-        const d = await aggregateStackedBar({
-          ...base,
-          field: entry.field,
-          by: entry.by,
-        });
+        const d = aggregateStackedBar(rows, entry.field, entry.by);
         return d.length
           ? {
               kind: 'ok',
@@ -72,7 +67,7 @@ async function resolveChart(props: {
           : { kind: 'empty' };
       }
       case 'horizontal_bar': {
-        const d = await aggregateHorizontalBar({ ...base, field: entry.field });
+        const d = aggregateHorizontalBar(rows, entry.field);
         return d.length
           ? {
               kind: 'ok',
@@ -82,11 +77,7 @@ async function resolveChart(props: {
       }
       case 'heatmap': {
         if (!entry.by) return { kind: 'invalid', reason: 'missing "by"' };
-        const d = await aggregateHeatmap({
-          ...base,
-          field: entry.field,
-          by: entry.by,
-        });
+        const d = aggregateHeatmap(rows, entry.field, entry.by);
         return d.length
           ? { kind: 'ok', node: <HeatmapChart data={d} title={entry.title} /> }
           : { kind: 'empty' };
@@ -144,6 +135,7 @@ export async function ChartEngine(props: {
   approvedOnly: boolean;
   filters: FilterState;
   targetN?: number;
+  rows?: Record<string, unknown>[];
 }) {
   const result = await resolveChart(props);
 

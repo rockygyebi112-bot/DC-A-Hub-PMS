@@ -29,7 +29,7 @@ export function AssigneePicker({
       <select
         value={pick}
         onChange={(e) => setPick(e.target.value)}
-        className="rounded border px-2 py-1 text-sm"
+        className="rounded border bg-background text-foreground px-2 py-1 text-sm"
       >
         <option value="">Add assignee…</option>
         {available.map((s) => (
@@ -45,7 +45,7 @@ export function AssigneePicker({
           onAdd(pick);
           setPick('');
         }}
-        className="rounded-md bg-gray-900 px-3 py-1 text-sm text-white"
+        className="rounded-md bg-primary px-3 py-1 text-sm text-primary-foreground"
       >
         Add
       </button>

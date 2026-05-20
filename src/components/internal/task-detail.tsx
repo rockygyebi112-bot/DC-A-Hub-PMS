@@ -60,7 +60,7 @@ export function TaskDetail({
   return (
     <article className="mx-auto max-w-3xl space-y-6">
       <header>
-        <div className="text-xs uppercase tracking-wide text-gray-500">
+        <div className="text-xs uppercase tracking-wide text-muted-foreground">
           {areas.find((a) => a.id === task.area_id)?.name ?? 'Area'}
         </div>
         <h1 className="text-2xl font-semibold">{task.title}</h1>
@@ -68,14 +68,14 @@ export function TaskDetail({
 
       <section className="grid grid-cols-2 gap-4 text-sm">
         <div>
-          <label className="block text-xs text-gray-500">Status</label>
+          <label className="block text-xs text-muted-foreground">Status</label>
           <select
             defaultValue={task.status}
             onChange={(e) =>
               run(() => setTaskStatus(task.id, e.target.value as TaskStatus))
             }
             disabled={pending}
-            className="mt-1 w-full rounded border px-2 py-1"
+            className="mt-1 w-full rounded border bg-background text-foreground px-2 py-1"
           >
             <option value="not_started">Not started</option>
             <option value="in_progress">In progress</option>
@@ -84,29 +84,29 @@ export function TaskDetail({
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500">Due date</label>
+          <label className="block text-xs text-muted-foreground">Due date</label>
           <form action={(fd) => run(() => updateTask(task.id, fd))}>
             <input
               name="due_date"
               type="date"
               defaultValue={task.due_date ?? ''}
-              className="mt-1 w-full rounded border px-2 py-1"
+              className="mt-1 w-full rounded border bg-background text-foreground px-2 py-1"
             />
           </form>
         </div>
       </section>
 
       <section>
-        <label className="block text-xs text-gray-500">Description</label>
+        <label className="block text-xs text-muted-foreground">Description</label>
         <form action={(fd) => run(() => updateTask(task.id, fd))}>
           <textarea
             name="description"
             defaultValue={task.description ?? ''}
-            className="mt-1 w-full rounded border p-2 text-sm"
+            className="mt-1 w-full rounded border bg-background text-foreground p-2 text-sm"
             rows={6}
           />
           <button
-            className="mt-2 rounded-md bg-gray-900 px-3 py-1 text-sm text-white"
+            className="mt-2 rounded-md bg-primary px-3 py-1 text-sm text-primary-foreground"
             disabled={pending}
           >
             Save description
@@ -126,7 +126,7 @@ export function TaskDetail({
               <button
                 onClick={() => run(() => removeAssignee(task.id, a.user_id))}
                 disabled={pending}
-                className="text-xs text-red-600"
+                className="text-xs text-destructive"
               >
                 Remove
               </button>

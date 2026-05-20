@@ -23,7 +23,7 @@ export default async function InternalWorkspacePage({
       <header className="flex items-end justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Internal workspace</h1>
-          <p className="text-sm text-gray-600">DC&A Hub internal tasks. Not visible to clients.</p>
+          <p className="text-sm text-muted-foreground">DC&A Hub internal tasks. Not visible to clients.</p>
         </div>
         <NewTaskForm areas={areas} />
       </header>
@@ -43,7 +43,7 @@ export default async function InternalWorkspacePage({
 function FilterPill({ href, label, active, color }: { href: string; label: string; active: boolean; color?: string }) {
   return (
     <a href={href}
-       className={`rounded-full border px-3 py-1 ${active ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
+       className={`rounded-full border px-3 py-1 ${active ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-foreground hover:bg-muted'}`}
        style={color && !active ? { borderColor: color, color } : undefined}>
       {label}
     </a>

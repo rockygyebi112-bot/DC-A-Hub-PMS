@@ -21,15 +21,27 @@ export default async function EvaluationsIndexPage() {
       .from('evaluation_instruments')
       .select('id, evaluation_id')
       .in('evaluation_id', ids);
-    for (const inst of instruments ?? []) {
-      const { count } = await sb
+    const instrumentList = instruments ?? [];
+    const instrumentIds = instrumentList.map((i) => i.id);
+    if (instrumentIds.length > 0) {
+      const { data: responseRows } = await sb
         .from('evaluation_responses')
-        .select('id', { count: 'exact', head: true })
-        .eq('instrument_id', inst.id);
-      responseCountByEval.set(
-        inst.evaluation_id,
-        (responseCountByEval.get(inst.evaluation_id) ?? 0) + (count ?? 0),
-      );
+        .select('instrument_id')
+        .in('instrument_id', instrumentIds);
+      const countByInstrument = new Map<string, number>();
+      for (const row of responseRows ?? []) {
+        countByInstrument.set(
+          row.instrument_id,
+          (countByInstrument.get(row.instrument_id) ?? 0) + 1,
+        );
+      }
+      for (const inst of instrumentList) {
+        responseCountByEval.set(
+          inst.evaluation_id,
+          (responseCountByEval.get(inst.evaluation_id) ?? 0) +
+            (countByInstrument.get(inst.id) ?? 0),
+        );
+      }
     }
   }
 

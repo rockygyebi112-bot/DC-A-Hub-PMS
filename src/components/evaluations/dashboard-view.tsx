@@ -1,3 +1,4 @@
+import { fetchResponseRows } from '@/lib/evaluations/aggregate';
 import { getActiveDashboardSpec } from '@/lib/evaluations/queries';
 import { DashboardSpec } from '@/lib/evaluations/dashboard-spec';
 import type { FilterState } from '@/lib/evaluations/schemas';
@@ -185,6 +186,13 @@ async function FindingsMode(props: {
   filters: FilterState;
   targetN: number;
 }) {
+  // Fetch the response set ONCE and share it across every row-based chart,
+  // instead of each ChartEngine re-querying the full table independently.
+  const rows = await fetchResponseRows({
+    instrumentId: props.instrumentId,
+    approvedOnly: props.approvedOnly,
+    filters: props.filters,
+  });
   return (
     <section className="space-y-8">
       {props.spec.sections.map((s) => (
@@ -199,6 +207,7 @@ async function FindingsMode(props: {
                 approvedOnly={props.approvedOnly}
                 filters={props.filters}
                 targetN={props.targetN}
+                rows={rows}
               />
             ))}
           </div>

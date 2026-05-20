@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { adminClient, cleanupTestData } from '../rls/setup';
 import {
-  aggregateDonut, aggregateBarPct, aggregateStackedBar,
+  aggregateDonut, aggregateBarPct, aggregateStackedBar, fetchResponseRows,
 } from '@/lib/evaluations/aggregate';
 
 let instrumentId: string;
@@ -40,28 +40,31 @@ afterAll(async () => { await cleanupTestData(); });
 
 describe('aggregators', () => {
   it('donut counts approved-only by default', async () => {
-    const buckets = await aggregateDonut({
-      instrumentId, field: 's3_a1', approvedOnly: true, client: admin,
+    const rows = await fetchResponseRows({
+      instrumentId, approvedOnly: true, client: admin,
     });
+    const buckets = aggregateDonut(rows, 's3_a1');
     const m = new Map(buckets.map((b) => [String(b.label), b.count]));
     expect(m.get('1')).toBe(2);
     expect(m.get('0')).toBe(1);
   });
 
   it('bar_pct returns shares', async () => {
-    const buckets = await aggregateBarPct({
-      instrumentId, field: 's3_a1', approvedOnly: true, client: admin,
+    const rows = await fetchResponseRows({
+      instrumentId, approvedOnly: true, client: admin,
     });
+    const buckets = aggregateBarPct(rows, 's3_a1');
     const total = buckets.reduce((s, b) => s + b.pct, 0);
     expect(Math.round(total)).toBe(100);
   });
 
   it('stacked_bar splits by gender', async () => {
-    const rows = await aggregateStackedBar({
-      instrumentId, field: 's3_a1', by: 'gender', approvedOnly: true, client: admin,
+    const rows = await fetchResponseRows({
+      instrumentId, approvedOnly: true, client: admin,
     });
-    expect(rows.length).toBeGreaterThan(0);
-    expect(rows[0]).toHaveProperty('group');
-    expect(rows[0]).toHaveProperty('series');
+    const stacked = aggregateStackedBar(rows, 's3_a1', 'gender');
+    expect(stacked.length).toBeGreaterThan(0);
+    expect(stacked[0]).toHaveProperty('group');
+    expect(stacked[0]).toHaveProperty('series');
   });
 });

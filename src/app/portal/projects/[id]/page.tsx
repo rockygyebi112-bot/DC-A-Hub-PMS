@@ -10,6 +10,7 @@ import {
 import { NeedHelpCard } from "@/components/portal/side-cards";
 import { PortalProjectTabs } from "@/components/portal/project-tabs";
 import { WorkplanProgressTable } from "@/components/portal/workplan-progress-table";
+import { getEvaluationForProject } from "@/lib/evaluations/queries";
 import { getPortalProjectDetail } from "@/lib/portal/queries";
 
 export default async function PortalProjectPage({
@@ -19,7 +20,10 @@ export default async function PortalProjectPage({
 }) {
   const { id } = await params;
 
-  const detail = await getPortalProjectDetail(id);
+  const [detail, evaluation] = await Promise.all([
+    getPortalProjectDetail(id),
+    getEvaluationForProject(id),
+  ]);
   if (!detail) notFound();
 
   const {
@@ -58,6 +62,16 @@ export default async function PortalProjectPage({
       />
 
       <PortalProjectTabs projectId={project.id} />
+
+      {evaluation ? (
+        <Link
+          href={`/portal/projects/${project.id}/dashboard`}
+          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+        >
+          View evaluation dashboard
+          <ArrowRight className="size-3" />
+        </Link>
+      ) : null}
 
       {/* Summary cards. Manager + timeline + overall progress used to live
           here too; manager is surfaced via NeedHelpCard, and timeline +

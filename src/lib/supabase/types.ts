@@ -287,6 +287,359 @@ export type Database = {
         }
         Relationships: []
       }
+      evaluation_dashboard_configs: {
+        Row: {
+          created_at: string
+          evaluation_id: string
+          id: string
+          is_active: boolean
+          spec: Json
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          evaluation_id: string
+          id?: string
+          is_active?: boolean
+          spec: Json
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          evaluation_id?: string
+          id?: string
+          is_active?: boolean
+          spec?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_dashboard_configs_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "evaluations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_ingestion_issues: {
+        Row: {
+          created_at: string
+          details: Json
+          id: string
+          instrument_id: string
+          kind: string
+          kobo_submission_uuid: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          run_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          id?: string
+          instrument_id: string
+          kind: string
+          kobo_submission_uuid?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          run_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          id?: string
+          instrument_id?: string
+          kind?: string
+          kobo_submission_uuid?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_ingestion_issues_instrument_id_fkey"
+            columns: ["instrument_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_instruments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_ingestion_issues_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_ingestion_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_ingestion_runs: {
+        Row: {
+          error_message: string | null
+          fetched_count: number | null
+          finished_at: string | null
+          id: string
+          inserted_count: number | null
+          instrument_id: string
+          started_at: string
+          status: string
+          trigger: string
+          unmatched_investment_count: number | null
+          updated_count: number | null
+        }
+        Insert: {
+          error_message?: string | null
+          fetched_count?: number | null
+          finished_at?: string | null
+          id?: string
+          inserted_count?: number | null
+          instrument_id: string
+          started_at?: string
+          status: string
+          trigger: string
+          unmatched_investment_count?: number | null
+          updated_count?: number | null
+        }
+        Update: {
+          error_message?: string | null
+          fetched_count?: number | null
+          finished_at?: string | null
+          id?: string
+          inserted_count?: number | null
+          instrument_id?: string
+          started_at?: string
+          status?: string
+          trigger?: string
+          unmatched_investment_count?: number | null
+          updated_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_ingestion_runs_instrument_id_fkey"
+            columns: ["instrument_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_instruments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_instruments: {
+        Row: {
+          created_at: string
+          evaluation_id: string
+          id: string
+          kind: string
+          kobo_api_token_encrypted: string | null
+          kobo_form_id: string
+          last_sync_error: string | null
+          last_sync_status: string | null
+          last_synced_at: string | null
+          name: string
+          schema_config: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          evaluation_id: string
+          id?: string
+          kind: string
+          kobo_api_token_encrypted?: string | null
+          kobo_form_id: string
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          name: string
+          schema_config?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          evaluation_id?: string
+          id?: string
+          kind?: string
+          kobo_api_token_encrypted?: string | null
+          kobo_form_id?: string
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          name?: string
+          schema_config?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_instruments_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "evaluations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_response_investments: {
+        Row: {
+          answers: Json
+          id: string
+          investment_id: string | null
+          match_status: string
+          raw_investment_name: string
+          response_id: string
+        }
+        Insert: {
+          answers: Json
+          id?: string
+          investment_id?: string | null
+          match_status?: string
+          raw_investment_name: string
+          response_id: string
+        }
+        Update: {
+          answers?: Json
+          id?: string
+          investment_id?: string | null
+          match_status?: string
+          raw_investment_name?: string
+          response_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_response_investments_investment_id_fkey"
+            columns: ["investment_id"]
+            isOneToOne: false
+            referencedRelation: "mis_investments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_response_investments_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_responses: {
+        Row: {
+          age: number | null
+          cluster: string | null
+          community: string | null
+          district: string | null
+          gender: string | null
+          id: string
+          ingested_at: string
+          instrument_id: string
+          kobo_submission_id: number | null
+          kobo_submission_uuid: string
+          qc_checked_at: string | null
+          qc_checked_by: string | null
+          qc_status: string
+          raw: Json
+          region: string | null
+          submitted_at: string
+        }
+        Insert: {
+          age?: number | null
+          cluster?: string | null
+          community?: string | null
+          district?: string | null
+          gender?: string | null
+          id?: string
+          ingested_at?: string
+          instrument_id: string
+          kobo_submission_id?: number | null
+          kobo_submission_uuid: string
+          qc_checked_at?: string | null
+          qc_checked_by?: string | null
+          qc_status?: string
+          raw: Json
+          region?: string | null
+          submitted_at: string
+        }
+        Update: {
+          age?: number | null
+          cluster?: string | null
+          community?: string | null
+          district?: string | null
+          gender?: string | null
+          id?: string
+          ingested_at?: string
+          instrument_id?: string
+          kobo_submission_id?: number | null
+          kobo_submission_uuid?: string
+          qc_checked_at?: string | null
+          qc_checked_by?: string | null
+          qc_status?: string
+          raw?: Json
+          region?: string | null
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_responses_instrument_id_fkey"
+            columns: ["instrument_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_instruments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluations: {
+        Row: {
+          collection_started_at: string | null
+          collection_target_n: number | null
+          created_at: string
+          dashboard_default_mode: string
+          description: string | null
+          id: string
+          name: string
+          project_id: string
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          collection_started_at?: string | null
+          collection_target_n?: number | null
+          created_at?: string
+          dashboard_default_mode?: string
+          description?: string | null
+          id?: string
+          name: string
+          project_id: string
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          collection_started_at?: string | null
+          collection_target_n?: number | null
+          created_at?: string
+          dashboard_default_mode?: string
+          description?: string | null
+          id?: string
+          name?: string
+          project_id?: string
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_activity_counts"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "evaluations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -479,6 +832,47 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mis_investments: {
+        Row: {
+          community: string
+          completion_date: string | null
+          created_at: string
+          district: string
+          evaluation_id: string
+          id: string
+          investment_name: string
+          investment_type: string
+        }
+        Insert: {
+          community: string
+          completion_date?: string | null
+          created_at?: string
+          district: string
+          evaluation_id: string
+          id?: string
+          investment_name: string
+          investment_type: string
+        }
+        Update: {
+          community?: string
+          completion_date?: string | null
+          created_at?: string
+          district?: string
+          evaluation_id?: string
+          id?: string
+          investment_name?: string
+          investment_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mis_investments_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "evaluations"
             referencedColumns: ["id"]
           },
         ]
@@ -1016,12 +1410,27 @@ export type Database = {
         Args: { p_task_id: string; p_user_id: string }
         Returns: boolean
       }
+      match_mis_investment_fuzzy: {
+        Args: {
+          p_community: string
+          p_evaluation_id: string
+          p_raw_name: string
+          p_threshold: number
+        }
+        Returns: {
+          id: string
+          investment_name: string
+          similarity: number
+        }[]
+      }
       project_id_from_path: { Args: { object_name: string }; Returns: string }
       receipt_project_id: { Args: { object_name: string }; Returns: string }
       shares_project_with: {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       transfer_project_manager: {
         Args: { p_member_id: string; p_project_id: string }
         Returns: undefined

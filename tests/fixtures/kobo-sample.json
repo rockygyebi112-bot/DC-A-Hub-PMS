@@ -1,0 +1,35 @@
+{
+  "count": 3,
+  "results": [
+    {
+      "_id": 1001,
+      "_uuid": "sub-1001",
+      "_submission_time": "2026-05-10T08:00:00Z",
+      "s0_a4": "Northern", "s0_a5": "Tamale", "s0_a7": "Sagnarigu",
+      "s1_a1": "female", "s1_a2": "32",
+      "s7_qc_status": "approved",
+      "investments": [
+        { "inv_name": "Sagnarigu Borehole 1", "satisfaction": 4 }
+      ]
+    },
+    {
+      "_id": 1002,
+      "_uuid": "sub-1002",
+      "_submission_time": "2026-05-10T09:00:00Z",
+      "s0_a4": "Northern", "s0_a5": "Tamale", "s0_a7": "Sagnarigu",
+      "s1_a1": "male", "s1_a2": "41",
+      "investments": [
+        { "inv_name": "Completely Unknown Investment", "satisfaction": 2 }
+      ]
+    },
+    {
+      "_id": 1001,
+      "_uuid": "sub-1001",
+      "_submission_time": "2026-05-10T08:00:00Z",
+      "s0_a4": "Northern", "s0_a5": "Tamale", "s0_a7": "Sagnarigu",
+      "s1_a1": "female", "s1_a2": "32",
+      "s7_qc_status": "approved",
+      "investments": []
+    }
+  ]
+}

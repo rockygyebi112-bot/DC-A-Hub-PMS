@@ -5,7 +5,7 @@ type Task = TaskRow & { area_id: string };
 
 export function TaskList({ tasks, areas }: { tasks: Task[]; areas: Area[] }) {
   if (tasks.length === 0) {
-    return <p className="text-sm text-gray-500">No tasks yet. Create one above.</p>;
+    return <p className="text-sm text-muted-foreground">No tasks yet. Create one above.</p>;
   }
   const grouped = new Map<string, Task[]>();
   for (const t of tasks) {
@@ -19,7 +19,7 @@ export function TaskList({ tasks, areas }: { tasks: Task[]; areas: Area[] }) {
         .filter((a) => grouped.has(a.id))
         .map((a) => (
           <section key={a.id}>
-            <h2 className="mb-2 text-sm font-semibold text-gray-800">{a.name}</h2>
+            <h2 className="mb-2 text-sm font-semibold text-foreground">{a.name}</h2>
             <div className="space-y-2">
               {grouped.get(a.id)!.map((t) => <TaskCard key={t.id} task={t} />)}
             </div>

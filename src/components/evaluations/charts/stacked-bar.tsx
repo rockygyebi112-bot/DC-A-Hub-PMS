@@ -1,6 +1,7 @@
 'use client';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { StackedRow } from '@/lib/evaluations/aggregate';
+import { ChartCard } from '../chart-card';
 
 const PALETTE = [
   'var(--chart-1)',
@@ -20,8 +21,7 @@ export function StackedBarChart({ data, title }: { data: StackedRow[]; title: st
     return out;
   });
   return (
-    <div className="rounded-lg border border-border p-4">
-      <h3 className="mb-2 text-sm font-medium">{title}</h3>
+    <ChartCard title={title}>
       <ResponsiveContainer width="100%" height={260}>
         <BarChart data={rows}>
           <XAxis dataKey="group" tick={{ fill: 'var(--muted-foreground)' }} />
@@ -39,6 +39,6 @@ export function StackedBarChart({ data, title }: { data: StackedRow[]; title: st
           ))}
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </ChartCard>
   );
 }

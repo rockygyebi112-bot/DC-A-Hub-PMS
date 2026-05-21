@@ -1,13 +1,13 @@
 'use client';
 import type { StackedRow } from '@/lib/evaluations/aggregate';
+import { ChartCard } from '../chart-card';
 
 export function HeatmapChart({ data, title }: { data: StackedRow[]; title: string }) {
   const seriesLabels = Array.from(new Set(data.flatMap((r) => r.series.map((s) => s.label))));
   const max = Math.max(1, ...data.flatMap((r) => r.series.map((s) => s.count)));
 
   return (
-    <div className="rounded-lg border border-border p-4">
-      <h3 className="mb-2 text-sm font-medium">{title}</h3>
+    <ChartCard title={title}>
       <div className="overflow-x-auto">
         <table className="text-xs">
           <thead>
@@ -37,6 +37,6 @@ export function HeatmapChart({ data, title }: { data: StackedRow[]; title: strin
           </tbody>
         </table>
       </div>
-    </div>
+    </ChartCard>
   );
 }

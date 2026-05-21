@@ -1,11 +1,11 @@
 'use client';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import type { BucketPct } from '@/lib/evaluations/aggregate';
+import { ChartCard } from '../chart-card';
 
 export function BarPctChart({ data, title }: { data: BucketPct[]; title: string }) {
   return (
-    <div className="rounded-lg border border-border p-4">
-      <h3 className="mb-2 text-sm font-medium">{title}</h3>
+    <ChartCard title={title}>
       <ResponsiveContainer width="100%" height={240}>
         <BarChart data={data}>
           <XAxis dataKey="label" tick={{ fill: 'var(--muted-foreground)' }} />
@@ -24,6 +24,6 @@ export function BarPctChart({ data, title }: { data: BucketPct[]; title: string 
           <Bar dataKey="pct" fill="var(--chart-1)" />
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </ChartCard>
   );
 }

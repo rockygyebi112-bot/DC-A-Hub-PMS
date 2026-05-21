@@ -46,7 +46,10 @@ export async function clientAs(email: string): Promise<SupabaseClient<Database>>
 /**
  * Delete every test fixture this suite (and siblings) might create:
  *   - auth users whose email ends in @example.com (cascades profiles + memberships)
- *   - the named test clients (cascades their projects + memberships)
+ *   - the named test clients (cascades their projects + evaluations + memberships)
+ *
+ * Internal-workspace fixtures are cleaned separately via `deleteInternalAreas`
+ * (id-scoped, to avoid races between concurrent test files).
  *
  * Safe to call multiple times. Intended for `afterAll` in integration tests so
  * the production-ish admin Users page doesn't accumulate fake users.
@@ -104,4 +107,23 @@ export async function cleanupTestData(): Promise<void> {
     page += 1;
     if (page > 50) break;
   }
+}
+
+/**
+ * Delete specific internal-workspace areas (and their tasks + assignees) by id.
+ *
+ * Internal-workspace tests create throwaway areas; each test file collects the
+ * ids it creates and passes them here from its own `afterAll`. We delete by
+ * explicit id rather than a global name-pattern sweep so test files running
+ * concurrently (vitest parallelises files) never delete each other's in-flight
+ * fixtures.
+ *
+ * internal_tasks.area_id is ON DELETE RESTRICT, so tasks are deleted first;
+ * internal_task_assignees cascade off the task deletion.
+ */
+export async function deleteInternalAreas(areaIds: string[]): Promise<void> {
+  if (!areaIds.length) return;
+  const admin = adminClient();
+  await admin.from('internal_tasks').delete().in('area_id', areaIds);
+  await admin.from('internal_areas').delete().in('id', areaIds);
 }

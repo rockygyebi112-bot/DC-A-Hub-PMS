@@ -3,19 +3,6 @@ import { cache } from 'react';
 
 import { createClient } from '@/lib/supabase/server';
 
-export const listEvaluations = cache(async (projectId?: string) => {
-  const sb = await createClient();
-  let q = sb
-    .from('evaluations')
-    .select(
-      'id, name, slug, status, project_id, collection_target_n, dashboard_default_mode, updated_at',
-    );
-  if (projectId) q = q.eq('project_id', projectId);
-  const { data, error } = await q.order('updated_at', { ascending: false });
-  if (error) throw new Error(error.message);
-  return data ?? [];
-});
-
 export const getEvaluation = cache(async (id: string) => {
   const sb = await createClient();
   const { data, error } = await sb

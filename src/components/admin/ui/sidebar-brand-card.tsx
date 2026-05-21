@@ -53,7 +53,7 @@ export function SidebarBrandCard({
       {visible.slice(0, 4).map((c) => (
         <div
           key={c.id}
-          className="relative overflow-hidden rounded-[14px] border border-white/10 bg-[hsl(225_60%_12%)]/85 px-4 py-4 shadow-inner"
+          className="relative overflow-hidden rounded-[14px] border border-white/10 bg-card/85 px-4 py-4 shadow-inner"
         >
           <div className="relative z-10 flex flex-col items-center gap-2 text-center">
             {c.logo_url ? (

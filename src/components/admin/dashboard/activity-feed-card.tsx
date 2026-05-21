@@ -29,12 +29,14 @@ function relative(iso: string) {
   return new Date(iso).toLocaleDateString();
 }
 
+// Brand-scale tints only — one bucket per hash. Keeping every entry on a
+// registered color scale (no raw hsl literals) means the palette tracks any
+// future brand-token change automatically.
 const AVATAR_PALETTE = [
-  "bg-[var(--color-dca-blue-100)] text-[var(--color-dca-blue-700)]",
-  "bg-[hsl(160_65%_94%)] text-[hsl(160_64%_28%)]",
-  "bg-[hsl(38_92%_92%)] text-[hsl(38_92%_32%)]",
-  "bg-[hsl(265_80%_94%)] text-[hsl(265_60%_42%)]",
-  "bg-[var(--color-dca-cyan-50)] text-[var(--color-dca-cyan-600)]",
+  "bg-dca-blue-100 text-dca-blue-700",
+  "bg-srsf-green-100 text-srsf-green-700",
+  "bg-srsf-purple-100 text-srsf-purple-700",
+  "bg-dca-cyan-50 text-dca-cyan-600",
 ];
 
 function paletteFor(name: string) {

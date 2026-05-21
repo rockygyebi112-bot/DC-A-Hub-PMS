@@ -29,10 +29,10 @@ export function AuthBrandPanel() {
       <Image
         src="/logo.png"
         alt=""
-        width={200}
-        height={101}
+        width={1030}
+        height={518}
         priority
-        className="relative z-10 h-14 w-auto"
+        className="relative z-10 h-14 w-auto self-start"
       />
       <div className="relative z-10 space-y-4">
         <div className="h-px w-12 bg-white/25" />

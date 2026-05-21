@@ -1,5 +1,6 @@
 import { Activity, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 /* -------------------- Card shell -------------------- */
 
@@ -13,15 +14,13 @@ function PortalCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[14px] border bg-card p-4 shadow-card">
+    <Card className="p-4">
       <div className="mb-3 flex items-center gap-2 text-muted-foreground">
         <Icon className="size-3.5" />
-        <span className="text-[11px] font-semibold uppercase tracking-wide">
-          {label}
-        </span>
+        <span className="text-xs font-semibold">{label}</span>
       </div>
       {children}
-    </div>
+    </Card>
   );
 }
 

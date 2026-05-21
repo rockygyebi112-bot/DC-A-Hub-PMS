@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import type { ComponentType } from "react";
 import {
   CalendarClock,
   CheckCircle2,
@@ -14,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProjectIcon } from "@/components/ui/project-icon";
+import { StatCard } from "@/components/ui/stat-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { PriorityPill, type Priority } from "@/components/ui/priority-pill";
 import { ProjectsToolbar } from "@/components/workspace/projects-toolbar";
@@ -121,37 +121,33 @@ async function WorkspaceBody({
   return (
     <>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-        <WorkspaceMetric
-          icon={FolderKanban}
+        <StatCard
+          icon={<FolderKanban className="size-5" />}
           label="Assigned"
           value={allProjects.length}
-          hint={`${projects.length} visible with current filters`}
-          tone="blue"
+          description={`${projects.length} visible with current filters`}
         />
-        <WorkspaceMetric
-          icon={CalendarClock}
+        <StatCard
+          icon={<CalendarClock className="size-5" />}
           label="Active"
           value={activeCount}
-          hint="Projects currently moving"
-          tone="green"
+          description="Projects currently moving"
         />
-        <WorkspaceMetric
-          icon={PauseCircle}
+        <StatCard
+          icon={<PauseCircle className="size-5" />}
           label="Planning / paused"
           value={waitingCount}
-          hint="Waiting on kickoff or restart"
-          tone="amber"
+          description="Waiting on kickoff or restart"
         />
-        <WorkspaceMetric
-          icon={CheckCircle2}
+        <StatCard
+          icon={<CheckCircle2 className="size-5" />}
           label="Completed"
           value={completedCount}
-          hint={
+          description={
             nextDeadline
               ? `Next due: ${formatProjectDate(nextDeadline.end_date)}`
               : "No upcoming deadlines"
           }
-          tone="cyan"
         />
       </div>
 
@@ -346,42 +342,6 @@ function CardsView({ projects }: { projects: Awaited<ReturnType<typeof listWorks
           </div>
         </Link>
       ))}
-    </div>
-  );
-}
-
-function WorkspaceMetric({
-  icon: Icon,
-  label,
-  value,
-  hint,
-  tone,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  value: number;
-  hint: string;
-  tone: "blue" | "green" | "amber" | "cyan";
-}) {
-  const toneClass = {
-    blue: "kpi-tile-blue",
-    green: "kpi-tile-green",
-    amber: "kpi-tile-amber",
-    cyan: "kpi-tile-cyan",
-  }[tone];
-
-  return (
-    <div className="rounded-xl border bg-card p-4 shadow-card">
-      <div className="flex items-start gap-3">
-        <span className={`kpi-tile ${toneClass}`}>
-          <Icon className="size-5" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          <p className="stat-number mt-1 text-2xl">{value}</p>
-          <p className="mt-1 truncate text-xs text-muted-foreground">{hint}</p>
-        </div>
-      </div>
     </div>
   );
 }

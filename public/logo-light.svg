@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="72" viewBox="0 0 280 72" fill="none">
+  <!-- Dummy placeholder logo for the auth brand panel. Replace with the real
+       light/reversed-out DC&A Hub logo when available. -->
+  <rect x="1" y="1" width="278" height="70" rx="10" stroke="#ffffff" stroke-opacity="0.35" stroke-dasharray="5 5"/>
+  <text x="24" y="46" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="30" font-weight="700" fill="#ffffff">DC&amp;A</text>
+  <text x="118" y="46" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="30" font-weight="300" fill="#ffffff">Hub</text>
+  <text x="190" y="44" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.5" fill="#ffffff" fill-opacity="0.45">PLACEHOLDER</text>
+</svg>

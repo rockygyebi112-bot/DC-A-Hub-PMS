@@ -2,8 +2,11 @@ import Image from "next/image";
 
 /**
  * Decorative brand panel shown on the left of the auth split-screen on lg+.
- * Solid navy, reversed-out logo, tagline, footer line. aria-hidden because
+ * Solid navy, light logo, tagline, footer line. aria-hidden because
  * AuthCard duplicates the logo for non-decorative use.
+ *
+ * NOTE: /logo-light.svg is a dummy placeholder wordmark. Replace it with the
+ * real reversed-out (white) DC&A Hub logo when available.
  */
 export function AuthBrandPanel() {
   return (
@@ -12,12 +15,12 @@ export function AuthBrandPanel() {
       className="hidden bg-secondary lg:flex lg:w-[40%] lg:flex-col lg:justify-between lg:p-12"
     >
       <Image
-        src="/logo.png"
+        src="/logo-light.svg"
         alt=""
-        width={200}
-        height={58}
+        width={280}
+        height={72}
         priority
-        className="h-14 w-auto brightness-0 invert"
+        className="h-14 w-auto"
       />
       <div className="space-y-4">
         <div className="h-px w-12 bg-white/25" />

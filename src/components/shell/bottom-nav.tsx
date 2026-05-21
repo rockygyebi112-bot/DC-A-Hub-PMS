@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NAV_ICONS } from "./sidebar-nav-list";
-import type { NavGroup, NavItem } from "./app-sidebar";
+import { isNavItemActive, NavIcon } from "./nav-utils";
+import type { NavGroup, NavItem } from "./nav-utils";
 
 /**
  * iOS-style bottom tab bar shown only below the `md` breakpoint.
@@ -52,11 +51,7 @@ export function BottomNav({
         style={{ height: "var(--mobile-bottom-nav-h, 60px)" }}
       >
         {tabs.map((item) => {
-          const active = item.exact
-            ? pathname === item.href
-            : pathname === item.href ||
-              pathname.startsWith(item.href + "/");
-          const Icon = NAV_ICONS[item.icon] ?? LayoutDashboard;
+          const active = isNavItemActive(item, pathname);
           return (
             <li key={item.href} className="flex-1">
               <Link
@@ -70,7 +65,8 @@ export function BottomNav({
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <Icon
+                <NavIcon
+                  name={item.icon}
                   className="size-[22px]"
                   strokeWidth={active ? 2.25 : 1.75}
                 />

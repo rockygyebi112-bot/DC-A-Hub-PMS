@@ -9,12 +9,18 @@ import { cn } from "@/lib/utils";
 export type DetailTabKey =
   | "overview"
   | "team"
-  | "budget";
+  | "budget"
+  | "evaluation";
 
 const TABS: { key: DetailTabKey; label: string; href: (id: string) => string }[] = [
   { key: "overview", label: "Overview", href: (id) => `/admin/projects/${id}` },
   { key: "team", label: "Team", href: (id) => `/admin/projects/${id}/team` },
   { key: "budget", label: "Budget", href: (id) => `/admin/projects/${id}/budget` },
+  {
+    key: "evaluation",
+    label: "Data Collection",
+    href: (id) => `/admin/projects/${id}/evaluation`,
+  },
 ];
 
 export function ProjectTabs({

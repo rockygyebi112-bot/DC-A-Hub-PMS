@@ -87,11 +87,6 @@ export default async function AdminLayout({
           badge: counts.totalUsers,
         },
         {
-          href: "/admin/evaluations",
-          label: "Evaluations",
-          icon: "clipboard-list" as const,
-        },
-        {
           href: "/workspace/internal",
           label: "Internal",
           icon: "inbox" as const,

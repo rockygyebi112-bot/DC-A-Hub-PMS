@@ -1,8 +1,13 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
 import { getCurrentProfile } from '@/lib/auth/get-current-profile';
 import { QcRowActions } from '@/components/evaluations/qc-row-actions';
-import { getEvaluation, listResponses } from '@/lib/evaluations/queries';
+import {
+  getEvaluation,
+  getEvaluationForProject,
+  listResponses,
+} from '@/lib/evaluations/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,9 +30,13 @@ export default async function QcTablePage({
     redirect('/');
   }
 
-  const { id } = await params;
+  const { id: projectId } = await params;
   const sp = await searchParams;
-  const ev = await getEvaluation(id);
+
+  const evMin = await getEvaluationForProject(projectId);
+  if (!evMin) return notFound();
+
+  const ev = await getEvaluation(evMin.id);
   if (!ev) return notFound();
   const hh = (ev.instruments ?? []).find(
     (i: { kind: string }) => i.kind === 'hh',
@@ -48,7 +57,13 @@ export default async function QcTablePage({
 
   return (
     <main className="space-y-6 p-6">
-      <header>
+      <header className="space-y-1">
+        <Link
+          href={`/workspace/projects/${projectId}/dashboard`}
+          className="text-xs text-muted-foreground hover:text-foreground"
+        >
+          ← Data Collection dashboard
+        </Link>
         <h1 className="text-2xl font-semibold">QC: {ev.name}</h1>
         <p className="text-xs text-muted-foreground">
           Internal QC view. Names, phone numbers, and any PII visible here stay

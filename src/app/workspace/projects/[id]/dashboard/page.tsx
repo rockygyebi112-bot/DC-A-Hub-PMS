@@ -1,8 +1,10 @@
 import { notFound, redirect } from 'next/navigation';
 
 import { DashboardView } from '@/components/evaluations/dashboard-view';
+import { ProjectDashboardTabs } from '@/components/evaluations/project-dashboard-tabs';
 import { getCurrentProfile } from '@/lib/auth/get-current-profile';
 import { getEvaluation, getEvaluationForProject } from '@/lib/evaluations/queries';
+import { getWorkspaceProject } from '@/lib/workspace/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +23,9 @@ export default async function StaffDashboardPage({
   const { id: projectId } = await params;
   const sp = await searchParams;
 
+  const project = await getWorkspaceProject(projectId);
+  if (!project) notFound();
+
   const evMin = await getEvaluationForProject(projectId);
   if (!evMin) notFound();
 
@@ -30,26 +35,33 @@ export default async function StaffDashboardPage({
   const hh = (ev.instruments ?? []).find(
     (i: { kind: string }) => i.kind === 'hh',
   );
-  if (!hh) {
-    return (
-      <p className="p-6 text-sm text-muted-foreground">No instrument configured.</p>
-    );
-  }
-
   return (
-    <DashboardView
-      evaluationId={ev.id}
-      instrumentId={hh.id}
-      targetN={ev.collection_target_n}
-      defaultMode={
-        (ev.dashboard_default_mode ?? 'auto') as
-          | 'auto'
-          | 'progress'
-          | 'findings'
-      }
-      searchParams={sp}
-      approvedOnly={false}
-      showStaffControls
-    />
+    <>
+      <div className="space-y-3 px-6 pt-6">
+        <h1 className="text-2xl font-semibold">{project.name}</h1>
+        <ProjectDashboardTabs projectId={projectId} />
+      </div>
+      {hh ? (
+        <DashboardView
+          projectId={projectId}
+          evaluationId={ev.id}
+          instrumentId={hh.id}
+          targetN={ev.collection_target_n}
+          defaultMode={
+            (ev.dashboard_default_mode ?? 'auto') as
+              | 'auto'
+              | 'progress'
+              | 'findings'
+          }
+          searchParams={sp}
+          approvedOnly={false}
+          showStaffControls
+        />
+      ) : (
+        <p className="p-6 text-sm text-muted-foreground">
+          No instrument configured.
+        </p>
+      )}
+    </>
   );
 }

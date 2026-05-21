@@ -41,7 +41,7 @@ export async function setQcStatus(formData: FormData): Promise<ActionResult> {
     .eq('id', parsed.data.response_id);
   if (error) return { ok: false, error: dbErrorMessage(error) };
 
-  revalidatePath('/workspace/evaluations/[id]/responses', 'page');
+  revalidatePath('/workspace/projects/[id]/responses', 'page');
   return { ok: true };
 }
 
@@ -62,7 +62,7 @@ export async function createEvaluation(
   const { error } = await sb.from('evaluations').insert(parsed.data);
   if (error) return { ok: false, error: dbErrorMessage(error) };
 
-  revalidatePath('/admin/evaluations');
+  revalidatePath('/admin/projects/[id]/evaluation', 'page');
   return { ok: true };
 }
 
@@ -94,7 +94,7 @@ export async function updateInstrument(
     .eq('id', id);
   if (error) return { ok: false, error: dbErrorMessage(error) };
 
-  revalidatePath('/admin/evaluations/[id]', 'page');
+  revalidatePath('/admin/projects/[id]/evaluation', 'page');
   return { ok: true };
 }
 
@@ -120,7 +120,7 @@ export async function setKoboToken(args: {
     .eq('id', args.instrumentId);
   if (error) return { ok: false, error: dbErrorMessage(error) };
 
-  revalidatePath('/admin/evaluations/[id]', 'page');
+  revalidatePath('/admin/projects/[id]/evaluation', 'page');
   return { ok: true };
 }
 
@@ -173,7 +173,7 @@ export async function setDashboardSpec(
     });
   if (insErr) return { ok: false, error: dbErrorMessage(insErr) };
 
-  revalidatePath('/admin/evaluations/[id]', 'page');
+  revalidatePath('/admin/projects/[id]/evaluation', 'page');
   return { ok: true };
 }
 
@@ -202,7 +202,7 @@ export async function triggerManualSync(
     };
   }
 
-  revalidatePath('/admin/evaluations/[id]', 'page');
+  revalidatePath('/admin/projects/[id]/evaluation', 'page');
   return { ok: true };
 }
 
@@ -223,6 +223,6 @@ export async function resolveIngestionIssue(
     .eq('id', id);
   if (error) return { ok: false, error: dbErrorMessage(error) };
 
-  revalidatePath('/admin/evaluations/[id]', 'page');
+  revalidatePath('/admin/projects/[id]/evaluation', 'page');
   return { ok: true };
 }

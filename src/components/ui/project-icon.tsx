@@ -1,16 +1,16 @@
 import { cn } from "@/lib/utils";
 
 const PALETTE = [
-  "from-emerald-400 to-emerald-600",
-  "from-blue-400 to-blue-600",
-  "from-violet-400 to-violet-600",
-  "from-amber-400 to-amber-600",
-  "from-rose-400 to-rose-600",
-  "from-cyan-400 to-cyan-600",
-  "from-indigo-400 to-indigo-600",
-  "from-fuchsia-400 to-fuchsia-600",
-  "from-pink-400 to-pink-600",
-  "from-teal-400 to-teal-600",
+  "bg-emerald-600",
+  "bg-blue-600",
+  "bg-violet-600",
+  "bg-amber-600",
+  "bg-rose-600",
+  "bg-cyan-600",
+  "bg-indigo-600",
+  "bg-fuchsia-600",
+  "bg-pink-600",
+  "bg-teal-600",
 ];
 
 function hashIndex(seed: string) {
@@ -41,7 +41,7 @@ export function ProjectIcon({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center bg-gradient-to-br font-semibold text-white shadow-sm",
+        "inline-flex shrink-0 items-center justify-center font-semibold text-white",
         SIZES[size],
         color,
         className,

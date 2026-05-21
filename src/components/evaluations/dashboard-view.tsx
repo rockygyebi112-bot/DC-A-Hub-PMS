@@ -71,22 +71,24 @@ export async function DashboardView(props: {
       : (props.defaultMode as 'progress' | 'findings');
   const mode = explicit ?? effectiveDefault;
 
-  // Filter option sources — just distinct values from responses (cheap at v1 scale).
-  const distinct = async (col: 'region' | 'district' | 'community') => {
-    const { data } = await sb
-      .from('evaluation_responses')
-      .select(col)
-      .eq('instrument_id', props.instrumentId)
-      .not(col, 'is', null);
-    return Array.from(
-      new Set((data ?? []).map((r: Record<string, unknown>) => r[col] as string)),
+  // Filter option sources — distinct region/district/community values. One
+  // query pulls all three columns; the distinct sets are derived in memory
+  // (cheap at v1 scale) instead of three separate round trips.
+  const { data: filterRows } = await sb
+    .from('evaluation_responses')
+    .select('region, district, community')
+    .eq('instrument_id', props.instrumentId);
+  const distinctValues = (col: 'region' | 'district' | 'community') =>
+    Array.from(
+      new Set(
+        (filterRows ?? [])
+          .map((r: Record<string, unknown>) => r[col])
+          .filter((v): v is string => Boolean(v)),
+      ),
     ).sort();
-  };
-  const [regions, districts, communities] = await Promise.all([
-    distinct('region'),
-    distinct('district'),
-    distinct('community'),
-  ]);
+  const regions = distinctValues('region');
+  const districts = distinctValues('district');
+  const communities = distinctValues('community');
   const exposureOptions = [
     'All',
     ...Object.keys(spec.disaggregations.soco_exposure),

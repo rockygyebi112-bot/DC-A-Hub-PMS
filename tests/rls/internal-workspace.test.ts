@@ -1,8 +1,20 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { adminClient, clientAs, createTestUser, cleanupTestData } from './setup';
+import {
+  adminClient,
+  clientAs,
+  createTestUser,
+  cleanupTestData,
+  deleteInternalAreas,
+} from './setup';
 
 describe('internal workspace RLS', () => {
-  afterAll(async () => { await cleanupTestData(); });
+  // Areas this file creates; cleaned up by id so a concurrent test file's
+  // afterAll never deletes our in-flight fixtures.
+  const createdAreaIds: string[] = [];
+  afterAll(async () => {
+    await deleteInternalAreas(createdAreaIds);
+    await cleanupTestData();
+  });
 
   it('client role cannot see any internal_tasks or internal_areas', async () => {
     const admin = adminClient();
@@ -10,7 +22,10 @@ describe('internal workspace RLS', () => {
     await createTestUser('client', clientEmail);
 
     const { data: area } = await admin
-      .from('internal_areas').select('id').limit(1).single();
+      .from('internal_areas')
+      .insert({ name: `IW Temp ${Date.now()}` })
+      .select('id').single();
+    createdAreaIds.push(area!.id);
     await admin.from('internal_tasks').insert({
       area_id: area!.id, title: 'Hidden BD work',
     });
@@ -29,7 +44,10 @@ describe('internal workspace RLS', () => {
     const staffAId = await createTestUser('staff', staffAEmail);
     await createTestUser('staff', staffBEmail);
 
-    const { data: area } = await admin.from('internal_areas').select('id').limit(1).single();
+    const { data: area } = await admin.from('internal_areas')
+      .insert({ name: `IW Temp ${Date.now()}` })
+      .select('id').single();
+    createdAreaIds.push(area!.id);
     const { data: t1 } = await admin.from('internal_tasks')
       .insert({ area_id: area!.id, title: 'Assigned to A' }).select('id').single();
     const { data: t2 } = await admin.from('internal_tasks')

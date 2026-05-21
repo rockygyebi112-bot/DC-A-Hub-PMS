@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
 
+/**
+ * Prop-based card shell for the common "titled section + body" case. Built
+ * on the Card primitive so the surface styling (radius, border, shadow) is
+ * defined in exactly one place.
+ */
 export function SectionCard({
   title,
   description,
@@ -15,9 +21,9 @@ export function SectionCard({
   action?: ReactNode;
 }) {
   return (
-    <section
+    <Card
       className={cn(
-        "rounded-[var(--admin-card-radius)] border border-border bg-card text-card-foreground overflow-hidden",
+        "overflow-hidden",
         tone === "destructive" && "border-destructive/30",
       )}
     >
@@ -41,7 +47,7 @@ export function SectionCard({
           {action && <div className="shrink-0">{action}</div>}
         </header>
       )}
-      <div className="p-4">{children}</div>
-    </section>
+      <CardContent className="p-4">{children}</CardContent>
+    </Card>
   );
 }

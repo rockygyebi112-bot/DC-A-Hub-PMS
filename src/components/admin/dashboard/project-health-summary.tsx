@@ -1,3 +1,5 @@
+import { Card } from "@/components/ui/card";
+
 export type HealthBucket = {
   key: "on_track" | "at_risk" | "delayed" | "not_started";
   label: string;
@@ -26,7 +28,7 @@ export function ProjectHealthSummary({
   const total = buckets.reduce((acc, b) => acc + b.value, 0) || 1;
 
   return (
-    <div className="overflow-hidden rounded-[var(--admin-card-radius)] border bg-card shadow-card">
+    <Card className="overflow-hidden">
       <header className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Project Health Summary
@@ -68,6 +70,6 @@ export function ProjectHealthSummary({
           })}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

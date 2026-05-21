@@ -4,7 +4,7 @@ import {
   FolderKanban,
   Users,
 } from "lucide-react";
-import { KpiCard } from "@/components/admin/dashboard/kpi-card";
+import { StatCard } from "@/components/ui/stat-card";
 import {
   TasksOverview,
   type TaskRow,
@@ -427,7 +427,7 @@ function KpiSkeleton() {
       {Array.from({ length: 3 }).map((_, i) => (
         <div
           key={i}
-          className="h-[92px] animate-pulse rounded-2xl border bg-muted/40"
+          className="h-[92px] animate-pulse rounded-xl border bg-muted/40"
         />
       ))}
     </div>
@@ -437,34 +437,34 @@ function KpiSkeleton() {
 function GridSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-      <div className="h-[280px] animate-pulse rounded-2xl border bg-muted/40" />
-      <div className="h-[280px] animate-pulse rounded-2xl border bg-muted/40" />
+      <div className="h-[280px] animate-pulse rounded-xl border bg-muted/40" />
+      <div className="h-[280px] animate-pulse rounded-xl border bg-muted/40" />
     </div>
   );
 }
 
 function ActivityFeedSkeleton() {
-  return <div className="h-[200px] animate-pulse rounded-2xl border bg-muted/40" />;
+  return <div className="h-[200px] animate-pulse rounded-xl border bg-muted/40" />;
 }
 
 async function KpiStrip() {
   const counts = await getAdminCounts();
   return (
     <div className="grid grid-cols-3 gap-2 sm:gap-4">
-      <KpiCard
+      <StatCard
         label="Total Projects"
         value={counts.totalProjects}
-        icon={FolderKanban}
+        icon={<FolderKanban className="size-5" />}
       />
-      <KpiCard
+      <StatCard
         label="Active Projects"
         value={counts.activeProjects}
-        icon={Activity}
+        icon={<Activity className="size-5" />}
       />
-      <KpiCard
+      <StatCard
         label="Total Users"
         value={counts.totalUsers}
-        icon={Users}
+        icon={<Users className="size-5" />}
       />
     </div>
   );

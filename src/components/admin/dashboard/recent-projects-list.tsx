@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 export type RecentProjectRow = {
   id: string;
@@ -44,7 +45,7 @@ export function RecentProjectsList({
   viewAllHref?: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-[var(--admin-card-radius)] border bg-card shadow-card">
+    <Card className="overflow-hidden">
       <header className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Recent Projects
@@ -127,6 +128,6 @@ export function RecentProjectsList({
           })
         )}
       </ul>
-    </div>
+    </Card>
   );
 }

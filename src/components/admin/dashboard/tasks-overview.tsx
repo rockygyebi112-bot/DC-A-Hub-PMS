@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 export type TaskRow = {
   id: string;
@@ -100,7 +101,7 @@ export function TasksOverview({
   ];
 
   return (
-    <div className="overflow-hidden rounded-[var(--admin-card-radius)] border bg-card shadow-card">
+    <Card className="overflow-hidden">
       <header className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Tasks Overview
@@ -259,6 +260,6 @@ export function TasksOverview({
           })
         )}
       </ul>
-    </div>
+    </Card>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 export type MilestoneRow = {
   id: string;
@@ -44,7 +45,7 @@ export function UpcomingMilestonesTimeline({
   viewAllHref?: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-[var(--admin-card-radius)] border bg-card shadow-card">
+    <Card className="overflow-hidden">
       <header className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">
           Upcoming Milestones
@@ -121,6 +122,6 @@ export function UpcomingMilestonesTimeline({
           </ol>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

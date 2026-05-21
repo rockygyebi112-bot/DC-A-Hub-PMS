@@ -83,7 +83,7 @@ export function MobileNav({
         <DialogPrimitive.Popup
           className={cn(
             "sidebar-navy fixed inset-y-0 left-0 z-50 flex w-[min(82vw,320px)] flex-col",
-            "border-r border-[hsl(225_35%_24%)] outline-none",
+            "border-r border-border outline-none",
             // Slide-from-left transitions.
             "data-open:animate-in data-open:slide-in-from-left data-open:duration-200",
             "data-closed:animate-out data-closed:slide-out-to-left data-closed:duration-150",

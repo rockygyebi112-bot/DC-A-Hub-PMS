@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 
 import { fetchResponseRows } from '@/lib/evaluations/aggregate';
@@ -123,22 +124,50 @@ export async function DashboardView(props: {
         socoExposureOptions={exposureOptions}
       />
 
-      {mode === 'progress' ? (
-        <ProgressMode
-          targetN={targetN}
-          instrumentId={props.instrumentId}
-          approvedOnly={props.approvedOnly}
-          filters={filters}
-        />
-      ) : (
-        <FindingsMode
-          spec={spec}
-          instrumentId={props.instrumentId}
-          approvedOnly={props.approvedOnly}
-          filters={filters}
-          targetN={targetN}
-        />
-      )}
+      {/* key={mode} re-suspends the boundary on every toggle, so the
+          skeleton shows immediately while the new mode's chart queries run
+          — the header, filters and toggle above stay interactive. */}
+      <Suspense key={mode} fallback={<DashboardModeSkeleton />}>
+        {mode === 'progress' ? (
+          <ProgressMode
+            targetN={targetN}
+            instrumentId={props.instrumentId}
+            approvedOnly={props.approvedOnly}
+            filters={filters}
+          />
+        ) : (
+          <FindingsMode
+            spec={spec}
+            instrumentId={props.instrumentId}
+            approvedOnly={props.approvedOnly}
+            filters={filters}
+            targetN={targetN}
+          />
+        )}
+      </Suspense>
+    </div>
+  );
+}
+
+function DashboardModeSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-20 animate-pulse rounded-xl border bg-muted/40"
+          />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-[288px] animate-pulse rounded-xl border bg-muted/40"
+          />
+        ))}
+      </div>
     </div>
   );
 }

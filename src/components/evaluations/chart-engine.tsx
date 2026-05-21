@@ -11,6 +11,7 @@ import {
 import type { ChartEntry } from '@/lib/evaluations/dashboard-spec';
 import type { FilterState } from '@/lib/evaluations/schemas';
 
+import { ChartCard } from './chart-card';
 import { BarPctChart } from './charts/bar-pct';
 import { ChoroplethChart } from './charts/choropleth';
 import { DonutChart } from './charts/donut';
@@ -148,18 +149,18 @@ export async function ChartEngine(props: {
 
 function empty(title: string) {
   return (
-    <div className="rounded-lg border border-border p-4">
-      <h3 className="mb-2 text-sm font-medium">{title}</h3>
-      <p className="text-xs text-muted-foreground">No data for this cut.</p>
-    </div>
+    <ChartCard title={title}>
+      <p className="text-sm text-muted-foreground">
+        No data for this question yet.
+      </p>
+    </ChartCard>
   );
 }
 
 function invalid(title: string, reason: string) {
   return (
-    <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4">
-      <h3 className="mb-1 text-sm font-medium">{title}</h3>
+    <ChartCard title={title} tone="error">
       <p className="text-xs text-destructive">Chart misconfigured: {reason}</p>
-    </div>
+    </ChartCard>
   );
 }

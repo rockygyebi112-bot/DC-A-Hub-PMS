@@ -1,12 +1,12 @@
 'use client';
+import { ChartCard } from '../chart-card';
 
 export function ChoroplethChart(props: {
   data: { region: string; count: number; target: number; pct: number }[];
   title: string;
 }) {
   return (
-    <div className="rounded-lg border border-border p-4">
-      <h3 className="mb-2 text-sm font-medium">{props.title}</h3>
+    <ChartCard title={props.title}>
       <ul className="space-y-2">
         {props.data.map((r) => (
           <li key={r.region}>
@@ -21,6 +21,6 @@ export function ChoroplethChart(props: {
           </li>
         ))}
       </ul>
-    </div>
+    </ChartCard>
   );
 }

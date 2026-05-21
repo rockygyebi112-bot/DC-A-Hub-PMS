@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FolderOpen, LayoutDashboard, ListChecks } from "lucide-react";
+import { BarChart3, FolderOpen, LayoutDashboard, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Tab = {
@@ -17,7 +17,13 @@ type Tab = {
  * Adds an "Uploads" entry so clients can find all documents in one place
  * without drilling into each activity.
  */
-export function PortalProjectTabs({ projectId }: { projectId: string }) {
+export function PortalProjectTabs({
+  projectId,
+  hasEvaluation = false,
+}: {
+  projectId: string;
+  hasEvaluation?: boolean;
+}) {
   const pathname = usePathname();
   const base = `/portal/projects/${projectId}`;
 
@@ -40,6 +46,16 @@ export function PortalProjectTabs({ projectId }: { projectId: string }) {
       icon: FolderOpen,
       match: (p, b) => p.startsWith(`${b}/uploads`),
     },
+    ...(hasEvaluation
+      ? [
+          {
+            href: `${base}/dashboard`,
+            label: "Data Collection",
+            icon: BarChart3,
+            match: (p: string, b: string) => p.startsWith(`${b}/dashboard`),
+          },
+        ]
+      : []),
   ];
 
   return (

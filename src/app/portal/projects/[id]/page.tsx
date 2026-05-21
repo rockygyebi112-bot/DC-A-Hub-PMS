@@ -61,17 +61,10 @@ export default async function PortalProjectPage({
         subtitle={subtitle || undefined}
       />
 
-      <PortalProjectTabs projectId={project.id} />
-
-      {evaluation ? (
-        <Link
-          href={`/portal/projects/${project.id}/dashboard`}
-          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-        >
-          View evaluation dashboard
-          <ArrowRight className="size-3" />
-        </Link>
-      ) : null}
+      <PortalProjectTabs
+        projectId={project.id}
+        hasEvaluation={!!evaluation}
+      />
 
       {/* Summary cards. Manager + timeline + overall progress used to live
           here too; manager is surfaced via NeedHelpCard, and timeline +

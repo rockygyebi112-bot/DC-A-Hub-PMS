@@ -2,33 +2,45 @@ import Image from "next/image";
 
 /**
  * Decorative brand panel shown on the left of the auth split-screen on lg+.
- * Solid navy, light logo, tagline, footer line. aria-hidden because
- * AuthCard duplicates the logo for non-decorative use.
+ * A background image fills the panel, darkened by a navy overlay so the logo
+ * and tagline stay readable. aria-hidden because AuthCard duplicates the logo
+ * for non-decorative use.
  *
- * NOTE: /logo-light.svg is a dummy placeholder wordmark. Replace it with the
- * real reversed-out (white) DC&A Hub logo when available.
+ * NOTE: /auth-panel-bg.svg is a dummy placeholder background. Replace it with
+ * a real photograph (same path) when available.
  */
 export function AuthBrandPanel() {
   return (
     <aside
       aria-hidden
-      className="hidden bg-secondary lg:flex lg:w-[40%] lg:flex-col lg:justify-between lg:p-12"
+      className="relative hidden overflow-hidden bg-secondary lg:flex lg:w-[40%] lg:flex-col lg:justify-between lg:p-12"
     >
+      {/* Dummy background image — swap the file at /auth-panel-bg.svg later. */}
       <Image
-        src="/logo-light.svg"
+        src="/auth-panel-bg.svg"
         alt=""
-        width={280}
-        height={72}
+        fill
         priority
-        className="h-14 w-auto"
+        className="object-cover"
       />
-      <div className="space-y-4">
+      {/* Navy overlay keeps the brand colour dominant and text legible. */}
+      <div className="absolute inset-0 bg-secondary/75" />
+
+      <Image
+        src="/logo.png"
+        alt=""
+        width={200}
+        height={101}
+        priority
+        className="relative z-10 h-14 w-auto"
+      />
+      <div className="relative z-10 space-y-4">
         <div className="h-px w-12 bg-white/25" />
         <p className="font-heading text-xl font-medium leading-snug text-white">
           Project Management System
         </p>
       </div>
-      <p className="text-xs text-white/50">© DC&amp;A Hub</p>
+      <p className="relative z-10 text-xs text-white/50">© DC&amp;A Hub</p>
     </aside>
   );
 }

@@ -25,9 +25,18 @@ export async function DashboardView(props: {
   const cfg = await getActiveDashboardSpec(props.evaluationId);
   if (!cfg) {
     return (
-      <p className="p-6 text-sm text-muted-foreground">
-        No dashboard config is active for this evaluation.
-      </p>
+      <div className="p-6">
+        <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center">
+          <h2 className="font-heading text-sm font-semibold tracking-tight text-foreground">
+            Dashboard not configured yet
+          </h2>
+          <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
+            Define the dashboard spec to see each survey question rendered as a
+            chart here. Until a spec is saved there are no questions to
+            display.
+          </p>
+        </div>
+      </div>
     );
   }
   const spec = DashboardSpec.parse(cfg.spec);

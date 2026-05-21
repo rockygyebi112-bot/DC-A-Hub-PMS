@@ -38,11 +38,6 @@ export default async function WorkspaceLayout({
           label: "Internal",
           icon: "inbox" as const,
         },
-        {
-          href: "/workspace/evaluations",
-          label: "Evaluations",
-          icon: "clipboard-list" as const,
-        },
       ],
     },
     {

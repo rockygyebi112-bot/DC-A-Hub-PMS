@@ -18,7 +18,7 @@ export function AuthAlert({ variant, children, className }: AuthAlertProps) {
         "rounded-lg border p-3 text-sm break-words",
         variant === "error"
           ? "border-destructive/30 bg-destructive/10 text-destructive"
-          : "border-emerald-200 bg-emerald-50 text-emerald-800",
+          : "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300",
         className,
       )}
     >

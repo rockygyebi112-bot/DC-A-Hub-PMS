@@ -3,12 +3,14 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
-import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { AuthCard } from "@/components/ui/auth-card";
+import { AuthField } from "@/components/ui/auth-field";
+import { AuthAlert } from "@/components/ui/auth-alert";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -60,107 +62,74 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="relative bg-card border rounded-2xl shadow-card-elevated overflow-hidden">
-      <div className="h-[3px] bg-gradient-to-r from-primary via-primary/70 to-secondary" />
-      <div className="flex items-center gap-3 px-6 sm:px-8 pt-6">
-        <Image
-          src="/logo.png"
-          alt="DC&A Hub"
-          width={44}
-          height={44}
-          className="rounded-lg"
-          priority
-        />
-        <div>
-          <h1 className="font-heading text-lg font-bold tracking-tight text-foreground">
-            Set a new password
-          </h1>
-          <p className="text-[11px] text-muted-foreground">
-            Choose a strong password to finish resetting your account
-          </p>
-        </div>
-      </div>
-
+    <AuthCard
+      title="Set a new password"
+      description="Choose a strong password to finish resetting your account"
+      footer={
+        <Link
+          href="/login"
+          className="font-medium text-muted-foreground hover:text-foreground"
+        >
+          Back to sign in
+        </Link>
+      }
+    >
       {checking ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        <div className="flex justify-center py-8">
+          <Spinner size="lg" label="Verifying your reset link" />
         </div>
       ) : (
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4 px-6 sm:px-8 pt-6">
-            {email && (
-              <p className="text-xs text-muted-foreground">
-                Resetting password for{" "}
-                <span className="font-medium text-foreground">{email}</span>
-              </p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {email && (
+            <p className="text-sm text-muted-foreground">
+              Resetting password for{" "}
+              <span className="font-medium text-foreground break-words">
+                {email}
+              </span>
+            </p>
+          )}
+          {error && <AuthAlert variant="error">{error}</AuthAlert>}
+          <AuthField label="New password" htmlFor="password">
+            <PasswordInput
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={12}
+              placeholder="At least 12 characters"
+              autoComplete="new-password"
+              className="h-10"
+            />
+          </AuthField>
+          <AuthField label="Confirm password" htmlFor="confirm">
+            <PasswordInput
+              id="confirm"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              required
+              minLength={12}
+              placeholder="Re-enter password"
+              autoComplete="new-password"
+              className="h-10"
+            />
+          </AuthField>
+          <Button
+            type="submit"
+            className="h-10 w-full font-semibold transition-smooth"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Update password & continue"
             )}
-            {error && (
-              <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-lg border border-destructive/30">
-                {error}
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="password"
-                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-              >
-                New password
-              </Label>
-              <PasswordInput
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={12}
-                placeholder="At least 12 characters"
-                autoComplete="new-password"
-                className="h-10"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="confirm"
-                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-              >
-                Confirm password
-              </Label>
-              <PasswordInput
-                id="confirm"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                required
-                minLength={12}
-                placeholder="Re-enter password"
-                autoComplete="new-password"
-                className="h-10"
-              />
-            </div>
-          </div>
-          <div className="flex flex-col gap-3 px-6 sm:px-8 pt-5 pb-8">
-            <Button
-              type="submit"
-              className="w-full h-10 font-semibold transition-smooth"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Update password & continue"
-              )}
-            </Button>
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-            >
-              Back to sign in
-            </Link>
-          </div>
+          </Button>
         </form>
       )}
-    </div>
+    </AuthCard>
   );
 }
 

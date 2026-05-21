@@ -6,8 +6,6 @@ import Image from "next/image";
  * and tagline stay readable. aria-hidden because AuthCard duplicates the logo
  * for non-decorative use.
  *
- * NOTE: /auth-panel-bg.svg is a dummy placeholder background. Replace it with
- * a real photograph (same path) when available.
  */
 export function AuthBrandPanel() {
   return (
@@ -15,12 +13,12 @@ export function AuthBrandPanel() {
       aria-hidden
       className="relative hidden overflow-hidden bg-secondary lg:flex lg:w-[40%] lg:flex-col lg:justify-between lg:p-12"
     >
-      {/* Dummy background image — swap the file at /auth-panel-bg.svg later. */}
       <Image
-        src="/auth-panel-bg.svg"
+        src="/login.jpg"
         alt=""
         fill
         priority
+        sizes="40vw"
         className="object-cover"
       />
       {/* Navy overlay keeps the brand colour dominant and text legible. */}

@@ -2,11 +2,21 @@
 
 import { useState, useTransition } from 'react';
 import { createTask } from '@/lib/internal/actions';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export function NewTaskForm({ areas }: { areas: { id: string; name: string }[] }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // Base UI Select has no empty-string item value; use a "__none" sentinel for
+  // the trigger and feed the real "" back through a hidden input for submission.
+  const [priority, setPriority] = useState("");
 
   async function onSubmit(fd: FormData) {
     setError(null);
@@ -27,20 +37,37 @@ export function NewTaskForm({ areas }: { areas: { id: string; name: string }[] }
 
   return (
     <form action={onSubmit} className="space-y-2 rounded-md border bg-card p-4 shadow-sm">
-      <select name="area_id" required className="w-full rounded border bg-background text-foreground px-2 py-1 text-sm">
-        <option value="">Choose area…</option>
-        {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-      </select>
+      <Select name="area_id" required>
+        <SelectTrigger size="sm" className="w-full">
+          <SelectValue placeholder="Choose area…" />
+        </SelectTrigger>
+        <SelectContent>
+          {areas.map((a) => (
+            <SelectItem key={a.id} value={a.id}>
+              {a.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <input name="title" required placeholder="Task title" className="w-full rounded border bg-background text-foreground px-2 py-1 text-sm" />
       <textarea name="description" placeholder="Description (optional)" className="w-full rounded border bg-background text-foreground px-2 py-1 text-sm" />
       <div className="flex gap-2">
-        <select name="priority" defaultValue="" className="rounded border bg-background text-foreground px-2 py-1 text-sm">
-          <option value="">No priority</option>
-          <option value="low">Low</option>
-          <option value="normal">Normal</option>
-          <option value="high">High</option>
-          <option value="urgent">Urgent</option>
-        </select>
+        <input type="hidden" name="priority" value={priority} />
+        <Select
+          value={priority || "__none"}
+          onValueChange={(v) => setPriority(v === "__none" ? "" : (v ?? ""))}
+        >
+          <SelectTrigger size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none">No priority</SelectItem>
+            <SelectItem value="low">Low</SelectItem>
+            <SelectItem value="normal">Normal</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+            <SelectItem value="urgent">Urgent</SelectItem>
+          </SelectContent>
+        </Select>
         <input name="due_date" type="date" className="rounded border bg-background text-foreground px-2 py-1 text-sm" />
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}

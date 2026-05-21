@@ -3,6 +3,13 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Calendar, Columns3, LayoutGrid, ListChecks, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 const VIEWS = [
@@ -108,20 +115,22 @@ function Chip({
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
 }) {
+  const current = options.find((o) => o.label === value)?.value ?? options[0].value;
   return (
-    <label className="inline-flex h-8 items-center gap-1.5 rounded-lg border bg-background px-2.5 text-xs font-medium">
+    <div className="inline-flex items-center gap-1.5 text-xs font-medium">
       <span className="text-muted-foreground">{label}:</span>
-      <select
-        className="bg-transparent text-foreground outline-none"
-        value={options.find((o) => o.label === value)?.value ?? options[0].value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
+      <Select value={current} onValueChange={(v) => onChange(v ?? current)}>
+        <SelectTrigger size="sm">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

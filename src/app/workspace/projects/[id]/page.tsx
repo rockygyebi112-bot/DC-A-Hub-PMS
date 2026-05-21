@@ -13,6 +13,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ToastForm } from "@/components/ui/toast-form";
@@ -256,18 +263,18 @@ export default async function WorkspaceProjectPage({
               successMessage={null}
               className="space-y-3"
             >
-              <select
-                name="phase_id"
-                required
-                className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm"
-              >
-                <option value="">Pick a phase</option>
-                {phases.map((phase) => (
-                  <option key={phase.id} value={phase.id}>
-                    {phase.name}
-                  </option>
-                ))}
-              </select>
+              <Select name="phase_id" required>
+                <SelectTrigger size="sm" className="w-full">
+                  <SelectValue placeholder="Pick a phase" />
+                </SelectTrigger>
+                <SelectContent>
+                  {phases.map((phase) => (
+                    <SelectItem key={phase.id} value={phase.id}>
+                      {phase.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Input name="name" placeholder="Activity name" required />
               <Input name="planned_date" type="date" />
               <Input name="location" placeholder="Location" />

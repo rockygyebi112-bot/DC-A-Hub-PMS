@@ -1,6 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type Staff = { user_id: string; full_name: string };
 
@@ -26,18 +33,18 @@ export function AssigneePicker({
 
   return (
     <div className="mt-3 flex gap-2">
-      <select
-        value={pick}
-        onChange={(e) => setPick(e.target.value)}
-        className="rounded border bg-background text-foreground px-2 py-1 text-sm"
-      >
-        <option value="">Add assignee…</option>
-        {available.map((s) => (
-          <option key={s.user_id} value={s.user_id}>
-            {s.full_name}
-          </option>
-        ))}
-      </select>
+      <Select value={pick || undefined} onValueChange={(v) => setPick(v ?? '')}>
+        <SelectTrigger size="sm" className="flex-1">
+          <SelectValue placeholder="Add assignee…" />
+        </SelectTrigger>
+        <SelectContent>
+          {available.map((s) => (
+            <SelectItem key={s.user_id} value={s.user_id}>
+              {s.full_name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <button
         type="button"
         disabled={!pick}

@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ToastForm, type ToastFormResult } from "@/components/ui/toast-form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card } from "./primitives";
 import type { ActivityForView, PhaseOption } from "./types";
 
@@ -28,30 +35,31 @@ export function EditCard({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="grid gap-2 text-sm font-medium">
             Phase
-            <select
-              name="phase_id"
-              defaultValue={activity.phase_id}
-              required
-              className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
-            >
-              {phases.map((phase) => (
-                <option key={phase.id} value={phase.id}>
-                  {phase.name}
-                </option>
-              ))}
-            </select>
+            <Select name="phase_id" defaultValue={activity.phase_id} required>
+              <SelectTrigger size="sm" className="w-full">
+                <SelectValue placeholder="Select a phase" />
+              </SelectTrigger>
+              <SelectContent>
+                {phases.map((phase) => (
+                  <SelectItem key={phase.id} value={phase.id}>
+                    {phase.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
           <label className="grid gap-2 text-sm font-medium">
             Status
-            <select
-              name="status"
-              defaultValue={activity.status}
-              className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
-            >
-              <option value="not_started">Not started</option>
-              <option value="in_progress">Ongoing</option>
-              <option value="done">Done</option>
-            </select>
+            <Select name="status" defaultValue={activity.status}>
+              <SelectTrigger size="sm" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="not_started">Not started</SelectItem>
+                <SelectItem value="in_progress">Ongoing</SelectItem>
+                <SelectItem value="done">Done</SelectItem>
+              </SelectContent>
+            </Select>
           </label>
         </div>
         <label className="grid gap-2 text-sm font-medium">

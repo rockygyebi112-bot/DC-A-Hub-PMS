@@ -7,6 +7,13 @@ import {
   addAssignee,
   removeAssignee,
 } from '@/lib/internal/actions';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { AssigneePicker } from './assignee-picker';
 
 // Shape mirrors `InternalTaskWithAssignees` from `@/lib/internal/queries`:
@@ -69,19 +76,23 @@ export function TaskDetail({
       <section className="grid grid-cols-2 gap-4 text-sm">
         <div>
           <label className="block text-xs text-muted-foreground">Status</label>
-          <select
+          <Select
             defaultValue={task.status}
-            onChange={(e) =>
-              run(() => setTaskStatus(task.id, e.target.value as TaskStatus))
+            onValueChange={(v) =>
+              run(() => setTaskStatus(task.id, (v ?? task.status) as TaskStatus))
             }
             disabled={pending}
-            className="mt-1 w-full rounded border bg-background text-foreground px-2 py-1"
           >
-            <option value="not_started">Not started</option>
-            <option value="in_progress">In progress</option>
-            <option value="blocked">Blocked</option>
-            <option value="done">Done</option>
-          </select>
+            <SelectTrigger size="sm" className="mt-1 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="not_started">Not started</SelectItem>
+              <SelectItem value="in_progress">In progress</SelectItem>
+              <SelectItem value="blocked">Blocked</SelectItem>
+              <SelectItem value="done">Done</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <label className="block text-xs text-muted-foreground">Due date</label>

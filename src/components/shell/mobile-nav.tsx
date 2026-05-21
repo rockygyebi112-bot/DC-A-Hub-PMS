@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { Building2, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { BrandChip } from "./brand-chip";
 import { SidebarNavList } from "./sidebar-nav-list";
-import type { NavGroup, ProjectBrand } from "./app-sidebar";
+import type { NavGroup, ProjectBrand } from "./nav-utils";
 
 /**
  * Mobile navigation drawer.
@@ -92,21 +92,7 @@ export function MobileNav({
           )}
         >
           <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-            <div className="flex size-10 shrink-0 items-center justify-center">
-              {displayLogo ? (
-                <Image
-                  src={displayLogo}
-                  alt={`${displayBrand} logo`}
-                  width={40}
-                  height={40}
-                  className="h-10 w-10 object-contain"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">
-                  <Building2 className="size-4" />
-                </div>
-              )}
-            </div>
+            <BrandChip logoUrl={displayLogo} label={displayBrand} />
             <div className="min-w-0 flex-1">
               <DialogPrimitive.Title
                 className="font-heading text-sm font-bold tracking-tight leading-tight text-white break-words [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical] overflow-hidden"
@@ -142,21 +128,7 @@ export function MobileNav({
 
           {/* Bottom brand chip — mirrors the desktop rail. */}
           <div className="flex items-center gap-2 border-t border-white/10 px-4 py-3">
-            <div className="flex size-10 shrink-0 items-center justify-center">
-              {defaultLogoUrl ? (
-                <Image
-                  src={defaultLogoUrl}
-                  alt={`${brand} logo`}
-                  width={40}
-                  height={40}
-                  className="h-10 w-10 object-contain"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-dca-blue-500)] to-[var(--color-dca-cyan-400)] text-white">
-                  <Building2 className="size-3.5" />
-                </div>
-              )}
-            </div>
+            <BrandChip logoUrl={defaultLogoUrl ?? null} label={brand} />
             <div className="min-w-0 flex-1 leading-tight">
               <p className="font-heading truncate text-xs font-semibold text-white">
                 {brand}

@@ -35,6 +35,7 @@ export default async function PortalDashboardPage({
 
   return (
     <DashboardView
+      projectId={projectId}
       evaluationId={ev.id}
       instrumentId={hh.id}
       targetN={ev.collection_target_n}

@@ -2,6 +2,13 @@ import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { createActivity } from "@/lib/workspace/actions";
@@ -41,18 +48,18 @@ export default async function NewWorkspaceActivityPage({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="grid gap-2 text-sm font-medium">
               Phase
-              <select
-                name="phase_id"
-                required
-                className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
-              >
-                <option value="">Pick a phase</option>
-                {phases.map((phase) => (
-                  <option key={phase.id} value={phase.id}>
-                    {phase.name}
-                  </option>
-                ))}
-              </select>
+              <Select name="phase_id" required>
+                <SelectTrigger size="sm" className="w-full">
+                  <SelectValue placeholder="Pick a phase" />
+                </SelectTrigger>
+                <SelectContent>
+                  {phases.map((phase) => (
+                    <SelectItem key={phase.id} value={phase.id}>
+                      {phase.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
             <label className="grid gap-2 text-sm font-medium">
               Start date

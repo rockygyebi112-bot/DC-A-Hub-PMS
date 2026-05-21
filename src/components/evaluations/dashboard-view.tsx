@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { fetchResponseRows } from '@/lib/evaluations/aggregate';
 import { getActiveDashboardSpec } from '@/lib/evaluations/queries';
 import { DashboardSpec } from '@/lib/evaluations/dashboard-spec';
@@ -11,6 +13,7 @@ import { ModeToggle } from './mode-toggle';
 import { SyncNowButton } from './sync-now-button';
 
 export async function DashboardView(props: {
+  projectId: string;
   evaluationId: string;
   instrumentId: string;
   targetN: number | null;
@@ -90,7 +93,15 @@ export async function DashboardView(props: {
         </div>
         <div className="flex items-center gap-2">
           {props.showStaffControls && (
-            <SyncNowButton instrumentId={props.instrumentId} />
+            <>
+              <SyncNowButton instrumentId={props.instrumentId} />
+              <Link
+                href={`/workspace/projects/${props.projectId}/responses`}
+                className="inline-flex h-8 items-center rounded-md border border-border px-3 text-sm font-medium transition-colors hover:bg-accent"
+              >
+                Review responses
+              </Link>
+            </>
           )}
           <ModeToggle defaultMode={effectiveDefault} />
         </div>

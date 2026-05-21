@@ -2,6 +2,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { notFound, redirect } from "next/navigation";
 import {
+  BarChart3,
   CalendarDays,
   Columns3,
   Layers,
@@ -23,6 +24,7 @@ import { ProjectProgress } from "@/components/workspace/project-progress";
 import { DeleteConfirm } from "@/components/workspace/delete-confirm";
 import { createActivity, createPhase, deleteWorkplan } from "@/lib/workspace/actions";
 import { getWorkspaceProject, listProjectPhases } from "@/lib/workspace/queries";
+import { getEvaluationForProject } from "@/lib/evaluations/queries";
 import { listTasks } from "@/lib/internal/queries";
 import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 import { ProjectMetricCard } from "./_components/project-metric-card";
@@ -54,10 +56,11 @@ export default async function WorkspaceProjectPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [projectMaybe, phases, internalTasks] = await Promise.all([
+  const [projectMaybe, phases, internalTasks, evaluation] = await Promise.all([
     getWorkspaceProject(id),
     listProjectPhases(id),
     listTasks({ projectId: id }),
+    getEvaluationForProject(id),
   ]);
   if (!projectMaybe) notFound();
   const project = projectMaybe;
@@ -175,24 +178,35 @@ export default async function WorkspaceProjectPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
         <Tabs defaultValue="phases" className="min-w-0">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <TabsList>
-              <TabsTrigger value="phases">
-                <Layers className="size-4" />
-                Phases
-              </TabsTrigger>
-              <TabsTrigger value="board">
-                <Columns3 className="size-4" />
-                Board
-              </TabsTrigger>
-              <TabsTrigger value="list">
-                <ListChecks className="size-4" />
-                List
-              </TabsTrigger>
-              <TabsTrigger value="timeline">
-                <CalendarDays className="size-4" />
-                Timeline
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex flex-wrap items-center gap-2">
+              <TabsList>
+                <TabsTrigger value="phases">
+                  <Layers className="size-4" />
+                  Phases
+                </TabsTrigger>
+                <TabsTrigger value="board">
+                  <Columns3 className="size-4" />
+                  Board
+                </TabsTrigger>
+                <TabsTrigger value="list">
+                  <ListChecks className="size-4" />
+                  List
+                </TabsTrigger>
+                <TabsTrigger value="timeline">
+                  <CalendarDays className="size-4" />
+                  Timeline
+                </TabsTrigger>
+              </TabsList>
+              {evaluation && (
+                <Link
+                  href={`/workspace/projects/${id}/dashboard`}
+                  className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-transparent bg-muted px-3 py-1 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all hover:text-foreground [&_svg]:size-4 [&_svg]:shrink-0"
+                >
+                  <BarChart3 />
+                  Data Collection
+                </Link>
+              )}
+            </div>
             <span className="text-xs text-muted-foreground">
               {phases.length} phases · {activities.length} activities
             </span>

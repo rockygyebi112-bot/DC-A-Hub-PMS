@@ -22,9 +22,9 @@ type Filter = "all" | "overdue" | "due_week" | "completed";
 export type TasksByFilter = Record<Filter, TaskRow[]>;
 
 const PRIORITY_COLOR: Record<TaskRow["priority"], { dot: string; label: string }> = {
-  high: { dot: "bg-[hsl(0_78%_56%)]", label: "High Priority" },
-  medium: { dot: "bg-[hsl(38_92%_50%)]", label: "Medium Priority" },
-  low: { dot: "bg-[hsl(160_64%_42%)]", label: "Low Priority" },
+  high: { dot: "bg-destructive", label: "High Priority" },
+  medium: { dot: "bg-[var(--status-at-risk)]", label: "Medium Priority" },
+  low: { dot: "bg-[var(--status-on-track)]", label: "Low Priority" },
 };
 
 function formatDue(date: string | null) {
@@ -129,7 +129,7 @@ export function TasksOverview({
                 className={cn(
                   "max-w-[140px] appearance-none truncate rounded-full border border-border bg-background py-1.5 pl-3 pr-8 text-xs font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/40 sm:max-w-none",
                   projectFilter !== "all" &&
-                    "border-[var(--color-dca-navy-900)] bg-[var(--color-dca-navy-900)] text-white hover:bg-[var(--color-dca-navy-900)]",
+                    "border-dca-navy-900 bg-dca-navy-900 text-white hover:bg-dca-navy-900",
                 )}
               >
                 <option value="all">All projects</option>
@@ -158,7 +158,7 @@ export function TasksOverview({
                 className={cn(
                   "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                   active
-                    ? "border-[var(--color-dca-navy-900)] bg-[var(--color-dca-navy-900)] text-white"
+                    ? "border-dca-navy-900 bg-dca-navy-900 text-white"
                     : "border-border bg-background text-muted-foreground hover:bg-muted",
                 )}
               >
@@ -196,7 +196,7 @@ export function TasksOverview({
                       className={cn(
                         "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
                         task.isCompleted
-                          ? "border-[hsl(160_64%_42%)] bg-[hsl(160_64%_42%)] text-white"
+                          ? "border-[var(--status-on-track)] bg-[var(--status-on-track)] text-white"
                           : "border-border bg-background",
                       )}
                     >

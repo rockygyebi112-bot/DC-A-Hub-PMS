@@ -15,7 +15,7 @@ export function ProgressBarsChart(props: {
               <span>{r.count} / {r.target}</span>
             </div>
             <div className="h-2 rounded bg-muted">
-              <div className="h-2 rounded bg-[var(--chart-2)]"
+              <div className="h-2 rounded bg-chart-2"
                    style={{ width: `${Math.min(100, r.pct)}%` }} />
             </div>
           </li>

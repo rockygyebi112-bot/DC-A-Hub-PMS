@@ -40,12 +40,18 @@ export async function POST(
     .from('mis_investments')
     .delete()
     .eq('evaluation_id', evaluationId);
-  if (delErr) return new NextResponse(delErr.message, { status: 500 });
+  if (delErr) {
+    console.error('[mis/upload] delete failed', delErr);
+    return new NextResponse('Failed to replace MIS data', { status: 500 });
+  }
 
   const { error } = await sb
     .from('mis_investments')
     .insert(rows.map((r) => ({ ...r, evaluation_id: evaluationId })));
-  if (error) return new NextResponse(error.message, { status: 500 });
+  if (error) {
+    console.error('[mis/upload] insert failed', error);
+    return new NextResponse('Failed to save MIS data', { status: 500 });
+  }
 
   return NextResponse.json({ inserted: rows.length });
 }

@@ -123,9 +123,12 @@ async function resolveChart(props: {
         return { kind: 'invalid', reason: 'unknown chart type' };
     }
   } catch (e) {
+    // Aggregation failures can carry raw DB error text (schema names, query
+    // fragments). Log the real error server-side; show users a generic note.
+    console.error('[chart-engine] aggregation failed', e);
     return {
       kind: 'invalid',
-      reason: e instanceof Error ? e.message : String(e),
+      reason: 'could not load chart data',
     };
   }
 }

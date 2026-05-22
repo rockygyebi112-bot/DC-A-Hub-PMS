@@ -1,5 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 
+import { PageHeader } from '@/components/admin/ui/page-header';
+import { ProjectIcon } from '@/components/ui/project-icon';
 import { DashboardView } from '@/components/evaluations/dashboard-view';
 import { ProjectDashboardTabs } from '@/components/evaluations/project-dashboard-tabs';
 import { getCurrentProfile } from '@/lib/auth/get-current-profile';
@@ -15,30 +17,43 @@ export default async function StaffDashboardPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const profile = await getCurrentProfile();
-  if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
-    redirect('/');
-  }
-
   const { id: projectId } = await params;
   const sp = await searchParams;
 
-  const project = await getWorkspaceProject(projectId);
-  if (!project) notFound();
+  // These three reads are mutually independent — fan them out.
+  const [profile, project, evMin] = await Promise.all([
+    getCurrentProfile(),
+    getWorkspaceProject(projectId),
+    getEvaluationForProject(projectId),
+  ]);
 
-  const evMin = await getEvaluationForProject(projectId);
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
+    redirect('/');
+  }
+  if (!project) notFound();
   if (!evMin) notFound();
 
+  // Depends on evMin.id, so it runs after the fan-out.
   const ev = await getEvaluation(evMin.id);
   if (!ev) notFound();
 
   const hh = (ev.instruments ?? []).find(
     (i: { kind: string }) => i.kind === 'hh',
   );
+
   return (
     <>
-      <div className="space-y-3 px-6 pt-6">
-        <h1 className="text-2xl font-semibold">{project.name}</h1>
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            <ProjectIcon name={project.name} seed={project.id} />
+            <span>{project.name}</span>
+          </span>
+        }
+        subtitle={`Data Collection · ${project.client?.name ?? 'Client'}`}
+        backFallbackHref={`/workspace/projects/${projectId}`}
+      />
+      <div className="mb-6">
         <ProjectDashboardTabs projectId={projectId} />
       </div>
       {hh ? (

@@ -23,6 +23,7 @@ export async function DashboardView(props: {
   approvedOnly: boolean;
   showStaffControls: boolean;
 }) {
+  const sb = await createClient();
   const cfg = await getActiveDashboardSpec(props.evaluationId);
   if (!cfg) {
     return (
@@ -42,6 +43,20 @@ export async function DashboardView(props: {
   }
   const spec = DashboardSpec.parse(cfg.spec);
 
+  const [approvedRes, filterRowsRes] = await Promise.all([
+    sb
+      .from('evaluation_responses')
+      .select('id', { count: 'exact', head: true })
+      .eq('instrument_id', props.instrumentId)
+      .eq('qc_status', 'approved'),
+    sb
+      .from('evaluation_responses')
+      .select('region, district, community')
+      .eq('instrument_id', props.instrumentId),
+  ]);
+  const approvedCount = approvedRes.count;
+  const filterRows = filterRowsRes.data;
+
   const filters: FilterState = {
     region: pickStr(props.searchParams.region),
     district: pickStr(props.searchParams.district),
@@ -51,12 +66,6 @@ export async function DashboardView(props: {
   };
 
   // Decide default mode if not overridden.
-  const sb = await createClient();
-  const { count: approvedCount } = await sb
-    .from('evaluation_responses')
-    .select('id', { count: 'exact', head: true })
-    .eq('instrument_id', props.instrumentId)
-    .eq('qc_status', 'approved');
   const targetN = props.targetN ?? 0;
   const collectionPct = targetN > 0 ? (approvedCount ?? 0) / targetN : 0;
   const autoMode: 'progress' | 'findings' =
@@ -74,10 +83,6 @@ export async function DashboardView(props: {
   // Filter option sources — distinct region/district/community values. One
   // query pulls all three columns; the distinct sets are derived in memory
   // (cheap at v1 scale) instead of three separate round trips.
-  const { data: filterRows } = await sb
-    .from('evaluation_responses')
-    .select('region, district, community')
-    .eq('instrument_id', props.instrumentId);
   const distinctValues = (col: 'region' | 'district' | 'community') =>
     Array.from(
       new Set(
@@ -97,12 +102,9 @@ export async function DashboardView(props: {
   return (
     <div className="space-y-4 p-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Evaluation dashboard</h1>
-          <span className="text-xs text-muted-foreground">
-            {approvedCount ?? 0} approved / {targetN || '—'} target
-          </span>
-        </div>
+        <span className="text-xs text-muted-foreground">
+          {approvedCount ?? 0} approved / {targetN || '—'} target
+        </span>
         <div className="flex items-center gap-2">
           {props.showStaffControls && (
             <>
@@ -136,6 +138,7 @@ export async function DashboardView(props: {
             instrumentId={props.instrumentId}
             approvedOnly={props.approvedOnly}
             filters={filters}
+            approvedCount={approvedCount ?? 0}
           />
         ) : (
           <FindingsMode

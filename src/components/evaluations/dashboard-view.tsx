@@ -7,9 +7,11 @@ import { DashboardSpec } from '@/lib/evaluations/dashboard-spec';
 import type { FilterState } from '@/lib/evaluations/schemas';
 import { createClient } from '@/lib/supabase/server';
 
+import { ProjectMetricCard } from '@/app/workspace/projects/[id]/_components/project-metric-card';
+import { ProjectProgress } from '@/components/workspace/project-progress';
+
 import { ChartEngine } from './chart-engine';
 import { FilterBar } from './filter-bar';
-import { KpiTile } from './kpi-tile';
 import { ModeToggle } from './mode-toggle';
 import { SyncNowButton } from './sync-now-button';
 
@@ -187,15 +189,44 @@ async function ProgressMode(props: {
   approvedOnly: boolean;
   targetN: number;
   filters: FilterState;
+  approvedCount: number;
 }) {
-  // KPI values are stubbed ("—") pending a dedicated KPI-computation pass;
-  // wiring up real numbers is intentionally out of scope for this task.
+  // Two independent count/select reads for the remaining KPI tiles.
+  const sb = await createClient();
+  const [pendingRes, districtRes] = await Promise.all([
+    sb
+      .from('evaluation_responses')
+      .select('id', { count: 'exact', head: true })
+      .eq('instrument_id', props.instrumentId)
+      .eq('qc_status', 'pending'),
+    sb
+      .from('evaluation_responses')
+      .select('district')
+      .eq('instrument_id', props.instrumentId),
+  ]);
+  const pendingCount = pendingRes.count ?? 0;
+  const districtsActive = new Set(
+    (districtRes.data ?? [])
+      .map((r: { district: string | null }) => r.district)
+      .filter((d): d is string => Boolean(d)),
+  ).size;
+
   return (
     <section className="space-y-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        <KpiTile label="Approved" value="—" sub="vs target" />
-        <KpiTile label="Awaiting QC" value="—" />
-        <KpiTile label="Districts active" value="—" />
+        <ProjectMetricCard title="Approved">
+          <ProjectProgress done={props.approvedCount} total={props.targetN} />
+        </ProjectMetricCard>
+        <ProjectMetricCard title="Awaiting QC">
+          <p className="font-heading text-2xl font-semibold tabular-nums">
+            {pendingCount}
+          </p>
+        </ProjectMetricCard>
+        <ProjectMetricCard title="Districts active">
+          <p className="font-heading text-2xl font-semibold tabular-nums">
+            {districtsActive}
+          </p>
+        </ProjectMetricCard>
       </div>
       <ChartEngine
         entry={{

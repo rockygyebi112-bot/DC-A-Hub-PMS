@@ -3,6 +3,13 @@
 -- Seeds the SOCO Midterm Review evaluation + the Household Survey instrument
 -- + the v1 dashboard spec (6 KPIs, 6 sections).
 --
+-- Reconciled 2026-05 against "MTR Harmonized Modules_HH_Ghana_Update_20260519":
+--   * schema_config: age fixed s1_a2 -> s1_a5; cluster (s0_a6) added.
+--   * dashboard spec: chart fields realigned to the questionnaire's actual
+--     section codes (s0-s6). Old s3_c / s5_* / s6_* / s7_* references removed.
+--   Every field code below is anchored on an explicit skip-logic reference in
+--   the questionnaire (no inferred guesses).
+--
 -- This migration is idempotent: every insert is guarded by a NOT EXISTS check
 -- on a stable slug or natural key. Re-running is safe.
 --
@@ -40,9 +47,10 @@ begin
       '{
         "s0_a4": "region",
         "s0_a5": "district",
+        "s0_a6": "cluster",
         "s0_a7": "community",
         "s1_a1": "gender",
-        "s1_a2": "age"
+        "s1_a5": "age"
       }'::jsonb
     )
     returning id into hh_instrument_id;
@@ -84,36 +92,45 @@ begin
               { "type": "bar_pct", "field": "s3_a2", "title": "How they heard",
                 "filter": { "field": "s3_a1", "eq": 1 } },
               { "type": "stacked_bar", "field": "s3_a8", "by": "gender",
-                "title": "Felt involved (by gender)" }
+                "title": "Felt involved in meeting decisions (by gender)" }
+            ]
+          },
+          { "id": "meetings", "title": "Community meetings & CPIC",
+            "charts": [
+              { "type": "donut", "field": "s3_a3", "title": "SOCO meeting held in community" },
+              { "type": "donut", "field": "s3_a4", "title": "Personally attended a meeting",
+                "filter": { "field": "s3_a3", "eq": 1 } },
+              { "type": "donut", "field": "s3_a10", "title": "CPIC exists in community" }
             ]
           },
           { "id": "investments", "title": "Infrastructure investments",
             "charts": [
               { "type": "horizontal_bar", "field": "inv_familiarity", "title": "Familiarity by investment" },
-              { "type": "horizontal_bar", "field": "inv_satisfaction", "title": "Satisfaction by investment" }
+              { "type": "horizontal_bar", "field": "inv_satisfaction", "title": "Satisfaction by investment" },
+              { "type": "bar_pct", "field": "s3_b3", "title": "How often investment is used" },
+              { "type": "donut", "field": "s3_b19", "title": "Investment benefited household" }
             ]
           },
-          { "id": "cohesion", "title": "Social cohesion activities",
+          { "id": "services", "title": "Service satisfaction & access",
             "charts": [
-              { "type": "donut", "field": "s3_c1", "title": "Familiar with cohesion activities" },
-              { "type": "bar_pct", "field": "s3_c3", "title": "Why participated" }
+              { "type": "donut", "field": "s2_a4", "title": "Pays for drinking water" },
+              { "type": "bar_pct", "field": "s2_b1", "title": "Market location" },
+              { "type": "donut", "field": "s2_d2", "title": "Household member fell seriously ill" }
             ]
           },
-          { "id": "perceptions", "title": "Perceptions & attitudes",
+          { "id": "civic", "title": "Civic engagement",
             "charts": [
-              { "type": "stacked_bar", "field": "s5_trust", "by": "district", "title": "Trust by district" },
-              { "type": "heatmap", "field": "s5_benefits", "by": "gender", "title": "Who benefits more grid" }
+              { "type": "donut", "field": "s4_b1", "title": "Public meeting held (past 12 months)" },
+              { "type": "donut", "field": "s4_b2", "title": "Personally attended a community meeting",
+                "filter": { "field": "s4_b1", "eq": 1 } },
+              { "type": "donut", "field": "s4_b7", "title": "Participated in community works" }
             ]
           },
-          { "id": "services", "title": "Service satisfaction & change",
+          { "id": "shocks", "title": "Conflict & climate shocks",
             "charts": [
-              { "type": "stacked_bar", "field": "s6_satisfaction", "by": "district", "title": "Satisfaction by service" }
-            ]
-          },
-          { "id": "conflict", "title": "Conflict & climate shocks",
-            "charts": [
-              { "type": "donut", "field": "s7_conflict_freq", "title": "Conflict frequency" },
-              { "type": "bar_pct", "field": "s7_climate_shocks", "title": "Climate shocks experienced" }
+              { "type": "bar_pct", "field": "s5_a1", "title": "Community conflict frequency" },
+              { "type": "stacked_bar", "field": "s5_b6", "by": "district",
+                "title": "SOCO effect on coping with drought (by district)" }
             ]
           }
         ],
@@ -123,8 +140,8 @@ begin
           "gender": { "field": "gender" },
           "soco_exposure": {
             "Heard of SOCO": { "field": "s3_a1", "eq": 1 },
-            "Attended meeting": { "field": "s3_a4", "eq": 1 },
-            "Participated in cohesion activity": { "field": "s3_c2", "eq": 1 }
+            "Attended a meeting": { "field": "s3_a4", "eq": 1 },
+            "Familiar with an investment": { "field": "s3_b2", "eq": 1 }
           }
         }
       }'::jsonb,

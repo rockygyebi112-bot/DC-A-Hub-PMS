@@ -107,7 +107,7 @@ function FilterPill({
   return (
     <Link
       href={href}
-      aria-current={active ? 'page' : undefined}
+      aria-current={active ? 'true' : undefined}
       className={`rounded-full border px-3 py-1 transition-colors ${
         active
           ? 'border-primary bg-primary text-primary-foreground'

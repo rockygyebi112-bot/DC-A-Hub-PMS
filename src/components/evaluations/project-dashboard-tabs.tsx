@@ -14,7 +14,7 @@ const triggerBase =
 const triggerInactive =
   'text-muted-foreground hover:text-foreground';
 const triggerActive =
-  'bg-background text-foreground shadow-sm';
+  'bg-background text-foreground shadow-sm dark:border-input dark:bg-input/30';
 
 /**
  * Tab strip on the project's Data Collection dashboard route. The four

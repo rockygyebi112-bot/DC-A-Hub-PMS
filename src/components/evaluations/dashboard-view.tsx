@@ -103,6 +103,9 @@ export async function DashboardView(props: {
 
   return (
     <div className="space-y-4 p-6">
+      {/* Controls live in this toolbar row (not the page PageHeader) because
+          SyncNowButton, the responses link, and ModeToggle all depend on
+          values computed inside DashboardView (instrumentId, effectiveDefault). */}
       <header className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-xs text-muted-foreground">
           {approvedCount ?? 0} approved / {targetN || '—'} target

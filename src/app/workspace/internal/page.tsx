@@ -54,7 +54,7 @@ export default async function InternalWorkspacePage({
         action={<NewTaskForm areas={areas} />}
       />
 
-      <div className="mb-4 space-y-2">
+      <nav aria-label="Task filters" className="mb-4 space-y-2">
         <div className="flex flex-wrap gap-2 text-sm">
           <FilterPill
             href={filterHref({ area: undefined })}
@@ -86,7 +86,7 @@ export default async function InternalWorkspacePage({
             />
           ))}
         </div>
-      </div>
+      </nav>
 
       <TaskList tasks={tasks} areas={areas} />
     </>
@@ -107,6 +107,7 @@ function FilterPill({
   return (
     <Link
       href={href}
+      aria-current={active ? 'page' : undefined}
       className={`rounded-full border px-3 py-1 transition-colors ${
         active
           ? 'border-primary bg-primary text-primary-foreground'

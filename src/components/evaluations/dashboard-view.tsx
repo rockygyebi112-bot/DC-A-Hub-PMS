@@ -7,9 +7,11 @@ import { DashboardSpec } from '@/lib/evaluations/dashboard-spec';
 import type { FilterState } from '@/lib/evaluations/schemas';
 import { createClient } from '@/lib/supabase/server';
 
+import { ProjectMetricCard } from '@/app/workspace/projects/[id]/_components/project-metric-card';
+import { ProjectProgress } from '@/components/workspace/project-progress';
+
 import { ChartEngine } from './chart-engine';
 import { FilterBar } from './filter-bar';
-import { KpiTile } from './kpi-tile';
 import { ModeToggle } from './mode-toggle';
 import { SyncNowButton } from './sync-now-button';
 
@@ -23,6 +25,7 @@ export async function DashboardView(props: {
   approvedOnly: boolean;
   showStaffControls: boolean;
 }) {
+  const sb = await createClient();
   const cfg = await getActiveDashboardSpec(props.evaluationId);
   if (!cfg) {
     return (
@@ -42,6 +45,20 @@ export async function DashboardView(props: {
   }
   const spec = DashboardSpec.parse(cfg.spec);
 
+  const [approvedRes, filterRowsRes] = await Promise.all([
+    sb
+      .from('evaluation_responses')
+      .select('id', { count: 'exact', head: true })
+      .eq('instrument_id', props.instrumentId)
+      .eq('qc_status', 'approved'),
+    sb
+      .from('evaluation_responses')
+      .select('region, district, community')
+      .eq('instrument_id', props.instrumentId),
+  ]);
+  const approvedCount = approvedRes.count;
+  const filterRows = filterRowsRes.data;
+
   const filters: FilterState = {
     region: pickStr(props.searchParams.region),
     district: pickStr(props.searchParams.district),
@@ -51,12 +68,6 @@ export async function DashboardView(props: {
   };
 
   // Decide default mode if not overridden.
-  const sb = await createClient();
-  const { count: approvedCount } = await sb
-    .from('evaluation_responses')
-    .select('id', { count: 'exact', head: true })
-    .eq('instrument_id', props.instrumentId)
-    .eq('qc_status', 'approved');
   const targetN = props.targetN ?? 0;
   const collectionPct = targetN > 0 ? (approvedCount ?? 0) / targetN : 0;
   const autoMode: 'progress' | 'findings' =
@@ -74,10 +85,6 @@ export async function DashboardView(props: {
   // Filter option sources — distinct region/district/community values. One
   // query pulls all three columns; the distinct sets are derived in memory
   // (cheap at v1 scale) instead of three separate round trips.
-  const { data: filterRows } = await sb
-    .from('evaluation_responses')
-    .select('region, district, community')
-    .eq('instrument_id', props.instrumentId);
   const distinctValues = (col: 'region' | 'district' | 'community') =>
     Array.from(
       new Set(
@@ -96,13 +103,13 @@ export async function DashboardView(props: {
 
   return (
     <div className="space-y-4 p-6">
+      {/* Controls live in this toolbar row (not the page PageHeader) because
+          SyncNowButton, the responses link, and ModeToggle all depend on
+          values computed inside DashboardView (instrumentId, effectiveDefault). */}
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Evaluation dashboard</h1>
-          <span className="text-xs text-muted-foreground">
-            {approvedCount ?? 0} approved / {targetN || '—'} target
-          </span>
-        </div>
+        <span className="text-xs text-muted-foreground">
+          {approvedCount ?? 0} approved / {targetN || '—'} target
+        </span>
         <div className="flex items-center gap-2">
           {props.showStaffControls && (
             <>
@@ -136,6 +143,8 @@ export async function DashboardView(props: {
             instrumentId={props.instrumentId}
             approvedOnly={props.approvedOnly}
             filters={filters}
+            approvedCount={approvedCount ?? 0}
+            districtsActive={districts.length}
           />
         ) : (
           <FindingsMode
@@ -184,15 +193,34 @@ async function ProgressMode(props: {
   approvedOnly: boolean;
   targetN: number;
   filters: FilterState;
+  approvedCount: number;
+  districtsActive: number;
 }) {
-  // KPI values are stubbed ("—") pending a dedicated KPI-computation pass;
-  // wiring up real numbers is intentionally out of scope for this task.
+  // KPI counts are instrument-wide totals and intentionally not scoped to the active filter-bar selection.
+  const sb = await createClient();
+  const { count: pendingRaw } = await sb
+    .from('evaluation_responses')
+    .select('id', { count: 'exact', head: true })
+    .eq('instrument_id', props.instrumentId)
+    .eq('qc_status', 'pending');
+  const pendingCount = pendingRaw ?? 0;
+
   return (
     <section className="space-y-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        <KpiTile label="Approved" value="—" sub="vs target" />
-        <KpiTile label="Awaiting QC" value="—" />
-        <KpiTile label="Districts active" value="—" />
+        <ProjectMetricCard title="Approved">
+          <ProjectProgress done={props.approvedCount} total={props.targetN} unit="responses" />
+        </ProjectMetricCard>
+        <ProjectMetricCard title="Awaiting QC">
+          <p className="font-heading text-2xl font-semibold tabular-nums">
+            {pendingCount}
+          </p>
+        </ProjectMetricCard>
+        <ProjectMetricCard title="Districts active">
+          <p className="font-heading text-2xl font-semibold tabular-nums">
+            {props.districtsActive}
+          </p>
+        </ProjectMetricCard>
       </div>
       <ChartEngine
         entry={{

@@ -3,8 +3,6 @@ import {
   clientFormSchema,
   projectFormSchema,
   inviteUserSchema,
-  assignMemberSchema,
-  inviteClientViewerSchema,
 } from "@/lib/admin/schemas";
 
 describe("clientFormSchema", () => {
@@ -72,38 +70,5 @@ describe("inviteUserSchema", () => {
     expect(
       inviteUserSchema.safeParse({ email: "no", role: "staff" }).success,
     ).toBe(false);
-  });
-});
-
-describe("assignMemberSchema", () => {
-  it("accepts a uuid + member role", () => {
-    expect(
-      assignMemberSchema.safeParse({
-        user_id: "11111111-1111-4111-8111-111111111111",
-        project_role: "member",
-      }).success,
-    ).toBe(true);
-  });
-  it("accepts viewer role", () => {
-    expect(
-      assignMemberSchema.safeParse({
-        user_id: "11111111-1111-4111-8111-111111111111",
-        project_role: "viewer",
-      }).success,
-    ).toBe(true);
-  });
-});
-
-describe("inviteClientViewerSchema", () => {
-  it("accepts email + optional name", () => {
-    expect(
-      inviteClientViewerSchema.safeParse({
-        email: "client@x.com",
-        full_name: "Client X",
-      }).success,
-    ).toBe(true);
-    expect(
-      inviteClientViewerSchema.safeParse({ email: "client@x.com" }).success,
-    ).toBe(true);
   });
 });

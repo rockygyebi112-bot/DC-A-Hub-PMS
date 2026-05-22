@@ -69,24 +69,6 @@ export type InviteUserInput = z.infer<typeof inviteUserSchema>;
 export const projectRoleSchema = z.enum(["manager", "member", "viewer"]);
 export type ProjectRole = z.infer<typeof projectRoleSchema>;
 
-export const assignMemberSchema = z.object({
-  user_id: z.string().uuid(),
-  project_role: projectRoleSchema,
-});
-export type AssignMemberInput = z.infer<typeof assignMemberSchema>;
-
-// Bulk variant for the multi-select assign dialog. Lets an admin add many
-// staff (or viewers) to a project in one round-trip instead of clicking
-// through the single-select dialog repeatedly.
-export const assignMembersSchema = z.object({
-  user_ids: z
-    .array(z.string().uuid())
-    .min(1, "Pick at least one user")
-    .max(100, "Too many users in one batch"),
-  project_role: projectRoleSchema,
-});
-export type AssignMembersInput = z.infer<typeof assignMembersSchema>;
-
 // Combined "Add staff/client" dialog payload. Admin may pick any number of
 // existing users AND/OR include a single new-invite block. Either side is
 // optional but at least one must be present (validated server-side).
@@ -119,20 +101,6 @@ export const setProjectManagerSchema = z.object({
 });
 export type SetProjectManagerInput = z.infer<typeof setProjectManagerSchema>;
 
-export const inviteClientViewerSchema = z.object({
-  email: z.string().trim().email(),
-  full_name: z.string().trim().max(200).optional(),
-});
-export type InviteClientViewerInput = z.infer<typeof inviteClientViewerSchema>;
-
-// Shape mirrors inviteClientViewerSchema; kept as its own type so the
-// "Invite staff" form has a distinct, intention-revealing payload shape.
-export const inviteStaffMemberSchema = z.object({
-  email: z.string().trim().email(),
-  full_name: z.string().trim().max(200).optional(),
-});
-export type InviteStaffMemberInput = z.infer<typeof inviteStaffMemberSchema>;
-
 export const setUserRoleSchema = z.object({
   role: z.enum(["admin", "staff", "client"]),
 });
@@ -141,12 +109,6 @@ export type SetUserRoleInput = z.infer<typeof setUserRoleSchema>;
 /* ---------------------------------------------------------------- */
 /* Finance / Budget                                                  */
 /* ---------------------------------------------------------------- */
-
-const moneyString = z
-  .string()
-  .trim()
-  .refine((v) => v === "" || /^\d+(\.\d{1,2})?$/.test(v), "Use a valid amount")
-  .transform((v) => (v === "" ? 0 : Number(v)));
 
 const moneyNumber = z.coerce
   .number()

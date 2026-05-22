@@ -141,6 +141,7 @@ export async function DashboardView(props: {
             approvedOnly={props.approvedOnly}
             filters={filters}
             approvedCount={approvedCount ?? 0}
+            districtsActive={districts.length}
           />
         ) : (
           <FindingsMode
@@ -190,32 +191,22 @@ async function ProgressMode(props: {
   targetN: number;
   filters: FilterState;
   approvedCount: number;
+  districtsActive: number;
 }) {
-  // Two independent count/select reads for the remaining KPI tiles.
+  // KPI counts are instrument-wide totals and intentionally not scoped to the active filter-bar selection.
   const sb = await createClient();
-  const [pendingRes, districtRes] = await Promise.all([
-    sb
-      .from('evaluation_responses')
-      .select('id', { count: 'exact', head: true })
-      .eq('instrument_id', props.instrumentId)
-      .eq('qc_status', 'pending'),
-    sb
-      .from('evaluation_responses')
-      .select('district')
-      .eq('instrument_id', props.instrumentId),
-  ]);
-  const pendingCount = pendingRes.count ?? 0;
-  const districtsActive = new Set(
-    (districtRes.data ?? [])
-      .map((r: { district: string | null }) => r.district)
-      .filter((d): d is string => Boolean(d)),
-  ).size;
+  const { count: pendingRaw } = await sb
+    .from('evaluation_responses')
+    .select('id', { count: 'exact', head: true })
+    .eq('instrument_id', props.instrumentId)
+    .eq('qc_status', 'pending');
+  const pendingCount = pendingRaw ?? 0;
 
   return (
     <section className="space-y-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <ProjectMetricCard title="Approved">
-          <ProjectProgress done={props.approvedCount} total={props.targetN} />
+          <ProjectProgress done={props.approvedCount} total={props.targetN} unit="responses" />
         </ProjectMetricCard>
         <ProjectMetricCard title="Awaiting QC">
           <p className="font-heading text-2xl font-semibold tabular-nums">
@@ -224,7 +215,7 @@ async function ProgressMode(props: {
         </ProjectMetricCard>
         <ProjectMetricCard title="Districts active">
           <p className="font-heading text-2xl font-semibold tabular-nums">
-            {districtsActive}
+            {props.districtsActive}
           </p>
         </ProjectMetricCard>
       </div>

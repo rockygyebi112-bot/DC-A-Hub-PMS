@@ -66,7 +66,8 @@ export async function POST(req: NextRequest) {
       .select('id, evaluation_id, evaluations!inner(status)')
       .eq('evaluations.status', 'collecting');
     if (error) {
-      return new NextResponse(`Lookup failed: ${error.message}`, { status: 500 });
+      console.error('[evaluations/sync] instrument lookup failed', error);
+      return new NextResponse('Lookup failed', { status: 500 });
     }
     targets = (data ?? []).map((r) => ({ id: r.id }));
   }

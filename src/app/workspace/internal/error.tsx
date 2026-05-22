@@ -1,4 +1,21 @@
-'use client';
-export default function Error({ error }: { error: Error }) {
-  return <main className="p-6 text-sm text-red-600">Something went wrong: {error.message}</main>;
+"use client";
+
+import { ErrorFallback } from "@/components/errors/error-fallback";
+
+export default function InternalError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <ErrorFallback
+      error={error}
+      reset={reset}
+      title="Couldn't load this page"
+      homeHref="/workspace/internal"
+      homeLabel="Back to internal workspace"
+    />
+  );
 }

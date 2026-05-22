@@ -85,7 +85,7 @@ export function TaskCard({ task }: { task: TaskRow }) {
         <span
           className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${pillClass}`}
         >
-          {task.status.replace('_', ' ')}
+          {task.status.replaceAll('_', ' ')}
         </span>
       </div>
       <div className="mt-2 flex items-center justify-between gap-2">

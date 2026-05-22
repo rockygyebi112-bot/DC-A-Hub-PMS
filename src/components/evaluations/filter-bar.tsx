@@ -1,5 +1,6 @@
 'use client';
 
+import { useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Select,
@@ -17,12 +18,15 @@ export function FilterBar(props: {
 }) {
   const router = useRouter();
   const params = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   function setParam(name: string, value: string) {
     const next = new URLSearchParams(params.toString());
     if (!value || value === 'all' || value === 'All') next.delete(name);
     else next.set(name, value);
-    router.push(`?${next.toString()}`);
+    startTransition(() => {
+      router.push(`?${next.toString()}`);
+    });
   }
 
   const region = params.get('region') || 'all';
@@ -32,8 +36,15 @@ export function FilterBar(props: {
   const exposure = params.get('soco_exposure') ?? 'All';
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-3 text-sm">
-      <Select value={region} onValueChange={(v) => setParam('region', v ?? 'all')}>
+    <div
+      data-pending={isPending ? '' : undefined}
+      className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-3 text-sm transition-opacity data-[pending]:pointer-events-none data-[pending]:opacity-50"
+    >
+      <Select
+        value={region}
+        onValueChange={(v) => setParam('region', v ?? 'all')}
+        disabled={isPending}
+      >
         <SelectTrigger size="sm">
           <SelectValue />
         </SelectTrigger>
@@ -46,7 +57,11 @@ export function FilterBar(props: {
           ))}
         </SelectContent>
       </Select>
-      <Select value={district} onValueChange={(v) => setParam('district', v ?? 'all')}>
+      <Select
+        value={district}
+        onValueChange={(v) => setParam('district', v ?? 'all')}
+        disabled={isPending}
+      >
         <SelectTrigger size="sm">
           <SelectValue />
         </SelectTrigger>
@@ -59,7 +74,11 @@ export function FilterBar(props: {
           ))}
         </SelectContent>
       </Select>
-      <Select value={community} onValueChange={(v) => setParam('community', v ?? 'all')}>
+      <Select
+        value={community}
+        onValueChange={(v) => setParam('community', v ?? 'all')}
+        disabled={isPending}
+      >
         <SelectTrigger size="sm">
           <SelectValue />
         </SelectTrigger>
@@ -72,7 +91,11 @@ export function FilterBar(props: {
           ))}
         </SelectContent>
       </Select>
-      <Select value={gender} onValueChange={(v) => setParam('gender', v ?? 'all')}>
+      <Select
+        value={gender}
+        onValueChange={(v) => setParam('gender', v ?? 'all')}
+        disabled={isPending}
+      >
         <SelectTrigger size="sm">
           <SelectValue />
         </SelectTrigger>
@@ -85,6 +108,7 @@ export function FilterBar(props: {
       <Select
         value={exposure}
         onValueChange={(v) => setParam('soco_exposure', v ?? 'All')}
+        disabled={isPending}
       >
         <SelectTrigger size="sm">
           <SelectValue />

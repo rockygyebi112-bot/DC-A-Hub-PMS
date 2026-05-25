@@ -84,7 +84,7 @@ export function EditCard({
         </label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="grid gap-2 text-sm font-medium">
-            Start date
+            Planned date
             <Input
               name="planned_date"
               type="date"
@@ -92,7 +92,7 @@ export function EditCard({
             />
           </label>
           <label className="grid gap-2 text-sm font-medium">
-            End date
+            Actual completion date
             <Input
               name="completed_date"
               type="date"
@@ -124,6 +124,7 @@ export function EditCard({
                 value="client_visible"
                 required
                 defaultChecked={activity.visibility === "client_visible"}
+                className="size-4 accent-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
               Client-visible
             </label>
@@ -134,6 +135,7 @@ export function EditCard({
                 value="internal"
                 required
                 defaultChecked={activity.visibility === "internal"}
+                className="size-4 accent-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
               Internal only
             </label>

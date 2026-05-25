@@ -11,7 +11,7 @@ import { NeedHelpCard } from "@/components/portal/side-cards";
 import { PortalProjectTabs } from "@/components/portal/project-tabs";
 import { WorkplanProgressTable } from "@/components/portal/workplan-progress-table";
 import { getEvaluationForProject } from "@/lib/evaluations/queries";
-import { getPortalProjectDetail } from "@/lib/portal/queries";
+import { getPortalProjectDetail, listPortalProjects } from "@/lib/portal/queries";
 
 export default async function PortalProjectPage({
   params,
@@ -20,11 +20,16 @@ export default async function PortalProjectPage({
 }) {
   const { id } = await params;
 
-  const [detail, evaluation] = await Promise.all([
+  const [detail, evaluation, allProjects] = await Promise.all([
     getPortalProjectDetail(id),
     getEvaluationForProject(id),
+    listPortalProjects(),
   ]);
   if (!detail) notFound();
+  // Single-project clients are redirected from /portal straight into their
+  // project, so a back link there would loop them. Only show it when they
+  // actually have somewhere to go back to.
+  const hasMultipleProjects = allProjects.length > 1;
 
   const {
     project,
@@ -50,7 +55,7 @@ export default async function PortalProjectPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        showBack={false}
+        showBack={hasMultipleProjects}
         backFallbackHref="/portal"
         title={
           <span className="flex flex-wrap items-center gap-3">

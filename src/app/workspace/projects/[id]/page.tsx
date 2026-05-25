@@ -5,6 +5,7 @@ import {
   BarChart3,
   CalendarDays,
   Columns3,
+  FileUp,
   Layers,
   ListChecks,
   Plus,
@@ -12,7 +13,9 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -125,27 +128,35 @@ export default async function WorkspaceProjectPage({
               Activity
             </Button>
             {phases.length > 0 && (
-              <DeleteConfirm
-                trigger={
-                  <Button variant="destructive" size="default">
-                    <Trash2 className="size-4" />
-                    Delete workplan
-                  </Button>
-                }
-                title="Delete workplan"
-                description={
-                  <>
-                    This will permanently delete <strong>all {phases.length} phases</strong>,{" "}
-                    <strong>{activities.length} activities</strong>, and every uploaded document for
-                    this project. The project itself will remain.
-                  </>
-                }
-                confirmWord="DELETE"
-                action={async () => {
-                  "use server";
-                  return deleteWorkplan(id);
-                }}
-              />
+              <>
+                <span className="mx-1 hidden h-6 w-px bg-border md:inline-block" aria-hidden />
+                <DeleteConfirm
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Delete workplan"
+                      title="Delete workplan"
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  }
+                  title="Delete workplan"
+                  description={
+                    <>
+                      This will permanently delete <strong>all {phases.length} phases</strong>,{" "}
+                      <strong>{activities.length} activities</strong>, and every uploaded document for
+                      this project. The project itself will remain.
+                    </>
+                  }
+                  confirmWord="DELETE"
+                  action={async () => {
+                    "use server";
+                    return deleteWorkplan(id);
+                  }}
+                />
+              </>
             )}
           </div>
         }
@@ -182,7 +193,30 @@ export default async function WorkspaceProjectPage({
         </ProjectMetricCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
+      {phases.length === 0 && (
+        <SectionCard title="Get started">
+          <EmptyState
+            variant="page"
+            icon={Layers}
+            title="This project has no workplan yet"
+            description="Import a workplan from Excel or add your first phase using the form on the right. Activities can then be planned under each phase."
+            action={
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button render={<a href="#import-checklist" />}>
+                  <FileUp className="size-4" />
+                  Import workplan
+                </Button>
+                <Button variant="outline" render={<Link href={`/workspace/projects/${id}/activities/new`} />}>
+                  <Plus className="size-4" />
+                  Add activity
+                </Button>
+              </div>
+            }
+          />
+        </SectionCard>
+      )}
+
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
         <Tabs defaultValue="phases" className="min-w-0">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -237,20 +271,34 @@ export default async function WorkspaceProjectPage({
         </Tabs>
 
         <aside className="space-y-4">
-          <div id="import-checklist" className="scroll-mt-20">
-            <SectionCard title="Import checklist">
-              <WorkplanImportForm projectId={id} />
-            </SectionCard>
-          </div>
+          {phases.length === 0 && (
+            <div id="import-checklist" className="scroll-mt-20">
+              <SectionCard title="Import checklist">
+                <WorkplanImportForm projectId={id} />
+              </SectionCard>
+            </div>
+          )}
 
           <SectionCard title="Add phase">
             <ToastForm action={addPhase} successMessage="Phase added" className="space-y-3">
-              <Input name="name" placeholder="Inception" required />
-              <div className="grid grid-cols-2 gap-2">
-                <Input name="start_date" type="date" />
-                <Input name="end_date" type="date" />
+              <div className="space-y-1.5">
+                <Label htmlFor="phase-name">Phase name</Label>
+                <Input id="phase-name" name="name" placeholder="Inception" required />
               </div>
-              <Textarea name="description" placeholder="Phase notes" rows={3} />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="phase-start">Start date</Label>
+                  <Input id="phase-start" name="start_date" type="date" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="phase-end">End date</Label>
+                  <Input id="phase-end" name="end_date" type="date" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="phase-notes">Notes</Label>
+                <Textarea id="phase-notes" name="description" placeholder="Optional context" rows={3} />
+              </div>
               <Button type="submit" className="w-full">
                 Add phase
               </Button>
@@ -263,35 +311,59 @@ export default async function WorkspaceProjectPage({
               successMessage={null}
               className="space-y-3"
             >
-              <Select name="phase_id" required>
-                <SelectTrigger size="sm" className="w-full">
-                  <SelectValue placeholder="Pick a phase" />
-                </SelectTrigger>
-                <SelectContent>
-                  {phases.map((phase) => (
-                    <SelectItem key={phase.id} value={phase.id}>
-                      {phase.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input name="name" placeholder="Activity name" required />
-              <Input name="planned_date" type="date" />
-              <Input name="location" placeholder="Location" />
+              <div className="space-y-1.5">
+                <Label htmlFor="quick-activity-phase">Phase</Label>
+                <Select name="phase_id" required>
+                  <SelectTrigger id="quick-activity-phase" size="sm" className="w-full">
+                    <SelectValue placeholder="Pick a phase" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {phases.map((phase) => (
+                      <SelectItem key={phase.id} value={phase.id}>
+                        {phase.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="quick-activity-name">Activity name</Label>
+                <Input id="quick-activity-name" name="name" placeholder="e.g. Stakeholder interviews" required />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="quick-activity-date">Planned date</Label>
+                <Input id="quick-activity-date" name="planned_date" type="date" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="quick-activity-location">Location</Label>
+                <Input id="quick-activity-location" name="location" placeholder="Optional" />
+              </div>
               <fieldset className="space-y-2">
-                <legend className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                  Visibility <span className="text-red-600">*</span>
+                <legend className="text-sm font-medium text-foreground">
+                  Visibility <span className="text-destructive">*</span>
                 </legend>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Internal-only activities are hidden from the client portal but visible to admin and assigned staff.
                 </p>
                 <div className="flex gap-4">
                   <label className="inline-flex items-center gap-2 text-sm">
-                    <input type="radio" name="visibility" value="client_visible" required />
+                    <input
+                      type="radio"
+                      name="visibility"
+                      value="client_visible"
+                      required
+                      className="size-4 accent-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
                     Client-visible
                   </label>
                   <label className="inline-flex items-center gap-2 text-sm">
-                    <input type="radio" name="visibility" value="internal" required />
+                    <input
+                      type="radio"
+                      name="visibility"
+                      value="internal"
+                      required
+                      className="size-4 accent-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
                     Internal only
                   </label>
                 </div>

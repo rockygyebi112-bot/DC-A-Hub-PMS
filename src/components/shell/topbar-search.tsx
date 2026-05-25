@@ -46,6 +46,8 @@ export function TopbarSearch({
   items,
   activityHrefBase = "/workspace",
   orgsHrefBase = "/admin",
+  onSelect,
+  autoFocus = false,
 }: {
   /** Optional fallback list of items rendered before the lazy fetch resolves. */
   items?: SearchItem[];
@@ -53,6 +55,10 @@ export function TopbarSearch({
   /** Path prefix for clicking a project / client result. Admin shell uses
    *  `/admin`, portal/workspace surfaces use their respective project pages. */
   orgsHrefBase?: "/admin" | "/workspace" | "/portal";
+  /** Called after a result is picked. Useful for closing a wrapping dialog. */
+  onSelect?: () => void;
+  /** Focus the input on mount (used when rendered inside a mobile dialog). */
+  autoFocus?: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -163,6 +169,7 @@ export function TopbarSearch({
     setOpen(false);
     setQuery("");
     router.push(item.href);
+    onSelect?.();
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -210,7 +217,9 @@ export function TopbarSearch({
           }}
           onKeyDown={onKeyDown}
           placeholder="Search projects..."
-          className="h-10 w-[220px] rounded-full border border-border bg-muted/40 pl-10 pr-4 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:bg-background md:w-[280px] lg:w-[340px]"
+          // eslint-disable-next-line jsx-a11y/no-autofocus
+          autoFocus={autoFocus}
+          className="h-10 w-full rounded-full border border-border bg-muted/40 pl-10 pr-4 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:bg-background md:w-[280px] lg:w-[340px]"
         />
       </label>
 

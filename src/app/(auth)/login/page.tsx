@@ -12,9 +12,30 @@ import { AuthCard } from "@/components/ui/auth-card";
 import { AuthField } from "@/components/ui/auth-field";
 import { AuthAlert } from "@/components/ui/auth-alert";
 
+// Map raw Supabase error messages to copy that is safe to show end users.
+// Anything we don't recognise falls back to a neutral message so we never leak
+// provider internals (status codes, table names, rate-limit specifics, etc.).
+function friendlyAuthError(raw: string): string {
+  const m = raw.toLowerCase();
+  if (m.includes("invalid login") || m.includes("invalid credentials")) {
+    return "That email and password don't match. Please try again.";
+  }
+  if (m.includes("email not confirmed")) {
+    return "Please confirm your email address before signing in. Check your inbox for the confirmation link.";
+  }
+  if (m.includes("too many") || m.includes("rate")) {
+    return "Too many sign-in attempts. Please wait a minute and try again.";
+  }
+  if (m.includes("network") || m.includes("fetch")) {
+    return "We couldn't reach the server. Check your connection and try again.";
+  }
+  return "We couldn't sign you in. Please try again, or contact support if the problem continues.";
+}
+
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
@@ -33,6 +54,15 @@ function LoginForm() {
     setLoading(true);
     setError("");
 
+    // Hint for the Supabase client: when "Remember me" is off we'd prefer a
+    // session that doesn't outlive the tab. Read by the browser client to
+    // decide between localStorage (persist) and sessionStorage (tab-only).
+    try {
+      window.sessionStorage.setItem("auth:remember", remember ? "1" : "0");
+    } catch {
+      // sessionStorage may be unavailable (private mode, quota) — non-fatal.
+    }
+
     const supabase = createClient();
     const { error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -40,7 +70,7 @@ function LoginForm() {
     });
 
     if (authError) {
-      setError(authError.message);
+      setError(friendlyAuthError(authError.message));
       setLoading(false);
       return;
     }
@@ -94,6 +124,15 @@ function LoginForm() {
             className="h-10"
           />
         </AuthField>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+            className="size-4 rounded border-border accent-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          Keep me signed in on this device
+        </label>
         <Button
           type="submit"
           className="h-10 w-full font-semibold transition-smooth"

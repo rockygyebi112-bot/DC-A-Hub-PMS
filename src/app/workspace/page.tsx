@@ -1,16 +1,15 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import {
+  ArrowRight,
   CalendarClock,
   CheckCircle2,
   FolderKanban,
-  MoreHorizontal,
   PauseCircle,
   Plus,
   UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProjectIcon } from "@/components/ui/project-icon";
 import { StatCard } from "@/components/ui/stat-card";
@@ -251,9 +250,6 @@ function ListView({ projects }: { projects: Awaited<ReturnType<typeof listWorksp
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-muted/40 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            <th className="w-10 px-4 py-2.5">
-              <Checkbox disabled aria-label="Select all projects" />
-            </th>
             <th className="px-2 py-2.5">Project Name</th>
             <th className="px-2 py-2.5">Start Date</th>
             <th className="px-2 py-2.5">Deadline</th>
@@ -266,9 +262,6 @@ function ListView({ projects }: { projects: Awaited<ReturnType<typeof listWorksp
         <tbody>
           {projects.map((p) => (
             <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
-              <td className="px-4 py-2.5">
-                <Checkbox aria-label={`Select ${p.name}`} />
-              </td>
               <td className="px-2 py-2.5">
                 <Link href={`/workspace/projects/${p.id}`} className="flex items-center gap-2.5 group">
                   <ProjectIcon name={p.name} seed={p.id} size="sm" />
@@ -298,9 +291,10 @@ function ListView({ projects }: { projects: Awaited<ReturnType<typeof listWorksp
               <td className="px-4 py-2.5 text-right">
                 <Link
                   href={`/workspace/projects/${p.id}`}
+                  aria-label={`Open ${p.name}`}
                   className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
-                  <MoreHorizontal className="size-4" />
+                  <ArrowRight className="size-4" />
                 </Link>
               </td>
             </tr>

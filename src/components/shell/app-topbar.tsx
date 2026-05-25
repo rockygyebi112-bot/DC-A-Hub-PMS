@@ -1,9 +1,16 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { Search } from "lucide-react";
 import { ThemeToggle } from "@/components/admin/ui/theme-toggle";
 import { UserDropdown } from "@/components/admin/ui/user-dropdown";
 import { Breadcrumbs } from "@/components/admin/ui/breadcrumbs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { TopbarSearch, type SearchItem } from "./topbar-search";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +60,7 @@ export function AppTopbar({
   // Layouts may still pass a small `items` array as a pre-fetch hint; treat
   // the dropdown as enabled regardless of its size.
   const items = searchItems ?? [];
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   return (
     <header
       className={cn(
@@ -68,7 +76,7 @@ export function AppTopbar({
           {showBreadcrumbs ? <Breadcrumbs /> : null}
         </div>
         {showSearch && (
-          /* Desktop only: live-search dropdown. Projects + clients load on
+          /* Desktop: live-search dropdown. Projects + clients load on
               first focus via /api/search/orgs; the fallback `items` array
               is shown until that resolves. */
           <div className="hidden md:block">
@@ -79,12 +87,40 @@ export function AppTopbar({
             />
           </div>
         )}
+        {showSearch && (
+          /* Mobile: icon button that opens the search inside a dialog so
+              phone users can still reach projects + activities. */
+          <button
+            type="button"
+            aria-label="Search"
+            onClick={() => setMobileSearchOpen(true)}
+            className="grid size-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
+          >
+            <Search className="size-4" />
+          </button>
+        )}
         <div className="flex items-center gap-1 md:gap-2">
           {extra}
           <ThemeToggle />
           <UserDropdown name={name} email={email} avatarUrl={avatarUrl} />
         </div>
       </div>
+      {showSearch && (
+        <Dialog open={mobileSearchOpen} onOpenChange={setMobileSearchOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Search</DialogTitle>
+            </DialogHeader>
+            <TopbarSearch
+              items={items}
+              activityHrefBase={searchActivityHrefBase}
+              orgsHrefBase={searchOrgsHrefBase}
+              onSelect={() => setMobileSearchOpen(false)}
+              autoFocus
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </header>
   );
 }

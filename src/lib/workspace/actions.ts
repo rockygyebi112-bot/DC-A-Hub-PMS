@@ -15,6 +15,7 @@ import { requireAuth, requireProjectReader, requireProjectWriter } from "@/lib/a
 import {
   validateUpload,
   sanitizeFileName,
+  checkUploadContent,
   MAX_XLSX_BYTES,
 } from "@/lib/uploads";
 import {
@@ -797,6 +798,10 @@ export async function uploadProofs(activityId: string, formData: FormData): Prom
       fileName: file.name,
     });
     if (!validation.ok) return { ok: false, error: validation.error };
+    // L-1: byte-level guard against HTML/SVG/script/executable content that
+    // slips past the declared-MIME allowlist (served from the storage origin).
+    const danger = await checkUploadContent(file);
+    if (danger) return { ok: false, error: "This file type is not allowed" };
   }
 
   for (const file of files) {

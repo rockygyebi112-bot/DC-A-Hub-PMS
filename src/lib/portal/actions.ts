@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, requireProjectReader } from "@/lib/auth/guards";
-import { validateUpload, sanitizeFileName } from "@/lib/uploads";
+import { validateUpload, sanitizeFileName, checkUploadContent } from "@/lib/uploads";
 import { dbErrorMessage } from "@/lib/db-errors";
 import {
   checkRateLimit,
@@ -280,6 +280,13 @@ export async function portalUploadActivityDocuments(
       fileName: file.name,
     });
     if (!validation.ok) return { ok: false, error: validation.error };
+    // L-1: reject files whose real bytes are HTML/SVG/script/executable even
+    // when the declared MIME passes the allowlist — they're served from the
+    // storage origin where our nosniff/CSP headers don't apply.
+    const danger = await checkUploadContent(file);
+    if (danger) {
+      return { ok: false, error: "This file type is not allowed" };
+    }
   }
 
   // RLS (migration 0025) allows viewers to insert their own activity_proofs

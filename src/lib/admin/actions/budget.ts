@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireProjectWriter } from "@/lib/auth/guards";
-import { validateUpload, sanitizeFileName } from "@/lib/uploads";
+import { validateUpload, sanitizeFileName, sniffDangerousContent } from "@/lib/uploads";
 import {
   budgetCategorySchema,
   budgetSetupSchema,
@@ -128,6 +128,13 @@ async function uploadReceipt(
     fileName: file.fileName,
   });
   if (!validation.ok) throw new Error(validation.error);
+  // L-1: byte-level guard against HTML/SVG/script/executable content that
+  // passes the declared-MIME allowlist (receipts are served from the storage
+  // origin where our nosniff/CSP headers don't apply).
+  const danger = sniffDangerousContent(
+    new Uint8Array(file.bytes.slice(0, 64)),
+  );
+  if (danger) throw new Error("This file type is not allowed");
 
   const sb = await createClient();
   const safeName = sanitizeFileName(file.fileName);

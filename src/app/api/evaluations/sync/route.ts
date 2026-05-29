@@ -107,10 +107,17 @@ export async function POST(req: NextRequest) {
       const r = await ingestInstrument({ instrumentId: t.id, trigger });
       results.push({ instrument_id: t.id, ...r });
     } catch (e) {
+      // L-5: log the real cause server-side; return a generic message so
+      // upstream details (Kobo URLs, tokens embedded in errors) don't reach
+      // the caller.
+      console.error('[evaluations/sync] ingest failed', {
+        instrument_id: t.id,
+        error: e,
+      });
       results.push({
         instrument_id: t.id,
         status: 'error',
-        error: e instanceof Error ? e.message : String(e),
+        error: 'Sync failed for this instrument',
       });
     }
   }

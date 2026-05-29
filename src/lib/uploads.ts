@@ -136,3 +136,75 @@ export function sanitizeFileName(name: string): string {
       .slice(0, 180) || "file"
   );
 }
+
+/**
+ * Content-based defence (L-1) layered on top of the MIME allowlist.
+ *
+ * `validateUpload` trusts the client-declared `mimeType`. Proof/receipt
+ * uploads stream the file straight into Supabase storage with that declared
+ * type, and storage serves it from a *.supabase.co origin where the app's
+ * `nosniff` / CSP headers do NOT apply. So a file whose bytes are actually
+ * HTML / SVG / XML / a script / an executable is a content-confusion and
+ * stored-XSS risk even when the caller labels it `image/png` or `text/csv`.
+ *
+ * This inspects the real leading bytes and rejects those dangerous shapes.
+ * It is a DENYLIST, not a positive signature check, precisely so it never
+ * rejects a legitimate allowlisted upload: real PDFs (`%PDF`), images, ZIP-
+ * based Office docs (`PK\x03\x04`), legacy OLE2 docs, and plain CSV/text do
+ * not begin with any of these markers.
+ *
+ * Returns a short reason string if the content is dangerous, else null.
+ */
+export function sniffDangerousContent(head: Uint8Array): string | null {
+  if (head.length === 0) return null;
+
+  // Binary executable magic numbers (checked on raw bytes).
+  // MZ (PE/DOS), \x7FELF (ELF), \xFE\xED\xFA\xCE/CF + \xCA\xFE\xBA\xBE (Mach-O / Java class).
+  if (head[0] === 0x4d && head[1] === 0x5a) return "executable";
+  if (head[0] === 0x7f && head[1] === 0x45 && head[2] === 0x4c && head[3] === 0x46) {
+    return "executable";
+  }
+  if (
+    head[0] === 0xfe && head[1] === 0xed && head[2] === 0xfa &&
+    (head[3] === 0xce || head[3] === 0xcf)
+  ) {
+    return "executable";
+  }
+  if (head[0] === 0xca && head[1] === 0xfe && head[2] === 0xba && head[3] === 0xbe) {
+    return "executable";
+  }
+
+  // Textual markup / scripts: decode the head as ASCII, skip a leading UTF-8
+  // BOM and whitespace, lowercase, then match dangerous document prefixes.
+  let text = "";
+  for (let i = 0; i < head.length && i < 64; i++) {
+    text += String.fromCharCode(head[i]);
+  }
+  const trimmed = text.replace(/^\xEF\xBB\xBF/, "").replace(/^[\s﻿]+/, "").toLowerCase();
+
+  const dangerousPrefixes = [
+    "<!doctype html",
+    "<html",
+    "<head",
+    "<body",
+    "<script",
+    "<svg",
+    "<?xml",   // SVG / XHTML / generic XML that a browser may render
+    "<!--",
+    "#!",      // shebang scripts
+    "<%",      // server-page / template markers
+  ];
+  for (const p of dangerousPrefixes) {
+    if (trimmed.startsWith(p)) return "html/script/executable content";
+  }
+  return null;
+}
+
+/**
+ * Read the leading bytes of an upload and run {@link sniffDangerousContent}.
+ * Convenience wrapper so server actions don't each re-implement the slice.
+ */
+export async function checkUploadContent(file: File): Promise<string | null> {
+  const head = new Uint8Array(await file.slice(0, 64).arrayBuffer());
+  return sniffDangerousContent(head);
+}

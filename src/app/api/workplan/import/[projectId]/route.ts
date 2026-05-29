@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { importWorkplanSheet } from "@/lib/workspace/actions";
 import { requireProjectWriter } from "@/lib/auth/guards";
 import { MAX_XLSX_BYTES } from "@/lib/uploads";
+import { isSameOrigin } from "@/lib/http/same-origin";
 
 // Thin wrapper around the `importWorkplanSheet` server action so the client
 // can upload with XMLHttpRequest and surface real upload progress. The server
@@ -14,36 +15,6 @@ const ALLOWED_XLSX_TYPES = new Set([
   "application/vnd.ms-excel", // some browsers still send this for .xls/.xlsx
   "application/octet-stream", // a few clients fail to set a real type
 ]);
-
-function isSameOrigin(request: Request): boolean {
-  // Modern browsers attach Sec-Fetch-Site on every fetch; "same-origin" is
-  // the canonical, attacker-can't-spoof CSRF signal. If absent (older client
-  // or non-browser caller) fall back to a host-equality check on Origin /
-  // Referer — strict, but no looser than what a browser would send.
-  const sfs = request.headers.get("sec-fetch-site");
-  if (sfs) return sfs === "same-origin";
-
-  const target = new URL(request.url);
-  const origin = request.headers.get("origin");
-  if (origin) {
-    try {
-      return new URL(origin).host === target.host;
-    } catch {
-      return false;
-    }
-  }
-  const referer = request.headers.get("referer");
-  if (referer) {
-    try {
-      return new URL(referer).host === target.host;
-    } catch {
-      return false;
-    }
-  }
-  // No Sec-Fetch-Site, no Origin, no Referer — refuse. We'd rather break a
-  // weird client than accept a forgeable cross-origin POST.
-  return false;
-}
 
 export async function POST(
   request: Request,

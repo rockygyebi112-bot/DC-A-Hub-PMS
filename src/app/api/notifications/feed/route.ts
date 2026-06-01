@@ -24,11 +24,14 @@ export async function GET(request: Request) {
   const surface: "portal" | "workspace" =
     surfaceParam === "portal" ? "portal" : "workspace";
 
-  const feed = await getNotificationFeed(surface).catch(() => ({
-    entries: [],
-    unreadCount: 0,
-    lastReadAt: null,
-  }));
+  const feed = await getNotificationFeed(surface).catch((err) => {
+    console.error("[notifications/feed] load failed", err);
+    return {
+      entries: [],
+      unreadCount: 0,
+      lastReadAt: null,
+    };
+  });
 
   return NextResponse.json(feed, {
     headers: {

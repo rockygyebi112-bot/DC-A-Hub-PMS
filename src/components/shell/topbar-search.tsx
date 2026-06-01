@@ -69,6 +69,15 @@ export function TopbarSearch({
   const [orgs, setOrgs] = useState<SearchableOrgs | null>(null);
   const [activitiesLoaded, setActivitiesLoaded] = useState(false);
   const [orgsLoaded, setOrgsLoaded] = useState(false);
+  // Server-filtered results tagged with the query they belong to. The prewarmed
+  // lists above are capped by recency, so a match outside that window could
+  // never be found by client-side filtering alone — these fill that gap. We
+  // key by query so stale results from a previous keystroke are ignored without
+  // having to clear state synchronously inside the effect.
+  const [serverResults, setServerResults] = useState<{
+    q: string;
+    items: SearchItem[];
+  }>({ q: "", items: [] });
   const containerRef = useRef<HTMLDivElement>(null);
 
   const loadActivities = useCallback(async () => {
@@ -99,6 +108,11 @@ export function TopbarSearch({
     }
   }, [orgsLoaded]);
 
+  // Defer the query used for filtering so fast typing doesn't block the input.
+  // React keeps the previous filtered list visible until the new pass settles,
+  // which is cheaper and smoother than a setTimeout-based debounce.
+  const deferredQuery = useDeferredValue(query);
+
   // Defensive dedupe: project + client + activity hrefs can overlap (e.g. a
   // project shown twice via separate layout passes). Skip duplicates so React
   // doesn't warn about repeated keys when the dropdown renders.
@@ -125,20 +139,95 @@ export function TopbarSearch({
       label: a.name,
       group: `Activity · ${a.project_name}`,
     }));
+    // Only merge server results that belong to the CURRENT query; stale ones
+    // from a previous keystroke are dropped.
+    const freshServerItems =
+      serverResults.q === deferredQuery.trim() ? serverResults.items : [];
+
     const seen = new Set<string>();
     const out: SearchItem[] = [];
-    for (const it of [...orgItems, ...activityItems]) {
+    // Server matches first so one outside the recency-capped prewarm wins the
+    // dedupe and is guaranteed to appear.
+    for (const it of [...freshServerItems, ...orgItems, ...activityItems]) {
       if (seen.has(it.href)) continue;
       seen.add(it.href);
       out.push(it);
     }
     return out;
-  }, [items, orgs, activities, activityHrefBase, orgsHrefBase]);
+  }, [
+    items,
+    orgs,
+    activities,
+    serverResults,
+    deferredQuery,
+    activityHrefBase,
+    orgsHrefBase,
+  ]);
 
-  // Defer the query used for filtering so fast typing doesn't block the input.
-  // React keeps the previous filtered list visible until the new pass settles,
-  // which is cheaper and smoother than a setTimeout-based debounce.
-  const deferredQuery = useDeferredValue(query);
+  // Server-side search for the deferred query so matches beyond the recency-
+  // capped prewarm are reachable. Aborts the previous in-flight request on each
+  // change; failures fall back silently to the client-side filtered prewarm.
+  useEffect(() => {
+    const q = deferredQuery.trim();
+    // Stale results are ignored by the query-tag check in dedupedItems, so we
+    // don't need to clear state here (which would be a synchronous setState in
+    // an effect). Just skip fetching for very short queries.
+    if (q.length < 2) return;
+    const ctrl = new AbortController();
+    const enc = encodeURIComponent(q);
+    (async () => {
+      try {
+        const [aRes, oRes] = await Promise.all([
+          fetch(`/api/search/activities?q=${enc}`, {
+            cache: "no-store",
+            signal: ctrl.signal,
+          }),
+          fetch(`/api/search/orgs?q=${enc}`, {
+            cache: "no-store",
+            signal: ctrl.signal,
+          }),
+        ]);
+        const next: SearchItem[] = [];
+        if (aRes.ok) {
+          const data = (await aRes.json()) as SearchableActivity[];
+          if (Array.isArray(data)) {
+            for (const a of data) {
+              next.push({
+                href: `${activityHrefBase}/projects/${a.project_id}/activities/${a.id}`,
+                label: a.name,
+                group: `Activity · ${a.project_name}`,
+              });
+            }
+          }
+        }
+        if (oRes.ok) {
+          const data = (await oRes.json()) as SearchableOrgs;
+          if (Array.isArray(data?.projects)) {
+            for (const p of data.projects) {
+              next.push({
+                href: `${orgsHrefBase}/projects/${p.id}`,
+                label: p.name,
+                group: "Projects",
+              });
+            }
+          }
+          if (Array.isArray(data?.clients)) {
+            for (const c of data.clients) {
+              next.push({
+                href: `${orgsHrefBase}/clients/${c.id}`,
+                label: c.name,
+                group: "Clients",
+              });
+            }
+          }
+        }
+        setServerResults({ q, items: next });
+      } catch {
+        // Aborted or network error — keep whatever the prewarm gave us.
+      }
+    })();
+    return () => ctrl.abort();
+  }, [deferredQuery, activityHrefBase, orgsHrefBase]);
 
   const matches = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase();

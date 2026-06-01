@@ -10,15 +10,16 @@ import { requireAuth } from "@/lib/auth/guards";
  * RLS scopes results to what the caller can see, so this is safe across
  * surfaces (admin / staff / client / viewer).
  */
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await requireAuth();
   if (!auth.ok) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const orgs = await listSearchableOrgs(500).catch(() => ({
-    projects: [],
-    clients: [],
-  }));
+  const q = new URL(request.url).searchParams.get("q") ?? undefined;
+  const orgs = await listSearchableOrgs(500, q).catch((err) => {
+    console.error("[search/orgs] query failed", err);
+    return { projects: [], clients: [] };
+  });
   return NextResponse.json(orgs, {
     headers: {
       "Cache-Control": "private, max-age=60",

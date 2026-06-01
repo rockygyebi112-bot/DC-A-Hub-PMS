@@ -12,6 +12,7 @@ import { renderPasswordResetEmail } from "@/lib/email/templates/password-reset";
 import {
   inviteUserSchema,
   setUserRoleSchema,
+  profileIdSchema,
 } from "@/lib/admin/schemas";
 import type { ActionResult } from "@/lib/action-result";
 import { PROFILE_ROLE_STATUS } from "@/lib/supabase/columns";
@@ -79,8 +80,19 @@ export async function inviteUser(
   });
 
   if (inviteLink.error) {
-    const msg = inviteLink.error.message.toLowerCase();
+    // Prefer the structured error code/status over substring-matching the
+    // human-readable message, which changes between gotrue versions and would
+    // silently break the invite-vs-recovery branch. Keep the prose check as a
+    // last-resort fallback for older auth-js builds.
+    const err = inviteLink.error as {
+      code?: string;
+      status?: number;
+      message: string;
+    };
+    const msg = err.message.toLowerCase();
     const alreadyExists =
+      err.code === "email_exists" ||
+      err.status === 422 ||
       msg.includes("already") ||
       msg.includes("registered") ||
       msg.includes("exists");
@@ -188,6 +200,10 @@ export async function setUserRole(
   const callerId = await assertCallerIsAdmin();
   if (!callerId) return { ok: false, error: "Not authorized" };
 
+  const idCheck = profileIdSchema.safeParse(profileId);
+  if (!idCheck.success) return { ok: false, error: "Invalid user id" };
+  profileId = idCheck.data;
+
   const parsed = setUserRoleSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
@@ -238,6 +254,10 @@ export async function deactivateUser(profileId: string): Promise<ActionResult> {
   const callerId = await assertCallerIsAdmin();
   if (!callerId) return { ok: false, error: "Not authorized" };
 
+  const idCheck = profileIdSchema.safeParse(profileId);
+  if (!idCheck.success) return { ok: false, error: "Invalid user id" };
+  profileId = idCheck.data;
+
   const admin = createAdminClient();
   const { data: profile, error: getErr } = await admin
     .from("profiles")
@@ -272,6 +292,10 @@ export async function deactivateUser(profileId: string): Promise<ActionResult> {
 export async function deleteUser(profileId: string): Promise<ActionResult> {
   const callerId = await assertCallerIsAdmin();
   if (!callerId) return { ok: false, error: "Not authorized" };
+
+  const idCheck = profileIdSchema.safeParse(profileId);
+  if (!idCheck.success) return { ok: false, error: "Invalid user id" };
+  profileId = idCheck.data;
 
   const admin = createAdminClient();
   const { data: profile, error: getErr } = await admin
@@ -309,10 +333,14 @@ export async function deleteUser(profileId: string): Promise<ActionResult> {
     .eq("user_id", profile.user_id);
   if (delMembershipErr) return { ok: false, error: dbErrorMessage(delMembershipErr) };
 
+  // Delete the profile by its auth user_id (a trusted DB-sourced UUID). The
+  // previous `.or(id.eq.${profileId},...)` interpolated the raw profileId arg
+  // into a PostgREST filter expression — a filter-injection vector. We already
+  // fetched this row by id above, so matching on user_id is equivalent.
   const { error: delProfileErr } = await admin
     .from("profiles")
     .delete()
-    .or(`id.eq.${profileId},user_id.eq.${profile.user_id}`);
+    .eq("user_id", profile.user_id);
   if (delProfileErr) return { ok: false, error: dbErrorMessage(delProfileErr) };
 
   const { data: remainingProfile, error: verifyProfileErr } = await admin
@@ -335,6 +363,10 @@ export async function deleteUser(profileId: string): Promise<ActionResult> {
 export async function reactivateUser(profileId: string): Promise<ActionResult> {
   const callerId = await assertCallerIsAdmin();
   if (!callerId) return { ok: false, error: "Not authorized" };
+
+  const idCheck = profileIdSchema.safeParse(profileId);
+  if (!idCheck.success) return { ok: false, error: "Invalid user id" };
+  profileId = idCheck.data;
 
   const admin = createAdminClient();
   const { data: profile, error: getErr } = await admin

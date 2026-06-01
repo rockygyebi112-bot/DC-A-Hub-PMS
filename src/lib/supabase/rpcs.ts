@@ -117,3 +117,38 @@ export async function addProjectMemberAsManager(
   });
   return res as RpcResult<ProjectMemberRow>;
 }
+
+export type MisInvestmentRowInput = {
+  community: string;
+  district: string;
+  investment_type: string;
+  investment_name: string;
+  completion_date: string | null;
+};
+
+// Atomic delete+insert of an evaluation's MIS rows (migration 0042). Must be
+// called with the service-role client — the function is granted to
+// service_role only.
+export async function replaceMisInvestments(
+  sb: SupabaseClient<Database>,
+  args: { evaluation_id: string; rows: MisInvestmentRowInput[] },
+): Promise<RpcResult<number>> {
+  const res = await untyped(sb).rpc("replace_mis_investments", {
+    p_evaluation_id: args.evaluation_id,
+    p_rows: args.rows,
+  });
+  return res as RpcResult<number>;
+}
+
+// Atomic dashboard-spec version bump + active swap (migration 0042). Admin-only
+// (enforced inside the function via is_admin()). Returns the new version.
+export async function setDashboardSpecVersion(
+  sb: SupabaseClient<Database>,
+  args: { evaluation_id: string; spec: unknown },
+): Promise<RpcResult<number>> {
+  const res = await untyped(sb).rpc("set_dashboard_spec", {
+    p_evaluation_id: args.evaluation_id,
+    p_spec: args.spec,
+  });
+  return res as RpcResult<number>;
+}

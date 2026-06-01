@@ -3,7 +3,9 @@ import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/require-role-server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { isSameOrigin } from '@/lib/http/same-origin';
-import { MAX_XLSX_BYTES } from '@/lib/uploads';
+import { MAX_XLSX_BYTES, MAX_SHEET_ROWS } from '@/lib/uploads';
+import { parseCsv } from '@/lib/csv';
+import { replaceMisInvestments } from '@/lib/supabase/rpcs';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -101,53 +103,72 @@ export async function POST(
   }
 
   const buf = Buffer.from(await file.arrayBuffer());
-  const rows = await parseRows(file.name, buf);
+  let rows: MisRow[];
+  try {
+    rows = await parseRows(file.name, buf);
+  } catch (err) {
+    if (err instanceof TooManyRowsError) {
+      return new NextResponse(
+        `Spreadsheet has too many rows (max ${MAX_SHEET_ROWS})`,
+        { status: 413 },
+      );
+    }
+    console.error('[mis/upload] parse failed', err);
+    return new NextResponse('Could not parse the upload', { status: 400 });
+  }
   if (rows.length === 0) {
     return new NextResponse('No rows parsed', { status: 400 });
   }
 
-  // Replace strategy: delete existing for this evaluation, then bulk insert.
-  const { error: delErr } = await sb
-    .from('mis_investments')
-    .delete()
-    .eq('evaluation_id', evaluationId);
-  if (delErr) {
-    console.error('[mis/upload] delete failed', delErr);
-    return new NextResponse('Failed to replace MIS data', { status: 500 });
-  }
-
-  const { error } = await sb
-    .from('mis_investments')
-    .insert(rows.map((r) => ({ ...r, evaluation_id: evaluationId })));
+  // Atomic replace: delete-existing + bulk-insert run in a single transaction
+  // inside the RPC (migration 0042). A failure rolls back the delete, so a
+  // bad insert can't wipe the prior dataset.
+  const { error } = await replaceMisInvestments(sb, {
+    evaluation_id: evaluationId,
+    rows,
+  });
   if (error) {
-    console.error('[mis/upload] insert failed', error);
+    console.error('[mis/upload] replace failed', error);
     return new NextResponse('Failed to save MIS data', { status: 500 });
   }
 
   return NextResponse.json({ inserted: rows.length });
 }
 
+class TooManyRowsError extends Error {}
+
 async function parseRows(name: string, buf: Buffer): Promise<MisRow[]> {
   const lower = name.toLowerCase();
   if (lower.endsWith('.csv')) {
-    const text = buf.toString('utf8');
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    if (lines.length < 2) return [];
-    const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
-    return lines
-      .slice(1)
-      .map((ln) => {
-        const cells = ln.split(',').map((c) => c.trim());
-        const get = (k: string) => cells[header.indexOf(k)] ?? '';
-        return {
-          community: get('community'),
-          district: get('district'),
-          investment_type: get('investment_type'),
-          investment_name: get('investment_name'),
-          completion_date: get('completion_date') || null,
-        };
-      })
-      .filter((r) => r.community && r.investment_name);
+    // RFC-4180 aware parse: a comma inside a quoted value (e.g. "Tamale,
+    // Northern") must NOT shift the remaining columns into the wrong fields.
+    const records = parseCsv(buf.toString('utf8'));
+    if (records.length < 2) return [];
+    if (records.length - 1 > MAX_SHEET_ROWS) throw new TooManyRowsError();
+    const header = records[0].map((h) => h.trim().toLowerCase());
+    const col = {
+      community: header.indexOf('community'),
+      district: header.indexOf('district'),
+      investment_type: header.indexOf('investment_type'),
+      investment_name: header.indexOf('investment_name'),
+      completion_date: header.indexOf('completion_date'),
+    };
+    const rows: MisRow[] = [];
+    for (let i = 1; i < records.length; i++) {
+      const cells = records[i];
+      const get = (idx: number) => (idx >= 0 ? (cells[idx] ?? '').trim() : '');
+      const community = get(col.community);
+      const investment_name = get(col.investment_name);
+      if (!community || !investment_name) continue;
+      rows.push({
+        community,
+        district: get(col.district),
+        investment_type: get(col.investment_type),
+        investment_name,
+        completion_date: get(col.completion_date) || null,
+      });
+    }
+    return rows;
   }
 
   // XLSX path via exceljs.
@@ -156,6 +177,7 @@ async function parseRows(name: string, buf: Buffer): Promise<MisRow[]> {
   await wb.xlsx.load(buf as unknown as ArrayBuffer);
   const ws = wb.worksheets[0];
   if (!ws) return [];
+  if (ws.rowCount > MAX_SHEET_ROWS + 1) throw new TooManyRowsError();
   const headerRow = ws.getRow(1);
   const headerMap: Record<string, number> = {};
   headerRow.eachCell((cell, col) => {

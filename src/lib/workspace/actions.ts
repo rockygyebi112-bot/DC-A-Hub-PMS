@@ -12,11 +12,13 @@ import {
   rateLimitMessage,
 } from "@/lib/rate-limit";
 import { requireAuth, requireProjectReader, requireProjectWriter } from "@/lib/auth/guards";
+import { currentUserId } from "@/lib/auth/session";
 import {
   validateUpload,
   sanitizeFileName,
   checkUploadContent,
   MAX_XLSX_BYTES,
+  MAX_SHEET_ROWS,
 } from "@/lib/uploads";
 import {
   activitySchema,
@@ -31,14 +33,6 @@ import {
   insertActivityOrdered,
   insertPhaseOrdered,
 } from "@/lib/supabase/rpcs";
-
-async function currentUserId() {
-  const sb = await createClient();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
-  return user?.id ?? null;
-}
 
 function formValue(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -210,6 +204,15 @@ export async function importWorkplanSheet(
     workbook.worksheets.find((ws) => ws.name.toLowerCase() === "checklist") ??
     workbook.worksheets[0];
   if (!sheet) return { ok: false, error: "No worksheet found in the upload" };
+
+  // Guard against a small file expanding into a sheet with a pathological row
+  // count that would OOM the runtime as we walk it. +1 for the header row.
+  if (sheet.rowCount > MAX_SHEET_ROWS + 1) {
+    return {
+      ok: false,
+      error: `Workplan has too many rows (max ${MAX_SHEET_ROWS})`,
+    };
+  }
 
   const sheetName = sheet.name;
 

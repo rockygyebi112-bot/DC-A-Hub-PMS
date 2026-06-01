@@ -1,6 +1,10 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { X } from 'lucide-react';
+
 import {
   setTaskStatus,
   updateTask,
@@ -14,11 +18,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { SectionCard } from '@/components/admin/ui/section-card';
+import { UserAvatar } from '@/components/admin/ui/user-avatar';
+import { cn } from '@/lib/utils';
+import {
+  TASK_PRIORITY_ORDER,
+  TASK_PRIORITY_META,
+  TASK_STATUS_META,
+  TASK_STATUS_ORDER,
+  type TaskStatus,
+} from './task-meta';
 import { AssigneePicker } from './assignee-picker';
 
-// Shape mirrors `InternalTaskWithAssignees` from `@/lib/internal/queries`:
-// the DB column is plain text (no enum) so `status` comes back as `string`,
-// and the hydrated assignee row carries the full profile projection.
 type Assignee = {
   user_id: string;
   profile: {
@@ -40,9 +55,7 @@ type Task = {
   assignees?: Assignee[] | null;
 };
 
-// `setTaskStatus` is typed against the DB enum literal; the <select> only emits
-// these four values, so the narrowing is sound at runtime.
-type TaskStatus = 'not_started' | 'in_progress' | 'blocked' | 'done';
+type ActionFn = () => Promise<{ ok: boolean; error?: string }>;
 
 export function TaskDetail({
   task,
@@ -51,104 +64,227 @@ export function TaskDetail({
   task: Task;
   areas: { id: string; name: string }[];
 }) {
+  const router = useRouter();
   const [pending, start] = useTransition();
 
-  // Server actions return `ActionResult`, but `useTransition`'s start callback
-  // requires a void-returning function. Run the action, surface failures to the
-  // console (toast plumbing is a follow-up), and discard the resolved value.
-  const run = (fn: () => Promise<{ ok: boolean; error?: string }>) => {
+  // Optimistic local copies so edits feel instant; reverted if the action fails.
+  const [status, setStatus] = useState<TaskStatus>(task.status as TaskStatus);
+  const [priority, setPriority] = useState(task.priority ?? '');
+  const [due, setDue] = useState(task.due_date ?? '');
+  const [areaId, setAreaId] = useState(task.area_id);
+
+  /** Run a server action with toast feedback (and an optional optimistic revert). */
+  function run(fn: ActionFn, okMsg: string, opts?: { onError?: () => void; refresh?: boolean }) {
     start(() => {
-      void fn().then((r) => {
-        if (!r.ok) console.error('[internal task] action failed:', r.error);
-      });
+      void fn()
+        .then((r) => {
+          if (r.ok) {
+            toast.success(okMsg);
+            if (opts?.refresh) router.refresh();
+          } else {
+            toast.error(r.error ?? 'Something went wrong');
+            opts?.onError?.();
+          }
+        })
+        .catch(() => {
+          toast.error('Something went wrong');
+          opts?.onError?.();
+        });
     });
-  };
+  }
+
+  function patch(fields: Record<string, string>): FormData {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(fields)) fd.set(k, v);
+    return fd;
+  }
+
+  function onStatusChange(value: string | null) {
+    const next = (value ?? status) as TaskStatus;
+    const prev = status;
+    setStatus(next);
+    run(() => setTaskStatus(task.id, next), 'Status updated', {
+      refresh: true,
+      onError: () => setStatus(prev),
+    });
+  }
+
+  function onPriorityChange(value: string | null) {
+    const next = value ?? '';
+    const prev = priority;
+    setPriority(next);
+    run(() => updateTask(task.id, patch({ priority: next })), 'Priority updated', {
+      onError: () => setPriority(prev),
+    });
+  }
+
+  function onDueChange(value: string) {
+    const prev = due;
+    setDue(value);
+    run(() => updateTask(task.id, patch({ due_date: value })), 'Due date updated', {
+      onError: () => setDue(prev),
+    });
+  }
+
+  function onAreaChange(value: string | null) {
+    const next = value ?? areaId;
+    const prev = areaId;
+    setAreaId(next);
+    run(() => updateTask(task.id, patch({ area_id: next })), 'Area updated', {
+      refresh: true,
+      onError: () => setAreaId(prev),
+    });
+  }
+
+  const assignees = (task.assignees ?? []).filter((a) => a.profile);
 
   return (
-    <article className="mx-auto max-w-3xl space-y-6">
-      <header>
-        <div className="text-xs uppercase tracking-wide text-muted-foreground">
-          {areas.find((a) => a.id === task.area_id)?.name ?? 'Area'}
-        </div>
-        <h1 className="text-2xl font-semibold">{task.title}</h1>
-      </header>
-
-      <section className="grid grid-cols-2 gap-4 text-sm">
-        <div>
-          <label className="block text-xs text-muted-foreground">Status</label>
-          <Select
-            defaultValue={task.status}
-            onValueChange={(v) =>
-              run(() => setTaskStatus(task.id, (v ?? task.status) as TaskStatus))
-            }
-            disabled={pending}
+    <div className="grid gap-6 lg:grid-cols-3">
+      {/* Main: description */}
+      <div className="space-y-6 lg:col-span-2">
+        <SectionCard title="Description">
+          <form
+            action={(fd) => run(() => updateTask(task.id, fd), 'Description saved')}
+            className="space-y-3"
           >
-            <SelectTrigger size="sm" className="mt-1 w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="not_started">Not started</SelectItem>
-              <SelectItem value="in_progress">In progress</SelectItem>
-              <SelectItem value="blocked">Blocked</SelectItem>
-              <SelectItem value="done">Done</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <label className="block text-xs text-muted-foreground">Due date</label>
-          <form action={(fd) => run(() => updateTask(task.id, fd))}>
-            <input
-              name="due_date"
-              type="date"
-              defaultValue={task.due_date ?? ''}
-              className="mt-1 w-full rounded border bg-background text-foreground px-2 py-1"
+            <Textarea
+              name="description"
+              defaultValue={task.description ?? ''}
+              rows={8}
+              placeholder="Add a description, context, or links…"
             />
+            <div className="flex justify-end">
+              <Button type="submit" size="sm" disabled={pending}>
+                Save description
+              </Button>
+            </div>
           </form>
-        </div>
-      </section>
+        </SectionCard>
+      </div>
 
-      <section>
-        <label className="block text-xs text-muted-foreground">Description</label>
-        <form action={(fd) => run(() => updateTask(task.id, fd))}>
-          <textarea
-            name="description"
-            defaultValue={task.description ?? ''}
-            className="mt-1 w-full rounded border bg-background text-foreground p-2 text-sm"
-            rows={6}
-          />
-          <button
-            className="mt-2 rounded-md bg-primary px-3 py-1 text-sm text-primary-foreground"
-            disabled={pending}
-          >
-            Save description
-          </button>
-        </form>
-      </section>
+      {/* Sidebar: details + assignees */}
+      <div className="space-y-6">
+        <SectionCard title="Details">
+          <div className="space-y-4">
+            <Field label="Status">
+              <Select value={status} onValueChange={onStatusChange} disabled={pending}>
+                <SelectTrigger size="sm" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TASK_STATUS_ORDER.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      <span className="flex items-center gap-2">
+                        <span
+                          aria-hidden
+                          className={cn('size-2 rounded-full', TASK_STATUS_META[s].dot)}
+                        />
+                        {TASK_STATUS_META[s].label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
 
-      <section>
-        <h2 className="text-sm font-semibold">Assignees</h2>
-        <ul className="mt-2 space-y-1 text-sm">
-          {(task.assignees ?? []).map((a) => (
-            <li
-              key={a.user_id}
-              className="flex items-center justify-between rounded border px-2 py-1"
-            >
-              <span>{a.profile?.full_name ?? a.user_id}</span>
-              <button
-                onClick={() => run(() => removeAssignee(task.id, a.user_id))}
+            <Field label="Priority">
+              <Select
+                value={priority || undefined}
+                onValueChange={onPriorityChange}
                 disabled={pending}
-                className="text-xs text-destructive"
               >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-        <AssigneePicker
-          existingIds={(task.assignees ?? []).map((a) => a.user_id)}
-          onAdd={(userId) => run(() => addAssignee(task.id, userId))}
-        />
-      </section>
-    </article>
+                <SelectTrigger size="sm" className="w-full">
+                  <SelectValue placeholder="Set priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TASK_PRIORITY_ORDER.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {TASK_PRIORITY_META[p].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field label="Due date">
+              <Input
+                type="date"
+                value={due}
+                onChange={(e) => onDueChange(e.target.value)}
+                disabled={pending}
+              />
+            </Field>
+
+            <Field label="Area">
+              <Select value={areaId} onValueChange={onAreaChange} disabled={pending}>
+                <SelectTrigger size="sm" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {areas.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Assignees">
+          {assignees.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No one assigned yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {assignees.map((a) => (
+                <li key={a.user_id} className="flex items-center gap-2">
+                  <UserAvatar
+                    email={a.user_id}
+                    name={a.profile?.full_name ?? 'Unknown'}
+                    avatarUrl={a.profile?.avatar_url}
+                    size="sm"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm">
+                    {a.profile?.full_name ?? a.user_id}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label={`Remove ${a.profile?.full_name ?? 'assignee'}`}
+                    disabled={pending}
+                    onClick={() =>
+                      run(() => removeAssignee(task.id, a.user_id), 'Assignee removed', {
+                        refresh: true,
+                      })
+                    }
+                  >
+                    <X />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <AssigneePicker
+            existingIds={assignees.map((a) => a.user_id)}
+            onAdd={(userId) =>
+              run(() => addAssignee(task.id, userId), 'Assignee added', {
+                refresh: true,
+              })
+            }
+          />
+        </SectionCard>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="mt-1.5">{children}</div>
+    </div>
   );
 }

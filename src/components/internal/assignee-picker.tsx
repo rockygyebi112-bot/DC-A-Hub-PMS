@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 
 type Staff = { user_id: string; full_name: string };
 
@@ -45,17 +46,17 @@ export function AssigneePicker({
           ))}
         </SelectContent>
       </Select>
-      <button
+      <Button
         type="button"
+        size="sm"
         disabled={!pick}
         onClick={() => {
           onAdd(pick);
           setPick('');
         }}
-        className="rounded-md bg-primary px-3 py-1 text-sm text-primary-foreground"
       >
         Add
-      </button>
+      </Button>
     </div>
   );
 }

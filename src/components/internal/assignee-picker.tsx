@@ -36,7 +36,11 @@ export function AssigneePicker({
     <div className="mt-3 flex gap-2">
       <Select value={pick || undefined} onValueChange={(v) => setPick(v ?? '')}>
         <SelectTrigger size="sm" className="flex-1">
-          <SelectValue placeholder="Add assignee…" />
+          <SelectValue placeholder="Add assignee…">
+            {(value: string) =>
+              staff.find((s) => s.user_id === value)?.full_name ?? 'Add assignee…'
+            }
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {available.map((s) => (

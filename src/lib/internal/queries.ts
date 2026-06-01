@@ -1,5 +1,5 @@
 import 'server-only';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 
 /**
  * NOTE on assignee joins: `internal_task_assignees.user_id` references
@@ -39,7 +39,6 @@ export type InternalTaskWithAssignees = Omit<RawTaskRow, 'assignees'> & {
 };
 
 async function hydrateAssigneeProfiles(
-  sb: Awaited<ReturnType<typeof createClient>>,
   rows: RawTaskRow[],
 ): Promise<InternalTaskWithAssignees[]> {
   const userIds = Array.from(
@@ -47,7 +46,15 @@ async function hydrateAssigneeProfiles(
   );
   let profileMap = new Map<string, AssigneeProfile>();
   if (userIds.length) {
-    const { data: profiles } = await sb
+    // Resolve colleague names/avatars with the service client. The `profiles`
+    // RLS policy only exposes self / admin / shared-project rows (migration
+    // 0017), so two staff who share an internal TASK but no PROJECT can't read
+    // each other via the user-scoped client — names would fall back to raw
+    // user ids. Every caller of this helper (listTasks/getTask) is already
+    // gated to admin/staff, and we only read non-sensitive name/avatar for
+    // users assigned to internal tasks, so the bypass is safe and scoped.
+    const admin = createServiceClient();
+    const { data: profiles } = await admin
       .from('profiles')
       .select('user_id, full_name, avatar_url')
       .in('user_id', userIds);
@@ -109,7 +116,7 @@ export async function listTasks(
       (r.assignees ?? []).some((a) => a.user_id === filter.assigneeId),
     );
   }
-  return hydrateAssigneeProfiles(sb, rows);
+  return hydrateAssigneeProfiles(rows);
 }
 
 export async function getTask(
@@ -127,7 +134,7 @@ export async function getTask(
     .single();
   if (error || !data) return null;
   // See note in `listTasks` re: the unknown cast.
-  const [hydrated] = await hydrateAssigneeProfiles(sb, [
+  const [hydrated] = await hydrateAssigneeProfiles([
     data as unknown as RawTaskRow,
   ]);
   return hydrated ?? null;

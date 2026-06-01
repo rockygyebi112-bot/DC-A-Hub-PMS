@@ -71,7 +71,11 @@ export function NewTaskForm({ areas }: { areas: { id: string; name: string }[] }
             <Label>Area</Label>
             <Select name="area_id" required>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Choose area…" />
+                <SelectValue placeholder="Choose area…">
+                  {(value: string) =>
+                    areas.find((a) => a.id === value)?.name ?? 'Choose area…'
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {areas.map((a) => (
@@ -107,7 +111,13 @@ export function NewTaskForm({ areas }: { areas: { id: string; name: string }[] }
                 onValueChange={(v) => setPriority(v === '__none' ? '' : (v ?? ''))}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue />
+                  <SelectValue>
+                    {(value: string) =>
+                      value && value !== '__none'
+                        ? value.charAt(0).toUpperCase() + value.slice(1)
+                        : 'No priority'
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">No priority</SelectItem>

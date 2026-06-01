@@ -31,6 +31,7 @@ import {
   TASK_STATUS_META,
   TASK_STATUS_ORDER,
   type TaskStatus,
+  type TaskPriority,
 } from './task-meta';
 import { AssigneePicker } from './assignee-picker';
 
@@ -169,7 +170,22 @@ export function TaskDetail({
             <Field label="Status">
               <Select value={status} onValueChange={onStatusChange} disabled={pending}>
                 <SelectTrigger size="sm" className="w-full">
-                  <SelectValue />
+                  <SelectValue>
+                    {(value: string) => {
+                      const meta = TASK_STATUS_META[value as TaskStatus];
+                      return meta ? (
+                        <span className="flex items-center gap-2">
+                          <span
+                            aria-hidden
+                            className={cn('size-2 rounded-full', meta.dot)}
+                          />
+                          {meta.label}
+                        </span>
+                      ) : (
+                        value
+                      );
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {TASK_STATUS_ORDER.map((s) => (
@@ -194,7 +210,12 @@ export function TaskDetail({
                 disabled={pending}
               >
                 <SelectTrigger size="sm" className="w-full">
-                  <SelectValue placeholder="Set priority" />
+                  <SelectValue placeholder="Set priority">
+                    {(value: string) =>
+                      TASK_PRIORITY_META[value as TaskPriority]?.label ??
+                      'Set priority'
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {TASK_PRIORITY_ORDER.map((p) => (
@@ -218,7 +239,11 @@ export function TaskDetail({
             <Field label="Area">
               <Select value={areaId} onValueChange={onAreaChange} disabled={pending}>
                 <SelectTrigger size="sm" className="w-full">
-                  <SelectValue />
+                  <SelectValue>
+                    {(value: string) =>
+                      areas.find((a) => a.id === value)?.name ?? String(value)
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {areas.map((a) => (

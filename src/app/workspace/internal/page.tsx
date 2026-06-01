@@ -1,10 +1,10 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentProfile } from '@/lib/auth/get-current-profile';
 import { listAreas, listTasks } from '@/lib/internal/queries';
-import { TaskList } from '@/components/internal/task-list';
+import { TaskBoard } from '@/components/internal/task-board';
 import { NewTaskForm } from '@/components/internal/new-task-form';
 import { PageHeader } from '@/components/admin/ui/page-header';
+import { FilterChips } from '@/components/admin/ui/filter-chips';
 
 const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: 'not_started', label: 'Not started' },
@@ -33,17 +33,7 @@ export default async function InternalWorkspacePage({
     }),
   ]);
 
-  // Build a filter href that mutates one param and preserves the rest.
-  function filterHref(patch: { area?: string; status?: string }) {
-    const next = new URLSearchParams();
-    const area = 'area' in patch ? patch.area : params.area;
-    const status = 'status' in patch ? patch.status : params.status;
-    if (area) next.set('area', area);
-    if (status) next.set('status', status);
-    if (params.project) next.set('project', params.project);
-    const qs = next.toString();
-    return qs ? `/workspace/internal?${qs}` : '/workspace/internal';
-  }
+  const areaOptions = areas.map((a) => ({ value: a.id, label: a.name }));
 
   return (
     <>
@@ -54,68 +44,20 @@ export default async function InternalWorkspacePage({
         action={<NewTaskForm areas={areas} />}
       />
 
-      <nav aria-label="Task filters" className="mb-4 space-y-2">
-        <div className="flex flex-wrap gap-2 text-sm">
-          <FilterPill
-            href={filterHref({ area: undefined })}
-            label="All areas"
-            active={!params.area}
-          />
-          {areas.map((a) => (
-            <FilterPill
-              key={a.id}
-              href={filterHref({ area: a.id })}
-              label={a.name}
-              active={params.area === a.id}
-              color={a.color ?? undefined}
-            />
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2 text-sm">
-          <FilterPill
-            href={filterHref({ status: undefined })}
-            label="All statuses"
-            active={!params.status}
-          />
-          {STATUS_FILTERS.map((s) => (
-            <FilterPill
-              key={s.value}
-              href={filterHref({ status: s.value })}
-              label={s.label}
-              active={params.status === s.value}
-            />
-          ))}
-        </div>
-      </nav>
+      <div
+        aria-label="Task filters"
+        role="group"
+        className="mb-5 space-y-2"
+      >
+        <FilterChips paramName="area" options={areaOptions} allLabel="All areas" />
+        <FilterChips
+          paramName="status"
+          options={STATUS_FILTERS}
+          allLabel="All statuses"
+        />
+      </div>
 
-      <TaskList tasks={tasks} areas={areas} />
+      <TaskBoard tasks={tasks} areas={areas} />
     </>
-  );
-}
-
-function FilterPill({
-  href,
-  label,
-  active,
-  color,
-}: {
-  href: string;
-  label: string;
-  active: boolean;
-  color?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? 'true' : undefined}
-      className={`rounded-full border px-3 py-1 transition-colors ${
-        active
-          ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-border bg-card text-foreground hover:bg-muted'
-      }`}
-      style={color && !active ? { borderColor: color, color } : undefined}
-    >
-      {label}
-    </Link>
   );
 }

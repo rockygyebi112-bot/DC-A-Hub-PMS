@@ -2,15 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  DataTable,
+  type ColumnDef,
+  type SortState,
+} from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { cn } from "@/lib/utils";
@@ -26,182 +23,127 @@ export type ProjectsTableRow = {
   client: { id: string; name: string } | null;
 };
 
-function SortableHeader({
-  label,
-  sortKey,
-}: {
-  label: string;
-  sortKey: string;
-}) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const params = useSearchParams();
-  const currentSort = params.get("sort") ?? "";
-  const currentDir = params.get("dir") === "desc" ? "desc" : "asc";
-  const active = currentSort === sortKey;
+type ProjectStatus = ProjectsTableRow["status"];
 
-  function go() {
-    const next = new URLSearchParams(Array.from(params.entries()));
-    if (active) {
-      // Toggle direction on the active column.
-      next.set("sort", sortKey);
-      next.set("dir", currentDir === "asc" ? "desc" : "asc");
-    } else {
-      // Switching column defaults to asc.
-      next.set("sort", sortKey);
-      next.set("dir", "asc");
-    }
-    const qs = next.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname);
-  }
-
-  const Icon = active ? (currentDir === "asc" ? ChevronUp : ChevronDown) : ChevronsUpDown;
-  return (
-    <button
-      type="button"
-      onClick={go}
-      className={cn(
-        "inline-flex items-center gap-1 text-left transition-colors hover:text-foreground",
-        active ? "text-foreground" : "text-muted-foreground",
-      )}
-    >
-      <span>{label}</span>
-      <Icon className={cn("size-3.5", !active && "opacity-60")} />
-    </button>
-  );
+function scheduleText(p: ProjectsTableRow, dash: string): string {
+  return p.start_date || p.end_date
+    ? `${p.start_date ?? "TBD"} ${dash} ${p.end_date ?? "TBD"}`
+    : "Not scheduled";
 }
 
 export function ProjectsTable({ rows }: { rows: ProjectsTableRow[] }) {
   const router = useRouter();
-  return (
-    <>
-      {/* Mobile: card list. */}
-      <ul className="space-y-2 md:hidden">
-        {rows.map((p) => {
-          const href = `/admin/projects/${p.id}`;
-          return (
-            <li key={p.id} className="row-cv-card">
-              <Link
-                href={href}
-                className={`flex min-h-16 flex-col gap-1 rounded-lg border border-border bg-card p-3 transition-colors active:bg-muted/60 ${
-                  p.archived_at ? "opacity-60" : ""
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{p.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {p.client?.name ?? "Unassigned"}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <StatusPill
-                      status={
-                        p.archived_at
-                          ? "archived"
-                          : (p.status as
-                              | "planning"
-                              | "active"
-                              | "paused"
-                              | "completed")
-                      }
-                    />
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
-                    {p.code}
-                  </code>
-                  <span className="truncate">
-                    {p.start_date || p.end_date
-                      ? `${p.start_date ?? "TBD"} \u2013 ${p.end_date ?? "TBD"}`
-                      : "Not scheduled"}
-                  </span>
-                </div>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+  const pathname = usePathname();
+  const params = useSearchParams();
 
-      {/* Desktop: table. */}
-      <div className="hidden overflow-x-auto md:block">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>
-              <SortableHeader label="Name" sortKey="name" />
-            </TableHead>
-            <TableHead>Code</TableHead>
-            <TableHead>
-              <SortableHeader label="Client" sortKey="client_id" />
-            </TableHead>
-            <TableHead>
-              <SortableHeader label="Status" sortKey="status" />
-            </TableHead>
-            <TableHead>
-              <SortableHeader label="Start date" sortKey="start_date" />
-            </TableHead>
-            <TableHead className="w-24" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((p) => {
-            const href = `/admin/projects/${p.id}`;
-            return (
-              <TableRow
-                key={p.id}
-                className={`row-cv cursor-pointer hover:bg-muted/40 transition-colors ${
-                  p.archived_at ? "opacity-60" : ""
-                }`}
-                style={{ height: "var(--admin-row-h)" }}
-                onClick={() => router.push(href)}
-              >
-                <TableCell className="font-medium">
-                  <Link
-                    href={href}
-                    onClick={(e) => e.stopPropagation()}
-                    className="hover:underline"
-                  >
-                    {p.name}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                    {p.code}
-                  </code>
-                </TableCell>
-                <TableCell>{p.client?.name ?? "-"}</TableCell>
-                <TableCell>
-                  <StatusPill
-                    status={
-                      p.archived_at
-                        ? "archived"
-                        : (p.status as "planning" | "active" | "paused" | "completed")
-                    }
-                  />
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {p.start_date || p.end_date
-                    ? `${p.start_date ?? "TBD"} - ${p.end_date ?? "TBD"}`
-                    : "Not scheduled"}
-                </TableCell>
-                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    render={<Link href={href} />}
-                  >
-                    Open
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-      </div>
-    </>
+  // Sorting is server-driven via ?sort=&dir= — the rows arrive pre-ordered, so
+  // the table reflects the sort but never re-orders on the client (manualSort).
+  const sortKey = params.get("sort");
+  const sort: SortState | null = sortKey
+    ? { columnId: sortKey, direction: params.get("dir") === "desc" ? "desc" : "asc" }
+    : null;
+
+  function onSortChange(next: SortState) {
+    const qp = new URLSearchParams(Array.from(params.entries()));
+    qp.set("sort", next.columnId);
+    qp.set("dir", next.direction);
+    const qs = qp.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  const columns: ColumnDef<ProjectsTableRow>[] = [
+    { id: "name", header: "Name", primary: true, sortable: true, cell: (p) => p.name },
+    {
+      id: "code",
+      header: "Code",
+      cell: (p) => (
+        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{p.code}</code>
+      ),
+    },
+    {
+      id: "client_id",
+      header: "Client",
+      sortable: true,
+      cell: (p) => p.client?.name ?? "-",
+    },
+    {
+      id: "status",
+      header: "Status",
+      sortable: true,
+      cell: (p) => (
+        <StatusPill
+          status={p.archived_at ? "archived" : (p.status as ProjectStatus)}
+        />
+      ),
+    },
+    {
+      id: "start_date",
+      header: "Start date",
+      sortable: true,
+      cellClassName: "text-muted-foreground",
+      cell: (p) => scheduleText(p, "-"),
+    },
+    {
+      id: "open",
+      header: "",
+      align: "end",
+      width: "6rem",
+      cell: (p) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          render={<Link href={`/admin/projects/${p.id}`} />}
+        >
+          Open
+        </Button>
+      ),
+    },
+  ];
+
+  return (
+    <DataTable<ProjectsTableRow>
+      caption="Projects"
+      data={rows}
+      getRowId={(p) => p.id}
+      columns={columns}
+      manualSort
+      sort={sort}
+      onSortChange={onSortChange}
+      rowHref={(p) => `/admin/projects/${p.id}`}
+      rowClassName={(p) =>
+        cn("row-cv h-[var(--admin-row-h)]", p.archived_at && "opacity-60")
+      }
+      empty={{ title: "No projects" }}
+      renderCard={(p) => (
+        <Link
+          href={`/admin/projects/${p.id}`}
+          className={cn(
+            "flex min-h-16 flex-col gap-1 rounded-lg border border-border bg-card p-3 transition-colors active:bg-muted/60",
+            p.archived_at && "opacity-60",
+          )}
+        >
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium">{p.name}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {p.client?.name ?? "Unassigned"}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <StatusPill
+                status={p.archived_at ? "archived" : (p.status as ProjectStatus)}
+              />
+              <ChevronRight className="size-4 text-muted-foreground" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+              {p.code}
+            </code>
+            <span className="truncate">{scheduleText(p, "–")}</span>
+          </div>
+        </Link>
+      )}
+    />
   );
 }

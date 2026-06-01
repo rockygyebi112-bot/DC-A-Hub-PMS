@@ -176,6 +176,67 @@ describe("DataTable", () => {
     expect(onRowClick).toHaveBeenCalledWith(rows[0]);
   });
 
+  it("manualSort: reflects the sort prop but does NOT reorder rows on the client", () => {
+    const onSortChange = vi.fn();
+    render(
+      <DataTable
+        caption="People"
+        columns={columns}
+        data={rows}
+        getRowId={(r) => r.id}
+        manualSort
+        sort={{ columnId: "name", direction: "asc" }}
+        onSortChange={onSortChange}
+      />,
+    );
+    const table = screen.getByRole("table");
+    // Original data order is preserved (server already sorted); the prop only
+    // drives aria-sort + the control state.
+    expect(bodyRowText().map((t) => t?.replace(/[0-9—]/g, ""))).toEqual([
+      "Charlie",
+      "alice",
+      "Bob",
+    ]);
+    expect(within(table).getByRole("columnheader", { name: /Name/ })).toHaveAttribute(
+      "aria-sort",
+      "ascending",
+    );
+    fireEvent.click(within(table).getByRole("button", { name: "Sort by Name" }));
+    expect(onSortChange).toHaveBeenCalledWith({ columnId: "name", direction: "desc" });
+  });
+
+  it("rowClassName applies per-row classes to the desktop row", () => {
+    render(
+      <DataTable
+        caption="People"
+        columns={columns}
+        data={rows}
+        getRowId={(r) => r.id}
+        rowClassName={(r) => (r.score === null ? "opacity-60" : undefined)}
+      />,
+    );
+    const table = screen.getByRole("table");
+    const dimmed = within(table).getByText("alice").closest("tr");
+    expect(dimmed).toHaveClass("opacity-60");
+    const normal = within(table).getByText("Charlie").closest("tr");
+    expect(normal).not.toHaveClass("opacity-60");
+  });
+
+  it("renderCard drives the mobile stack instead of the generic label/value layout", () => {
+    render(
+      <DataTable
+        caption="People"
+        columns={columns}
+        data={rows}
+        getRowId={(r) => r.id}
+        renderCard={(r) => <article>Custom card for {r.name}</article>}
+      />,
+    );
+    expect(screen.getByText("Custom card for Charlie")).toBeInTheDocument();
+    // The generic card's label/value pairs should not be rendered.
+    expect(screen.queryByRole("definition")).not.toBeInTheDocument();
+  });
+
   it("supports controlled sort (no internal state change; calls onSortChange)", () => {
     const onSortChange = vi.fn();
     const { rerender } = render(

@@ -130,6 +130,22 @@ export type DataTableProps<T> = {
   rowHref?: (row: T) => string | undefined;
   /** Whole-row click handler (mouse convenience + keyboard via primary cell). */
   onRowClick?: (row: T) => void;
+  /** Extra class(es) for the desktop `<tr>` — e.g. dim archived rows. */
+  rowClassName?: (row: T) => string | undefined;
+
+  /**
+   * The data is already sorted by the consumer (e.g. a server-side ORDER BY
+   * driven by `sort`/`onSortChange`). Header controls still reflect `sort` and
+   * emit `onSortChange`, but the rows are NOT re-ordered on the client.
+   */
+  manualSort?: boolean;
+
+  /**
+   * Custom mobile card renderer. When provided, the mobile card-stack uses it
+   * verbatim per row (the card owns its own link/markup) instead of the generic
+   * label/value layout — so bespoke mobile cards survive the migration.
+   */
+  renderCard?: (row: T) => React.ReactNode;
 
   stickyHeader?: boolean;
   className?: string;
@@ -193,6 +209,9 @@ export function DataTable<T>({
   onSortChange,
   rowHref,
   onRowClick,
+  rowClassName,
+  manualSort = false,
+  renderCard,
   stickyHeader = true,
   className,
 }: DataTableProps<T>) {
@@ -250,7 +269,8 @@ export function DataTable<T>({
   );
 
   const sortedData = React.useMemo(() => {
-    if (!activeSort) return data;
+    // Consumer owns ordering (server-side sort) — never re-order on the client.
+    if (manualSort || !activeSort) return data;
     const col = columns.find((c) => c.id === activeSort.columnId);
     if (!col || !isSortable(col)) return data;
     const dir = activeSort.direction === "asc" ? 1 : -1;
@@ -266,7 +286,7 @@ export function DataTable<T>({
         return cmp !== 0 ? cmp * dir : x.i - y.i;
       })
       .map((d) => d.row);
-  }, [data, activeSort, columns]);
+  }, [data, activeSort, columns, manualSort]);
 
   function renderCellContent(col: ColumnDef<T>, row: T): React.ReactNode {
     if (col.cell) return col.cell(row);
@@ -431,7 +451,10 @@ export function DataTable<T>({
               onClick={
                 interactiveRows ? (e) => handleRowActivate(e, row) : undefined
               }
-              className={cn(interactiveRows && "cursor-pointer")}
+              className={cn(
+                interactiveRows && "cursor-pointer",
+                rowClassName?.(row),
+              )}
             >
               {columns.map((col) => {
                 const content = renderCellContent(col, row);
@@ -552,6 +575,13 @@ export function DataTable<T>({
           description={empty?.description}
           action={empty?.action}
         />
+      ) : renderCard ? (
+        // Consumer-owned bespoke card (owns its own link/markup).
+        <ul className="space-y-3">
+          {sortedData.map((row) => (
+            <li key={getRowId(row)}>{renderCard(row)}</li>
+          ))}
+        </ul>
       ) : (
         <ul className="space-y-3">
           {sortedData.map((row) => (

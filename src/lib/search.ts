@@ -2,6 +2,12 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 
+// Escape Postgres LIKE/ILIKE wildcards so a user-typed query can't pattern-
+// match unintended rows (or turn into an expensive scan).
+function escapeLike(value: string): string {
+  return value.replace(/([\\%_])/g, "\\$1");
+}
+
 export type SearchableActivity = {
   id: string;
   name: string;
@@ -16,19 +22,23 @@ export type SearchableActivity = {
  * so this is safe to call from any surface (portal/workspace/admin) — the
  * same row-level policies that gate the project pages also gate this query.
  *
- * Capped to keep the layout payload bounded; users with more activities
- * than this still find them by typing more specific terms (the cap is
- * applied AFTER ordering by most recently updated).
+ * When `query` is provided the filter is applied server-side (case-insensitive
+ * name match) so a match that falls outside the recency cap is still
+ * reachable — client-side filtering over a truncated list could never find it.
  */
 export async function listSearchableActivities(
   limit = 500,
+  query?: string,
 ): Promise<SearchableActivity[]> {
   const sb = await createClient();
-  const { data, error } = await sb
+  let q = sb
     .from("activities")
     .select(
       "id, name, updated_at, phase:phases(name, project:projects(id, name))",
-    )
+    );
+  const term = query?.trim();
+  if (term) q = q.ilike("name", `%${escapeLike(term)}%`);
+  const { data, error } = await q
     .order("updated_at", { ascending: false })
     .limit(limit);
   if (error || !data) return [];
@@ -69,21 +79,26 @@ export type SearchableOrgs = {
  */
 export async function listSearchableOrgs(
   limit = 500,
+  query?: string,
 ): Promise<SearchableOrgs> {
   const sb = await createClient();
+  const term = query?.trim();
+  const like = term ? `%${escapeLike(term)}%` : null;
+  let projectsQuery = sb
+    .from("projects")
+    .select("id, name")
+    .is("archived_at", null);
+  let clientsQuery = sb
+    .from("clients")
+    .select("id, name")
+    .is("archived_at", null);
+  if (like) {
+    projectsQuery = projectsQuery.ilike("name", like);
+    clientsQuery = clientsQuery.ilike("name", like);
+  }
   const [projectsRes, clientsRes] = await Promise.all([
-    sb
-      .from("projects")
-      .select("id, name")
-      .is("archived_at", null)
-      .order("name", { ascending: true })
-      .limit(limit),
-    sb
-      .from("clients")
-      .select("id, name")
-      .is("archived_at", null)
-      .order("name", { ascending: true })
-      .limit(limit),
+    projectsQuery.order("name", { ascending: true }).limit(limit),
+    clientsQuery.order("name", { ascending: true }).limit(limit),
   ]);
   return {
     projects: (projectsRes.data ?? []).map((p) => ({

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionUser } from "./session";
 import type { AppRole } from "./require-role";
@@ -7,6 +8,24 @@ import type { AppRole } from "./require-role";
 export type GuardResult =
   | { ok: true; userId: string; role: AppRole }
   | { ok: false; error: string };
+
+/**
+ * The caller's project_role for a project, or null if they have no membership.
+ * Wrapped in React `cache()` so layout + page + guard + action share a single
+ * round-trip per request instead of each re-querying project_members.
+ */
+const getProjectRole = cache(
+  async (userId: string, projectId: string): Promise<string | null> => {
+    const sb = await createClient();
+    const { data } = await sb
+      .from("project_members")
+      .select("project_role")
+      .eq("project_id", projectId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    return data?.project_role ?? null;
+  },
+);
 
 /**
  * Returns the authenticated user's id and role, or an error result.
@@ -44,14 +63,8 @@ export async function requireProjectWriter(
   if (!res.ok) return res;
   if (res.role === "admin") return res;
 
-  const sb = await createClient();
-  const { data } = await sb
-    .from("project_members")
-    .select("project_role")
-    .eq("project_id", projectId)
-    .eq("user_id", res.userId)
-    .maybeSingle();
-  if (!data || (data.project_role !== "member" && data.project_role !== "manager")) {
+  const projectRole = await getProjectRole(res.userId, projectId);
+  if (projectRole !== "member" && projectRole !== "manager") {
     return { ok: false, error: "Not authorized" };
   }
   return res;
@@ -65,13 +78,7 @@ export async function requireProjectReader(
   if (!res.ok) return res;
   if (res.role === "admin") return res;
 
-  const sb = await createClient();
-  const { data } = await sb
-    .from("project_members")
-    .select("project_role")
-    .eq("project_id", projectId)
-    .eq("user_id", res.userId)
-    .maybeSingle();
-  if (!data) return { ok: false, error: "Not authorized" };
+  const projectRole = await getProjectRole(res.userId, projectId);
+  if (!projectRole) return { ok: false, error: "Not authorized" };
   return res;
 }

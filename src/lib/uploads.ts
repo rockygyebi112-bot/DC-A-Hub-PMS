@@ -14,6 +14,13 @@ export const MAX_PROOF_BYTES = 25 * 1024 * 1024; // 25 MB
 export const MAX_RECEIPT_BYTES = 25 * 1024 * 1024; // 25 MB
 export const MAX_XLSX_BYTES = 10 * 1024 * 1024; // 10 MB
 
+// Hard ceiling on rows we will read out of an uploaded spreadsheet. The byte
+// cap bounds the compressed input, but exceljs materialises the whole workbook
+// in memory and a small file can expand to a sheet with millions of (sparse)
+// rows — enough to OOM a constrained serverless runtime. Reject before we walk
+// the sheet rather than risk the crash.
+export const MAX_SHEET_ROWS = 10_000;
+
 const IMAGE_MIMES = new Set([
   "image/jpeg",
   "image/png",

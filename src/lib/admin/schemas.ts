@@ -106,6 +106,11 @@ export const setUserRoleSchema = z.object({
 });
 export type SetUserRoleInput = z.infer<typeof setUserRoleSchema>;
 
+// Profile ids arrive as raw server-action arguments from client components.
+// Validate them as UUIDs before they reach any query — never interpolate an
+// unvalidated id into a PostgREST filter expression.
+export const profileIdSchema = z.string().uuid("Invalid user id");
+
 /* ---------------------------------------------------------------- */
 /* Finance / Budget                                                  */
 /* ---------------------------------------------------------------- */

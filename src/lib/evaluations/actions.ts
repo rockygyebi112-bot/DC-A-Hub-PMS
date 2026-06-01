@@ -6,8 +6,8 @@ import { requireRole } from '@/lib/auth/require-role-server';
 import { dbErrorMessage } from '@/lib/db-errors';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { setDashboardSpecVersion } from '@/lib/supabase/rpcs';
 import type { ActionResult } from '@/lib/action-result';
-import type { Json } from '@/lib/supabase/types';
 
 import { DashboardSpec } from './dashboard-spec';
 import { ingestInstrument } from './ingest';
@@ -143,35 +143,16 @@ export async function setDashboardSpec(
     return { ok: false, error: parsed.error.issues[0].message };
   }
 
+  // Deactivate the prior config and insert version+1 in one atomic, advisory-
+  // locked RPC (migration 0042). The previous read-modify-write across three
+  // statements could collide on version or briefly leave NO active config
+  // under concurrent saves. The RPC enforces admin-only via is_admin().
   const sb = await createClient();
-  // Deactivate prior active config, insert a new one at version+1.
-  const { data: prev } = await sb
-    .from('evaluation_dashboard_configs')
-    .select('version')
-    .eq('evaluation_id', evaluationId)
-    .eq('is_active', true)
-    .maybeSingle();
-  const nextVersion = (prev?.version ?? 0) + 1;
-
-  const { error: deErr } = await sb
-    .from('evaluation_dashboard_configs')
-    .update({ is_active: false })
-    .eq('evaluation_id', evaluationId)
-    .eq('is_active', true);
-  if (deErr) return { ok: false, error: dbErrorMessage(deErr) };
-
-  const { error: insErr } = await sb
-    .from('evaluation_dashboard_configs')
-    .insert({
-      evaluation_id: evaluationId,
-      version: nextVersion,
-      // DashboardSpec's open-ended `numerator` record widens past supabase-js's
-      // recursive `Json` type; the spec is validated Zod data — cast at the
-      // column boundary only.
-      spec: parsed.data as unknown as Json,
-      is_active: true,
-    });
-  if (insErr) return { ok: false, error: dbErrorMessage(insErr) };
+  const { error } = await setDashboardSpecVersion(sb, {
+    evaluation_id: evaluationId,
+    spec: parsed.data,
+  });
+  if (error) return { ok: false, error: dbErrorMessage(error) };
 
   revalidatePath('/admin/projects/[id]/evaluation', 'page');
   return { ok: true };
@@ -183,8 +164,15 @@ export async function triggerManualSync(
   const auth = await requireRole(['admin', 'staff']);
   if (!auth.ok) return auth;
 
-  // 60s rate limit, keyed per instrument.
-  const rl = await checkRateLimit('evaluations-sync', instrumentId, 1, 60);
+  // 60s rate limit, keyed on caller + instrument (matches the sync route).
+  // Keying on the instrument alone let one user's debounce lock out another
+  // and didn't track per-user abuse.
+  const rl = await checkRateLimit(
+    'evaluations-sync',
+    `${auth.userId}:${instrumentId}`,
+    1,
+    60,
+  );
   if (!rl.ok) {
     return {
       ok: false,

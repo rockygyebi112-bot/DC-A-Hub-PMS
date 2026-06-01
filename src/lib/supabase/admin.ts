@@ -1,13 +1,7 @@
 import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
-
-import type { Database } from "./types";
-
-export function createAdminClient() {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+// `createAdminClient` and `createServiceClient` were two byte-for-byte copies
+// of the same RLS-bypassing service-role client in different files. Keep this
+// name for existing call sites but delegate to the single canonical factory so
+// there is exactly one definition of "the dangerous client".
+export { createServiceClient as createAdminClient } from "./server";

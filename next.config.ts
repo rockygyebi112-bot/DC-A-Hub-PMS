@@ -1,21 +1,25 @@
 import type { NextConfig } from "next";
 
 /**
- * Security headers applied to every response. CSP intentionally omitted from
- * middleware (which runs on the edge) so it can include `unsafe-inline` for
- * Next's dev runtime; tighten via a separate `Content-Security-Policy-Report-Only`
- * once all inline script sources have been enumerated.
+ * Security headers applied to every response. CSP is set statically here so it
+ * covers EVERY route (including /login, /api, /auth) uniformly — the existing
+ * `proxy.ts` matcher deliberately skips those paths for Vercel quota reasons,
+ * so it is not a complete place to attach a per-request policy.
+ *
+ * KNOWN GAP: `script-src` still includes `'unsafe-inline'`, which blunts CSP's
+ * XSS protection. The proper fix is a per-request nonce (`'nonce-…'
+ * 'strict-dynamic'`), but in Next 16 that must be minted in `proxy.ts` AND the
+ * proxy matcher widened to cover document routes it currently excludes, then
+ * verified end-to-end (dev needs `'unsafe-eval'`; prod must not). That is a
+ * focused, separately-verified change — tracked rather than bundled here.
  */
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const supabaseConnect = SUPABASE_URL ? ` ${SUPABASE_URL}` : "";
 
 const CSP = [
   "default-src 'self'",
-  // Next.js + React runtime requires inline scripts for hydration; nonces
-  // would be cleaner but require per-request injection. Revisit once the
-  // upgrade path is clear. 'unsafe-eval' is intentionally NOT included —
-  // Next 16 / React 19 production runtimes do not need eval, and allowing
-  // it defeats the bulk of CSP's value.
+  // See KNOWN GAP above — 'unsafe-inline' is a deliberate, documented stopgap
+  // until the nonce migration lands. 'unsafe-eval' is intentionally excluded.
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",

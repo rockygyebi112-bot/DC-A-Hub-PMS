@@ -158,20 +158,31 @@ export async function unlockProjectDocuments(
     return { ok: false, error: "Could not record document access. Try again." };
   }
 
-  // Mint URLs in parallel: files get a 5-minute signed URL on the `proofs`
-  // bucket; links are passed through unchanged.
-  const resolved = await Promise.all(
-    proofs.map(async (p): Promise<UnlockedDocument | null> => {
+  // Mint file URLs with ONE bulk call (5-minute expiry) instead of firing N
+  // parallel createSignedUrl requests — a project with hundreds of proofs
+  // otherwise bursts hundreds of concurrent storage calls per unlock click.
+  const filePaths = proofs
+    .filter((p) => p.kind !== "link" && p.file_path)
+    .map((p) => p.file_path as string);
+  const signedByPath = new Map<string, string>();
+  if (filePaths.length > 0) {
+    const { data: signedList } = await sb.storage
+      .from("proofs")
+      .createSignedUrls(filePaths, 5 * 60);
+    for (const s of signedList ?? []) {
+      if (s.path && s.signedUrl) signedByPath.set(s.path, s.signedUrl);
+    }
+  }
+
+  const documents = proofs
+    .map((p): UnlockedDocument | null => {
       const kind = (p.kind === "link" ? "link" : "file") as "file" | "link";
-      let url: string | null = null;
-      if (kind === "link") {
-        url = p.url ?? null;
-      } else if (p.file_path) {
-        const { data: signed } = await sb.storage
-          .from("proofs")
-          .createSignedUrl(p.file_path, 5 * 60);
-        url = signed?.signedUrl ?? null;
-      }
+      const url =
+        kind === "link"
+          ? (p.url ?? null)
+          : p.file_path
+            ? (signedByPath.get(p.file_path) ?? null)
+            : null;
       if (!url) return null;
       const meta = activityById.get(p.activity_id);
       return {
@@ -186,9 +197,8 @@ export async function unlockProjectDocuments(
         activityName: meta?.name ?? null,
         createdAt: p.created_at,
       };
-    }),
-  );
-  const documents = resolved.filter((d): d is UnlockedDocument => d !== null);
+    })
+    .filter((d): d is UnlockedDocument => d !== null);
 
   return { ok: true, data: documents };
 }

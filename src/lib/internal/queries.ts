@@ -38,30 +38,34 @@ export type InternalTaskWithAssignees = Omit<RawTaskRow, 'assignees'> & {
   assignees: Array<{ user_id: string; profile: AssigneeProfile | null }>;
 };
 
+/**
+ * Resolve display name/avatar for a set of user ids with the service client.
+ * The `profiles` RLS policy only exposes self / admin / shared-project rows
+ * (migration 0017), so two staff who share an internal TASK but no PROJECT
+ * can't read each other via the user-scoped client — names would fall back to
+ * raw user ids. Every caller here is already gated to admin/staff and we only
+ * read non-sensitive name/avatar for users tied to internal work, so the
+ * bypass is safe and scoped.
+ */
+async function fetchProfileMap(
+  userIds: Iterable<string>,
+): Promise<Map<string, AssigneeProfile>> {
+  const ids = Array.from(new Set([...userIds].filter(Boolean)));
+  if (!ids.length) return new Map();
+  const admin = createServiceClient();
+  const { data } = await admin
+    .from('profiles')
+    .select('user_id, full_name, avatar_url')
+    .in('user_id', ids);
+  return new Map((data ?? []).map((p) => [p.user_id, p as AssigneeProfile]));
+}
+
 async function hydrateAssigneeProfiles(
   rows: RawTaskRow[],
 ): Promise<InternalTaskWithAssignees[]> {
-  const userIds = Array.from(
-    new Set(rows.flatMap((r) => (r.assignees ?? []).map((a) => a.user_id))),
+  const profileMap = await fetchProfileMap(
+    rows.flatMap((r) => (r.assignees ?? []).map((a) => a.user_id)),
   );
-  let profileMap = new Map<string, AssigneeProfile>();
-  if (userIds.length) {
-    // Resolve colleague names/avatars with the service client. The `profiles`
-    // RLS policy only exposes self / admin / shared-project rows (migration
-    // 0017), so two staff who share an internal TASK but no PROJECT can't read
-    // each other via the user-scoped client — names would fall back to raw
-    // user ids. Every caller of this helper (listTasks/getTask) is already
-    // gated to admin/staff, and we only read non-sensitive name/avatar for
-    // users assigned to internal tasks, so the bypass is safe and scoped.
-    const admin = createServiceClient();
-    const { data: profiles } = await admin
-      .from('profiles')
-      .select('user_id, full_name, avatar_url')
-      .in('user_id', userIds);
-    profileMap = new Map(
-      (profiles ?? []).map((p) => [p.user_id, p as AssigneeProfile]),
-    );
-  }
   return rows.map((row) => ({
     ...row,
     assignees: (row.assignees ?? []).map((a) => ({
@@ -138,4 +142,112 @@ export async function getTask(
     data as unknown as RawTaskRow,
   ]);
   return hydrated ?? null;
+}
+
+// ---------- documents + comments (0045) ----------
+
+export type InternalProof = {
+  id: string;
+  task_id: string;
+  file_path: string;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  caption: string | null;
+  uploaded_by: string | null;
+  created_at: string;
+  uploaderName: string | null;
+};
+
+export type InternalComment = {
+  id: string;
+  body: string;
+  author_user_id: string;
+  authorName: string | null;
+  authorAvatarUrl: string | null;
+  created_at: string;
+};
+
+type ProofRow = Omit<InternalProof, 'uploaderName'>;
+type CommentRow = {
+  id: string;
+  body: string;
+  author_user_id: string;
+  created_at: string;
+};
+
+/** Documents attached to an internal task, newest first. */
+export async function listInternalTaskProofs(
+  taskId: string,
+): Promise<InternalProof[]> {
+  const sb = await createClient();
+  const { data, error } = await sb
+    .from('internal_task_proofs')
+    .select(
+      'id, task_id, file_path, file_name, mime_type, size_bytes, caption, uploaded_by, created_at',
+    )
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  const rows = (data ?? []) as ProofRow[];
+  const profileMap = await fetchProfileMap(rows.map((r) => r.uploaded_by ?? ''));
+  return rows.map((r) => ({
+    ...r,
+    uploaderName: r.uploaded_by
+      ? profileMap.get(r.uploaded_by)?.full_name ?? null
+      : null,
+  }));
+}
+
+/** Task-level discussion feed, oldest first (chronological). */
+export async function listInternalTaskComments(
+  taskId: string,
+): Promise<InternalComment[]> {
+  const sb = await createClient();
+  const { data, error } = await sb
+    .from('internal_task_comments')
+    .select('id, body, author_user_id, created_at')
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return hydrateComments((data ?? []) as CommentRow[]);
+}
+
+/**
+ * Per-document comment threads for every proof on a task, keyed by proof id.
+ * Fetched in one round-trip so the page can hand each document its thread.
+ */
+export async function listInternalProofComments(
+  proofIds: string[],
+): Promise<Record<string, InternalComment[]>> {
+  const grouped: Record<string, InternalComment[]> = {};
+  if (proofIds.length === 0) return grouped;
+  const sb = await createClient();
+  const { data, error } = await sb
+    .from('internal_task_proof_comments')
+    .select('id, proof_id, body, author_user_id, created_at')
+    .in('proof_id', proofIds)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  const rows = (data ?? []) as (CommentRow & { proof_id: string })[];
+  const hydrated = await hydrateComments(rows);
+  rows.forEach((row, i) => {
+    (grouped[row.proof_id] ??= []).push(hydrated[i]);
+  });
+  return grouped;
+}
+
+async function hydrateComments(rows: CommentRow[]): Promise<InternalComment[]> {
+  const profileMap = await fetchProfileMap(rows.map((r) => r.author_user_id));
+  return rows.map((r) => {
+    const p = profileMap.get(r.author_user_id);
+    return {
+      id: r.id,
+      body: r.body,
+      author_user_id: r.author_user_id,
+      authorName: p?.full_name ?? null,
+      authorAvatarUrl: p?.avatar_url ?? null,
+      created_at: r.created_at,
+    };
+  });
 }

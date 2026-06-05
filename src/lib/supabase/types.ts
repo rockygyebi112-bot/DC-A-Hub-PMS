@@ -1539,6 +1539,14 @@ export type Database = {
       }
       project_id_from_path: { Args: { object_name: string }; Returns: string }
       receipt_project_id: { Args: { object_name: string }; Returns: string }
+      replace_mis_investments: {
+        Args: { p_evaluation_id: string; p_rows: Json }
+        Returns: number
+      }
+      set_dashboard_spec: {
+        Args: { p_evaluation_id: string; p_spec: Json }
+        Returns: number
+      }
       shares_project_with: {
         Args: { target_user_id: string }
         Returns: boolean

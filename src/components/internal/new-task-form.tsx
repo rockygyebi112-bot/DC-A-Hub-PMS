@@ -26,15 +26,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import type { TaskStatus } from './task-meta';
 
 export function NewTaskForm({
   areas,
+  projects = [],
+  defaultStatus = 'not_started',
   triggerLabel = 'New task',
   triggerVariant = 'default',
   triggerSize = 'default',
   triggerClassName,
 }: {
   areas: { id: string; name: string }[];
+  projects?: { id: string; name: string; client?: { name: string } | null }[];
+  defaultStatus?: TaskStatus;
   triggerLabel?: string;
   triggerVariant?: ComponentProps<typeof Button>['variant'];
   triggerSize?: ComponentProps<typeof Button>['size'];
@@ -46,6 +51,7 @@ export function NewTaskForm({
   // Base UI Select has no empty-string item value; use a "__none" sentinel for
   // the trigger and feed the real "" back through a hidden input for submission.
   const [priority, setPriority] = useState('');
+  const [projectId, setProjectId] = useState('');
 
   function onSubmit(fd: FormData) {
     start(async () => {
@@ -57,6 +63,7 @@ export function NewTaskForm({
       toast.success('Task created');
       setOpen(false);
       setPriority('');
+      setProjectId('');
       router.refresh();
     });
   }
@@ -80,6 +87,7 @@ export function NewTaskForm({
         </DialogHeader>
 
         <form action={onSubmit} className="space-y-4">
+          <input type="hidden" name="status" value={defaultStatus} />
           <div className="space-y-1.5">
             <Label>Area</Label>
             <Select name="area_id" required>
@@ -99,6 +107,37 @@ export function NewTaskForm({
               </SelectContent>
             </Select>
           </div>
+
+          {projects.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Project</Label>
+              <input type="hidden" name="project_id" value={projectId} />
+              <Select
+                value={projectId || '__none'}
+                onValueChange={(v) => setProjectId(v === '__none' ? '' : (v ?? ''))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {(value: string) => {
+                      const project = projects.find((p) => p.id === value);
+                      if (!project || value === '__none') return 'No linked project';
+                      return project.client?.name
+                        ? `${project.name} - ${project.client.name}`
+                        : project.name;
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">No linked project</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.client?.name ? `${p.name} - ${p.client.name}` : p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="new-task-title">Title</Label>

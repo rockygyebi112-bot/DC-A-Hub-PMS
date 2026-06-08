@@ -120,14 +120,14 @@ export function MobileNav({
             />
           </div>
 
-          <div className="mt-2 flex-1 overflow-y-auto pb-4">
+          <div className="mt-2 min-h-0 flex-1 overflow-y-auto pb-4">
             <SidebarNavList groups={groups} onNavigate={() => setOpen(false)} />
           </div>
 
-          {footer && <div className="mx-3 mb-3 mt-2">{footer}</div>}
+          {footer && <div className="mx-3 mb-3 mt-2 shrink-0">{footer}</div>}
 
           {/* Bottom brand chip — mirrors the desktop rail. */}
-          <div className="flex items-center gap-2 border-t border-white/10 px-4 py-3">
+          <div className="flex shrink-0 items-center gap-2 border-t border-white/10 px-4 py-3">
             <BrandChip logoUrl={defaultLogoUrl ?? null} label={brand} />
             <div className="min-w-0 flex-1 leading-tight">
               <p className="font-heading truncate text-xs font-semibold text-white">

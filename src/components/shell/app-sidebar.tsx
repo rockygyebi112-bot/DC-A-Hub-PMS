@@ -113,7 +113,7 @@ export function AppSidebar({
           </Button>
         </div>
 
-        <div className="mt-3 flex flex-1 flex-col overflow-y-auto">
+        <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-y-auto">
           <SidebarNavList groups={groups} collapsed={collapsed} />
         </div>
 
@@ -124,10 +124,10 @@ export function AppSidebar({
             rail has switched to their own organisation's logo + name. */}
         <div
           className={cn(
-            "mt-auto border-t border-white/10",
+            "mt-auto shrink-0 border-t border-white/10",
             collapsed
               ? "flex flex-col items-center gap-1 py-3"
-              : "flex items-center gap-2 px-4 py-3",
+              : "flex items-center gap-2 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]",
           )}
         >
           <BrandChip logoUrl={defaultLogoUrl ?? null} label={brand} />

@@ -29,7 +29,6 @@ import {
 import { getAdminCounts } from "@/lib/admin/queries";
 import { createClient } from "@/lib/supabase/server";
 import { actionVerb } from "@/lib/notifications/labels";
-import type { DashboardPeriod } from "@/components/admin/ui/dashboard-period-selector";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -132,45 +131,24 @@ function activityCompletion(activities: ActivityRow[]) {
   return Math.round((done / activities.length) * 100);
 }
 
-function periodStartDate(period: DashboardPeriod, now = new Date()): string {
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  let start: Date;
-  if (period === "ytd") {
-    start = new Date(y, 0, 1);
-  } else if (period === "quarter") {
-    const qStartMonth = Math.floor(m / 3) * 3;
-    start = new Date(y, qStartMonth, 1);
-  } else {
-    // default: this month
-    start = new Date(y, m, 1);
-  }
-  return start.toISOString();
-}
-
 // ---------------------------------------------------------------------------
 // Data loaders — split into independent fetches so per-card Suspense
 // boundaries can stream in as each one resolves rather than blocking on the
 // slowest single query.
 // ---------------------------------------------------------------------------
 
-async function getDashboardGridData(
-  period: DashboardPeriod,
-): Promise<DashboardGridData> {
+async function getDashboardGridData(): Promise<DashboardGridData> {
   const sb = await createClient();
   const today = new Date().toISOString().slice(0, 10);
   const inSevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
-  const periodStart = periodStartDate(period);
-
   const { data: projectsRaw } = await sb
     .from("projects")
     .select(
       "id, name, code, status, start_date, end_date, archived_at, client:clients(name, logo_url)",
     )
     .is("archived_at", null)
-    .gte("created_at", periodStart)
     .order("created_at", { ascending: false });
 
   const projects = (projectsRaw ?? []) as ProjectRow[];
@@ -184,12 +162,16 @@ async function getDashboardGridData(
           "id, phase_id, name, status, planned_date, completed_date, created_at, phases!inner(project_id)",
         )
         .in("phases.project_id", projectIds)
-        .gte("created_at", periodStart)
     : { data: [] as ActivityWithPhase[] };
   const activitiesWithPhase = (activitiesRaw ?? []) as unknown as ActivityWithPhase[];
-  const activities: ActivityRow[] = activitiesWithPhase.map(
-    ({ phases: _phases, ...rest }) => rest,
-  );
+  const activities: ActivityRow[] = activitiesWithPhase.map((activity) => ({
+    id: activity.id,
+    phase_id: activity.phase_id,
+    name: activity.name,
+    status: activity.status,
+    planned_date: activity.planned_date,
+    completed_date: activity.completed_date,
+  }));
   const phaseToProject = new Map(
     activitiesWithPhase
       .filter((a) => a.phases?.project_id)
@@ -381,15 +363,7 @@ async function getDashboardActivityFeed(): Promise<ActivityFeedRow[]> {
 // Page
 // ---------------------------------------------------------------------------
 
-export default async function AdminOverview({
-  searchParams,
-}: {
-  searchParams: Promise<{ period?: string }>;
-}) {
-  const sp = await searchParams;
-  const period: DashboardPeriod =
-    sp.period === "quarter" || sp.period === "ytd" ? sp.period : "month";
-
+export default async function AdminOverview() {
   return (
     <div className="space-y-5">
       <div className="flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
@@ -407,8 +381,8 @@ export default async function AdminOverview({
 
       {/* Main grid — health + tasks + recent + milestones, all derived from
           one projects + activities snapshot scoped to the selected period. */}
-      <Suspense key={`grid:${period}`} fallback={<GridSkeleton />}>
-        <DashboardGrid period={period} />
+      <Suspense fallback={<GridSkeleton />}>
+        <DashboardGrid />
       </Suspense>
 
       {/* Activity feed — its own Suspense + own query (activity_log + a small
@@ -470,8 +444,8 @@ async function KpiStrip() {
   );
 }
 
-async function DashboardGrid({ period }: { period: DashboardPeriod }) {
-  const data = await getDashboardGridData(period);
+async function DashboardGrid() {
+  const data = await getDashboardGridData();
 
   const healthBuckets: HealthBucket[] = [
     { key: "on_track", label: "On Track", value: data.health.on_track },

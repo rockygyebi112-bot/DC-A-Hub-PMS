@@ -8,11 +8,15 @@ export function FilterChips({
   options,
   allLabel = "All",
   counts,
+  wrap = true,
+  className,
 }: {
   paramName: string;
   options: { value: string; label: string }[];
   allLabel?: string;
   counts?: Record<string, number>;
+  wrap?: boolean;
+  className?: string;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -36,7 +40,13 @@ export function FilterChips({
 
   const items = [{ value: "", label: allLabel }, ...options];
   return (
-    <div className="flex flex-wrap gap-1">
+    <div
+      className={cn(
+        "flex gap-1",
+        wrap ? "flex-wrap" : "overflow-x-auto whitespace-nowrap pb-1",
+        className,
+      )}
+    >
       {items.map((it) => {
         const selected = it.value === current;
         const count = counts
@@ -52,7 +62,7 @@ export function FilterChips({
             onClick={() => (isEmpty ? undefined : go(it.value))}
             disabled={isEmpty}
             className={cn(
-              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+              "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
               selected
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-border bg-background text-muted-foreground hover:bg-accent",

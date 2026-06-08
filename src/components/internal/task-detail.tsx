@@ -1,9 +1,18 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  BriefcaseBusiness,
+  CalendarDays,
+  Flag,
+  Layers3,
+  Save,
+  Users,
+  X,
+} from 'lucide-react';
 import { toast } from 'sonner';
-import { X } from 'lucide-react';
 
 import {
   setTaskStatus,
@@ -22,7 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { SectionCard } from '@/components/admin/ui/section-card';
+import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/admin/ui/user-avatar';
 import { cn } from '@/lib/utils';
 import {
@@ -30,6 +39,7 @@ import {
   TASK_PRIORITY_META,
   TASK_STATUS_META,
   TASK_STATUS_ORDER,
+  asTaskStatus,
   type TaskStatus,
   type TaskPriority,
 } from './task-meta';
@@ -56,25 +66,27 @@ type Task = {
   assignees?: Assignee[] | null;
 };
 
+type Area = { id: string; name: string; color?: string | null };
+type Project = { id: string; name: string; client?: { name: string } | null };
 type ActionFn = () => Promise<{ ok: boolean; error?: string }>;
 
 export function TaskDetail({
   task,
   areas,
+  projects = [],
 }: {
   task: Task;
-  areas: { id: string; name: string }[];
+  areas: Area[];
+  projects?: Project[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-
-  // Optimistic local copies so edits feel instant; reverted if the action fails.
-  const [status, setStatus] = useState<TaskStatus>(task.status as TaskStatus);
+  const [status, setStatus] = useState<TaskStatus>(asTaskStatus(task.status));
   const [priority, setPriority] = useState(task.priority ?? '');
   const [due, setDue] = useState(task.due_date ?? '');
   const [areaId, setAreaId] = useState(task.area_id);
+  const [projectId, setProjectId] = useState(task.project_id ?? '');
 
-  /** Run a server action with toast feedback (and an optional optimistic revert). */
   function run(fn: ActionFn, okMsg: string, opts?: { onError?: () => void; refresh?: boolean }) {
     start(() => {
       void fn()
@@ -100,8 +112,7 @@ export function TaskDetail({
     return fd;
   }
 
-  function onStatusChange(value: string | null) {
-    const next = (value ?? status) as TaskStatus;
+  function onStatusChange(next: TaskStatus) {
     const prev = status;
     setStatus(next);
     run(() => setTaskStatus(task.id, next), 'Status updated', {
@@ -131,79 +142,119 @@ export function TaskDetail({
     const next = value ?? areaId;
     const prev = areaId;
     setAreaId(next);
-    run(() => updateTask(task.id, patch({ area_id: next })), 'Area updated', {
+    run(() => updateTask(task.id, patch({ area_id: next })), 'Workstream updated', {
       refresh: true,
       onError: () => setAreaId(prev),
     });
   }
 
+  function onProjectChange(value: string | null) {
+    const next = value === '__none' ? '' : value ?? '';
+    const prev = projectId;
+    setProjectId(next);
+    run(() => updateTask(task.id, patch({ project_id: next })), 'Project link updated', {
+      refresh: true,
+      onError: () => setProjectId(prev),
+    });
+  }
+
   const assignees = (task.assignees ?? []).filter((a) => a.profile);
+  const statusMeta = TASK_STATUS_META[status];
+  const priorityMeta =
+    priority && priority in TASK_PRIORITY_META
+      ? TASK_PRIORITY_META[priority as TaskPriority]
+      : null;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      {/* Main: description */}
-      <div className="space-y-6 lg:col-span-2">
-        <SectionCard title="Description">
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_23rem]">
+      <div className="space-y-5">
+        <section className="rounded-lg border border-border bg-card">
+          <header className="border-b border-border px-4 py-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold">Task brief</h2>
+                <p className="text-xs text-muted-foreground">
+                  Keep the objective, context, and handoff notes current.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={status === 'done' ? 'success' : status === 'blocked' ? 'destructive' : 'info'} dot>
+                  {statusMeta.label}
+                </Badge>
+                {priorityMeta && (
+                  <Badge variant={priorityMeta.variant}>
+                    <Flag className="size-3" />
+                    {priorityMeta.label}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </header>
           <form
-            action={(fd) => run(() => updateTask(task.id, fd), 'Description saved')}
-            className="space-y-3"
+            action={(fd) => run(() => updateTask(task.id, fd), 'Task brief saved', { refresh: true })}
+            className="space-y-4 p-4"
           >
-            <Textarea
-              name="description"
-              defaultValue={task.description ?? ''}
-              rows={8}
-              placeholder="Add a description, context, or links…"
-            />
+            <div className="space-y-1.5">
+              <Label htmlFor="task-title">Title</Label>
+              <Input id="task-title" name="title" defaultValue={task.title} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="task-description">Description</Label>
+              <Textarea
+                id="task-description"
+                name="description"
+                defaultValue={task.description ?? ''}
+                rows={9}
+                placeholder="Add objective, context, decisions, links, dependencies, and success criteria."
+              />
+            </div>
             <div className="flex justify-end">
               <Button type="submit" size="sm" disabled={pending}>
-                Save description
+                <Save />
+                Save brief
               </Button>
             </div>
           </form>
-        </SectionCard>
+        </section>
+
+        <section className="rounded-lg border border-border bg-card">
+          <header className="border-b border-border px-4 py-3">
+            <h2 className="text-sm font-semibold">Status pipeline</h2>
+            <p className="text-xs text-muted-foreground">
+              Update the task stage as work progresses.
+            </p>
+          </header>
+          <div className="grid gap-2 p-3 sm:grid-cols-4">
+            {TASK_STATUS_ORDER.map((item) => {
+              const meta = TASK_STATUS_META[item];
+              const Icon = meta.icon;
+              const selected = item === status;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => onStatusChange(item)}
+                  className={cn(
+                    "flex min-h-20 flex-col items-start justify-between rounded-md border px-3 py-3 text-left transition-colors",
+                    selected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:bg-muted",
+                  )}
+                >
+                  <Icon className="size-4" />
+                  <span className="text-sm font-semibold">{meta.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       </div>
 
-      {/* Sidebar: details + assignees */}
-      <div className="space-y-6">
-        <SectionCard title="Details">
+      <aside className="space-y-5">
+        <Panel title="Controls" description="Ownership, timeline, and project context.">
           <div className="space-y-4">
-            <Field label="Status">
-              <Select value={status} onValueChange={onStatusChange} disabled={pending}>
-                <SelectTrigger size="sm" className="w-full">
-                  <SelectValue>
-                    {(value: string) => {
-                      const meta = TASK_STATUS_META[value as TaskStatus];
-                      return meta ? (
-                        <span className="flex items-center gap-2">
-                          <span
-                            aria-hidden
-                            className={cn('size-2 rounded-full', meta.dot)}
-                          />
-                          {meta.label}
-                        </span>
-                      ) : (
-                        value
-                      );
-                    }}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {TASK_STATUS_ORDER.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      <span className="flex items-center gap-2">
-                        <span
-                          aria-hidden
-                          className={cn('size-2 rounded-full', TASK_STATUS_META[s].dot)}
-                        />
-                        {TASK_STATUS_META[s].label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-
-            <Field label="Priority">
+            <Field label="Priority" icon={<Flag className="size-3.5" />}>
               <Select
                 value={priority || undefined}
                 onValueChange={onPriorityChange}
@@ -212,8 +263,7 @@ export function TaskDetail({
                 <SelectTrigger size="sm" className="w-full">
                   <SelectValue placeholder="Set priority">
                     {(value: string) =>
-                      TASK_PRIORITY_META[value as TaskPriority]?.label ??
-                      'Set priority'
+                      TASK_PRIORITY_META[value as TaskPriority]?.label ?? 'Set priority'
                     }
                   </SelectValue>
                 </SelectTrigger>
@@ -227,7 +277,7 @@ export function TaskDetail({
               </Select>
             </Field>
 
-            <Field label="Due date">
+            <Field label="Due date" icon={<CalendarDays className="size-3.5" />}>
               <Input
                 type="date"
                 value={due}
@@ -236,7 +286,7 @@ export function TaskDetail({
               />
             </Field>
 
-            <Field label="Area">
+            <Field label="Workstream" icon={<Layers3 className="size-3.5" />}>
               <Select value={areaId} onValueChange={onAreaChange} disabled={pending}>
                 <SelectTrigger size="sm" className="w-full">
                   <SelectValue>
@@ -254,23 +304,55 @@ export function TaskDetail({
                 </SelectContent>
               </Select>
             </Field>
-          </div>
-        </SectionCard>
 
-        <SectionCard title="Assignees">
+            {projects.length > 0 && (
+              <Field label="Linked project" icon={<BriefcaseBusiness className="size-3.5" />}>
+                <Select
+                  value={projectId || '__none'}
+                  onValueChange={onProjectChange}
+                  disabled={pending}
+                >
+                  <SelectTrigger size="sm" className="w-full">
+                    <SelectValue>
+                      {(value: string) => {
+                        const project = projects.find((p) => p.id === value);
+                        if (!project || value === '__none') return 'No linked project';
+                        return project.client?.name
+                          ? `${project.name} - ${project.client.name}`
+                          : project.name;
+                      }}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">No linked project</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.client?.name ? `${p.name} - ${p.client.name}` : p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
+          </div>
+        </Panel>
+
+        <Panel title="Assignees" description="People accountable for the next move.">
           {assignees.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No one assigned yet.</p>
+            <p className="rounded-md border border-dashed border-border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+              No one assigned yet.
+            </p>
           ) : (
             <ul className="space-y-2">
               {assignees.map((a) => (
-                <li key={a.user_id} className="flex items-center gap-2">
+                <li key={a.user_id} className="flex items-center gap-2 rounded-md border border-border bg-background p-2">
                   <UserAvatar
                     email={a.user_id}
                     name={a.profile?.full_name ?? 'Unknown'}
                     avatarUrl={a.profile?.avatar_url}
                     size="sm"
                   />
-                  <span className="min-w-0 flex-1 truncate text-sm">
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
                     {a.profile?.full_name ?? a.user_id}
                   </span>
                   <Button
@@ -291,24 +373,60 @@ export function TaskDetail({
               ))}
             </ul>
           )}
-          <AssigneePicker
-            existingIds={assignees.map((a) => a.user_id)}
-            onAdd={(userId) =>
-              run(() => addAssignee(task.id, userId), 'Assignee added', {
-                refresh: true,
-              })
-            }
-          />
-        </SectionCard>
-      </div>
+          <div className="mt-3">
+            <AssigneePicker
+              existingIds={assignees.map((a) => a.user_id)}
+              onAdd={(userId) =>
+                run(() => addAssignee(task.id, userId), 'Assignee added', {
+                  refresh: true,
+                })
+              }
+            />
+          </div>
+        </Panel>
+      </aside>
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Panel({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-border bg-card">
+      <header className="flex items-start gap-2 border-b border-border px-4 py-3">
+        <Users className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold">{title}</h2>
+          {description && <p className="text-xs text-muted-foreground">{description}</p>}
+        </div>
+      </header>
+      <div className="p-4">{children}</div>
+    </section>
+  );
+}
+
+function Field({
+  label,
+  icon,
+  children,
+}: {
+  label: string;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <div>
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {icon}
+        {label}
+      </Label>
       <div className="mt-1.5">{children}</div>
     </div>
   );

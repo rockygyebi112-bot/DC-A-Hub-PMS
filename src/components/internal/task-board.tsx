@@ -33,21 +33,30 @@ export function TaskBoard({ tasks, areas }: { tasks: Task[]; areas: Area[] }) {
   for (const t of tasks) byStatus.get(asTaskStatus(t.status))!.push(t);
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="-mx-4 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
+      <div className="grid min-w-[920px] grid-cols-4 gap-3 xl:min-w-0">
       {TASK_STATUS_ORDER.map((status) => {
         const meta = TASK_STATUS_META[status];
+        const Icon = meta.icon;
         const list = byStatus.get(status)!;
         return (
           <section
             key={status}
-            className="flex flex-col rounded-xl border border-border bg-muted/30 p-3"
+            className="flex min-h-[420px] flex-col rounded-lg border border-border bg-muted/35"
           >
-            <header className="mb-3 flex items-center gap-2 px-1">
+            <header className="flex h-12 items-center gap-2 border-b border-border px-3">
               <span
-                aria-hidden
-                className={cn("size-2 rounded-full", meta.dot)}
-              />
-              <h2 className="text-sm font-semibold tracking-tight">
+                className={cn(
+                  "flex size-7 items-center justify-center rounded-md bg-background",
+                  status === "not_started" && "text-muted-foreground",
+                  status === "in_progress" && "text-blue-500",
+                  status === "blocked" && "text-red-500",
+                  status === "done" && "text-emerald-500",
+                )}
+              >
+                <Icon className="size-4" />
+              </span>
+              <h2 className="min-w-0 truncate text-sm font-semibold tracking-tight">
                 {meta.label}
               </h2>
               <span className="ml-auto rounded-full bg-background px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
@@ -55,9 +64,9 @@ export function TaskBoard({ tasks, areas }: { tasks: Task[]; areas: Area[] }) {
               </span>
             </header>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-1 flex-col gap-2 p-2.5">
               {list.length === 0 ? (
-                <p className="px-1 py-8 text-center text-xs text-muted-foreground">
+                <p className="rounded-md border border-dashed border-border bg-background/50 px-3 py-8 text-center text-xs text-muted-foreground">
                   No tasks
                 </p>
               ) : (
@@ -73,6 +82,7 @@ export function TaskBoard({ tasks, areas }: { tasks: Task[]; areas: Area[] }) {
           </section>
         );
       })}
+      </div>
     </div>
   );
 }

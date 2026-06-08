@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, Flag } from "lucide-react";
+import { CalendarDays, CircleCheck, Flag } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -68,24 +68,27 @@ export function TaskCard({
   return (
     <Link
       href={`/workspace/internal/${task.id}`}
-      className="group block rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/35 hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="group block rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
-          {task.title}
-        </h3>
+        <div className="flex min-w-0 items-start gap-2">
+          <CircleCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground/55 group-hover:text-primary" />
+          <h3 className="line-clamp-3 text-sm font-medium leading-snug text-foreground">
+            {task.title}
+          </h3>
+        </div>
         {priority && (
-          <Badge variant={priority.variant} className="shrink-0 gap-1">
+          <Badge variant={priority.variant} className="shrink-0 gap-1 rounded-sm px-1.5 py-0.5">
             <Flag className="size-3" />
             <span className="sr-only sm:not-sr-only">{priority.label}</span>
           </Badge>
         )}
       </div>
 
-      <div className="mt-3 space-y-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className="mt-3 space-y-3 pl-6">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
           {area && (
-            <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
+            <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
               <span
                 aria-hidden
                 className="size-2 shrink-0 rounded-full bg-muted-foreground/50"
@@ -97,10 +100,10 @@ export function TaskCard({
           {task.due_date && (
             <span
               className={cn(
-                "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs",
+                "inline-flex shrink-0 items-center gap-1 text-xs",
                 overdue
-                  ? "bg-destructive/10 font-medium text-destructive"
-                  : "bg-muted text-muted-foreground",
+                  ? "font-medium text-destructive"
+                  : "text-muted-foreground",
               )}
             >
               <CalendarDays className="size-3" />
@@ -110,7 +113,7 @@ export function TaskCard({
         </div>
 
         {assignees.length > 0 && (
-          <div className="flex shrink-0 items-center -space-x-2 pt-1">
+          <div className="flex shrink-0 items-center -space-x-2">
             {visible.map((a) => (
               <UserAvatar
                 key={a.user_id}

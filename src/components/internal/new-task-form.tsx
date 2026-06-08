@@ -1,5 +1,6 @@
 'use client';
 
+import type { ComponentProps } from 'react';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
@@ -26,7 +27,19 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 
-export function NewTaskForm({ areas }: { areas: { id: string; name: string }[] }) {
+export function NewTaskForm({
+  areas,
+  triggerLabel = 'New task',
+  triggerVariant = 'default',
+  triggerSize = 'default',
+  triggerClassName,
+}: {
+  areas: { id: string; name: string }[];
+  triggerLabel?: string;
+  triggerVariant?: ComponentProps<typeof Button>['variant'];
+  triggerSize?: ComponentProps<typeof Button>['size'];
+  triggerClassName?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
@@ -52,9 +65,9 @@ export function NewTaskForm({ areas }: { areas: { id: string; name: string }[] }
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button>
+          <Button variant={triggerVariant} size={triggerSize} className={triggerClassName}>
             <Plus />
-            New task
+            {triggerLabel}
           </Button>
         }
       />

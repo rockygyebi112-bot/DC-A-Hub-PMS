@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { Kanban, LayoutList, type LucideIcon } from "lucide-react";
 
 import { FilterChips } from "@/components/admin/ui/filter-chips";
-import { NewTaskForm } from "@/components/internal/new-task-form";
 import { TaskBoard } from "@/components/internal/task-board";
 import {
   TASK_STATUS_META,
@@ -73,7 +72,7 @@ export default async function InternalWorkspacePage({
 
   return (
     <div className="flex min-h-[calc(100vh-var(--topbar-height,58px)-3rem)] flex-col gap-4">
-      <header className="flex items-center justify-between gap-2">
+      <header className="flex items-center gap-2">
         <div className="inline-flex rounded-lg border border-border/70 bg-card p-0.5">
           <ViewLink params={params} view="list" active={view === "list"} icon={LayoutList}>
             List
@@ -82,7 +81,6 @@ export default async function InternalWorkspacePage({
             Board
           </ViewLink>
         </div>
-        <NewTaskForm areas={areas} projects={projects} />
       </header>
 
       <div className="flex flex-col gap-2 border-b border-border/70 pb-4">

@@ -4,21 +4,17 @@ import type { ReactNode } from 'react';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  BriefcaseBusiness,
-  CalendarDays,
   Flag,
-  Layers3,
   Save,
-  Users,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
-  setTaskStatus,
-  updateTask,
   addAssignee,
   removeAssignee,
+  setTaskStatus,
+  updateTask,
 } from '@/lib/internal/actions';
 import {
   Select,
@@ -31,17 +27,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/admin/ui/user-avatar';
 import { cn } from '@/lib/utils';
 import {
-  TASK_PRIORITY_ORDER,
   TASK_PRIORITY_META,
+  TASK_PRIORITY_ORDER,
   TASK_STATUS_META,
   TASK_STATUS_ORDER,
   asTaskStatus,
-  type TaskStatus,
   type TaskPriority,
+  type TaskStatus,
 } from './task-meta';
 import { AssigneePicker } from './assignee-picker';
 
@@ -63,6 +58,8 @@ type Task = {
   status: string;
   priority?: string | null;
   due_date?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
   assignees?: Assignee[] | null;
 };
 
@@ -159,159 +156,120 @@ export function TaskDetail({
   }
 
   const assignees = (task.assignees ?? []).filter((a) => a.profile);
-  const statusMeta = TASK_STATUS_META[status];
-  const priorityMeta =
-    priority && priority in TASK_PRIORITY_META
-      ? TASK_PRIORITY_META[priority as TaskPriority]
-      : null;
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_23rem]">
-      <div className="space-y-5">
-        <section className="rounded-lg border border-border bg-card">
-          <header className="border-b border-border px-4 py-3">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="min-w-0">
-                <h2 className="text-sm font-semibold">Task brief</h2>
-                <p className="text-xs text-muted-foreground">
-                  Keep the objective, context, and handoff notes current.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={status === 'done' ? 'success' : status === 'blocked' ? 'destructive' : 'info'} dot>
-                  {statusMeta.label}
-                </Badge>
-                {priorityMeta && (
-                  <Badge variant={priorityMeta.variant}>
-                    <Flag className="size-3" />
-                    {priorityMeta.label}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </header>
-          <form
-            action={(fd) => run(() => updateTask(task.id, fd), 'Task brief saved', { refresh: true })}
-            className="space-y-4 p-4"
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="task-title">Title</Label>
-              <Input id="task-title" name="title" defaultValue={task.title} required />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="task-description">Description</Label>
-              <Textarea
-                id="task-description"
-                name="description"
-                defaultValue={task.description ?? ''}
-                rows={9}
-                placeholder="Add objective, context, decisions, links, dependencies, and success criteria."
-              />
-            </div>
-            <div className="flex justify-end">
-              <Button type="submit" size="sm" disabled={pending}>
-                <Save />
-                Save brief
-              </Button>
-            </div>
-          </form>
-        </section>
-
-        <section className="rounded-lg border border-border bg-card">
-          <header className="border-b border-border px-4 py-3">
-            <h2 className="text-sm font-semibold">Status pipeline</h2>
-            <p className="text-xs text-muted-foreground">
-              Update the task stage as work progresses.
-            </p>
-          </header>
-          <div className="grid gap-2 p-3 sm:grid-cols-4">
-            {TASK_STATUS_ORDER.map((item) => {
-              const meta = TASK_STATUS_META[item];
-              const Icon = meta.icon;
-              const selected = item === status;
-              return (
-                <button
-                  key={item}
-                  type="button"
-                  disabled={pending}
-                  onClick={() => onStatusChange(item)}
-                  className={cn(
-                    "flex min-h-20 flex-col items-start justify-between rounded-md border px-3 py-3 text-left transition-colors",
-                    selected
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background hover:bg-muted",
-                  )}
-                >
-                  <Icon className="size-4" />
-                  <span className="text-sm font-semibold">{meta.label}</span>
-                </button>
-              );
-            })}
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <section className="rounded-xl border border-border/70 bg-white shadow-sm">
+        <header className="flex items-center justify-between border-b border-border/60 px-5 py-4">
+          <h2 className="text-sm font-semibold text-gray-950">Description</h2>
+        </header>
+        <form
+          action={(fd) => run(() => updateTask(task.id, fd), 'Description saved', { refresh: true })}
+          className="space-y-4 p-5"
+        >
+          <Textarea
+            id="task-description"
+            name="description"
+            defaultValue={task.description ?? ''}
+            rows={12}
+            placeholder="Add a description..."
+            className="min-h-72 resize-y border-0 bg-muted/30 p-4 text-sm leading-6 shadow-none focus-visible:ring-2 focus-visible:ring-primary/20"
+          />
+          <div className="flex justify-end">
+            <Button type="submit" size="sm" disabled={pending} className="bg-[#5B6AF0] hover:bg-[#4C59D8]">
+              <Save className="size-3.5" />
+              Save
+            </Button>
           </div>
-        </section>
-      </div>
+        </form>
+      </section>
 
       <aside className="space-y-5">
-        <Panel title="Controls" description="Ownership, timeline, and project context.">
-          <div className="space-y-4">
-            <Field label="Priority" icon={<Flag className="size-3.5" />}>
+        <section className="rounded-xl border border-border/70 bg-white px-4 py-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-950">Properties</h2>
+          <div className="mt-4 space-y-4">
+            <Property label="Status">
               <Select
-                value={priority || undefined}
-                onValueChange={onPriorityChange}
+                value={status}
+                onValueChange={(value) => value && onStatusChange(value)}
                 disabled={pending}
               >
                 <SelectTrigger size="sm" className="w-full">
+                  <SelectValue>
+                    {(value: string) => TASK_STATUS_META[value as TaskStatus]?.label ?? 'Set status'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {TASK_STATUS_ORDER.map((item) => {
+                    const meta = TASK_STATUS_META[item];
+                    return (
+                      <SelectItem key={item} value={item}>
+                        <span className="inline-flex items-center gap-2">
+                          <span className={cn('size-2 rounded-full', meta.dot)} />
+                          {meta.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </Property>
+
+            <Property label="Priority">
+              <Select value={priority || undefined} onValueChange={onPriorityChange} disabled={pending}>
+                <SelectTrigger size="sm" className="w-full">
                   <SelectValue placeholder="Set priority">
-                    {(value: string) =>
-                      TASK_PRIORITY_META[value as TaskPriority]?.label ?? 'Set priority'
-                    }
+                    {(value: string) => TASK_PRIORITY_META[value as TaskPriority]?.label ?? 'Set priority'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {TASK_PRIORITY_ORDER.map((p) => (
                     <SelectItem key={p} value={p}>
-                      {TASK_PRIORITY_META[p].label}
+                      <span className="inline-flex items-center gap-2">
+                        <Flag className="size-3.5" />
+                        {TASK_PRIORITY_META[p].label}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </Field>
+            </Property>
 
-            <Field label="Due date" icon={<CalendarDays className="size-3.5" />}>
+            <Property label="Due date">
               <Input
                 type="date"
                 value={due}
                 onChange={(e) => onDueChange(e.target.value)}
                 disabled={pending}
               />
-            </Field>
+            </Property>
 
-            <Field label="Workstream" icon={<Layers3 className="size-3.5" />}>
+            <Property label="Workstream">
               <Select value={areaId} onValueChange={onAreaChange} disabled={pending}>
                 <SelectTrigger size="sm" className="w-full">
                   <SelectValue>
-                    {(value: string) =>
-                      areas.find((a) => a.id === value)?.name ?? String(value)
-                    }
+                    {(value: string) => areas.find((a) => a.id === value)?.name ?? String(value)}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {areas.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.name}
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className="size-2 rounded-full bg-muted-foreground/50"
+                          style={a.color ? { backgroundColor: a.color } : undefined}
+                        />
+                        {a.name}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </Field>
+            </Property>
 
             {projects.length > 0 && (
-              <Field label="Linked project" icon={<BriefcaseBusiness className="size-3.5" />}>
-                <Select
-                  value={projectId || '__none'}
-                  onValueChange={onProjectChange}
-                  disabled={pending}
-                >
+              <Property label="Linked project">
+                <Select value={projectId || '__none'} onValueChange={onProjectChange} disabled={pending}>
                   <SelectTrigger size="sm" className="w-full">
                     <SelectValue>
                       {(value: string) => {
@@ -332,102 +290,93 @@ export function TaskDetail({
                     ))}
                   </SelectContent>
                 </Select>
-              </Field>
+              </Property>
             )}
-          </div>
-        </Panel>
 
-        <Panel title="Assignees" description="People accountable for the next move.">
-          {assignees.length === 0 ? (
-            <p className="rounded-md border border-dashed border-border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
-              No one assigned yet.
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {assignees.map((a) => (
-                <li key={a.user_id} className="flex items-center gap-2 rounded-md border border-border bg-background p-2">
-                  <UserAvatar
-                    email={a.user_id}
-                    name={a.profile?.full_name ?? 'Unknown'}
-                    avatarUrl={a.profile?.avatar_url}
-                    size="sm"
-                  />
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                    {a.profile?.full_name ?? a.user_id}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label={`Remove ${a.profile?.full_name ?? 'assignee'}`}
-                    disabled={pending}
-                    onClick={() =>
-                      run(() => removeAssignee(task.id, a.user_id), 'Assignee removed', {
+            <Property label="Assignees">
+              <div className="space-y-3">
+                {assignees.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {assignees.map((a) => (
+                      <span
+                        key={a.user_id}
+                        className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-muted/30 py-1 pl-1 pr-2 text-xs"
+                      >
+                        <UserAvatar
+                          email={a.user_id}
+                          name={a.profile?.full_name ?? 'Unknown'}
+                          avatarUrl={a.profile?.avatar_url}
+                          size="sm"
+                        />
+                        <span className="max-w-28 truncate">{a.profile?.full_name ?? a.user_id}</span>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${a.profile?.full_name ?? 'assignee'}`}
+                          disabled={pending}
+                          onClick={() =>
+                            run(() => removeAssignee(task.id, a.user_id), 'Assignee removed', {
+                              refresh: true,
+                            })
+                          }
+                          className="text-muted-foreground hover:text-destructive disabled:opacity-50"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="rounded-lg border border-dashed border-border bg-muted/20 p-3 text-center text-xs text-muted-foreground">
+                    No assignees yet.
+                  </p>
+                )}
+                <div className="rounded-lg border border-border/70 bg-white p-2">
+                  <AssigneePicker
+                    existingIds={assignees.map((a) => a.user_id)}
+                    onAdd={(userId) =>
+                      run(() => addAssignee(task.id, userId), 'Assignee added', {
                         refresh: true,
                       })
                     }
-                  >
-                    <X />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="mt-3">
-            <AssigneePicker
-              existingIds={assignees.map((a) => a.user_id)}
-              onAdd={(userId) =>
-                run(() => addAssignee(task.id, userId), 'Assignee added', {
-                  refresh: true,
-                })
-              }
-            />
+                  />
+                </div>
+              </div>
+            </Property>
+
+            <Property label="Timeline">
+              <div className="space-y-1.5 text-xs text-muted-foreground">
+                <p>Created {relativeDate(task.created_at) ?? 'recently'}</p>
+                <p>Updated {relativeDate(task.updated_at) ?? 'recently'}</p>
+              </div>
+            </Property>
           </div>
-        </Panel>
+        </section>
       </aside>
     </div>
   );
 }
 
-function Panel({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
+function Property({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <section className="rounded-lg border border-border bg-card">
-      <header className="flex items-start gap-2 border-b border-border px-4 py-3">
-        <Users className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-        <div className="min-w-0">
-          <h2 className="text-sm font-semibold">{title}</h2>
-          {description && <p className="text-xs text-muted-foreground">{description}</p>}
-        </div>
-      </header>
-      <div className="p-4">{children}</div>
-    </section>
+    <div>
+      <Label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
+        {label}
+      </Label>
+      {children}
+    </div>
   );
 }
 
-function Field({
-  label,
-  icon,
-  children,
-}: {
-  label: string;
-  icon: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div>
-      <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        {icon}
-        {label}
-      </Label>
-      <div className="mt-1.5">{children}</div>
-    </div>
-  );
+function relativeDate(value?: string | null): string | null {
+  if (!value) return null;
+  const then = new Date(value);
+  if (Number.isNaN(then.getTime())) return null;
+  const diff = Date.now() - then.getTime();
+  const minutes = Math.max(1, Math.round(diff / 60000));
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return then.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }

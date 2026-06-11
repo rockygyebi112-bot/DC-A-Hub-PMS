@@ -1,127 +1,84 @@
+import Link from "next/link";
+import {
+  CalendarDays,
+  Check,
+  ChevronDown,
+  UserRound,
+} from "lucide-react";
+
+import { UserAvatar } from "@/components/admin/ui/user-avatar";
+import { setTaskStatus } from "@/lib/internal/actions";
 import { cn } from "@/lib/utils";
 import { TaskCard, type TaskRow } from "./task-card";
 import { NewTaskForm } from "./new-task-form";
-import { TASK_STATUS_META, TASK_STATUS_ORDER, asTaskStatus } from "./task-meta";
+import {
+  TASK_PRIORITY_META,
+  TASK_STATUS_META,
+  TASK_STATUS_ORDER,
+  asTaskStatus,
+  type TaskPriority,
+  type TaskStatus,
+} from "./task-meta";
 
 type Area = { id: string; name: string; color?: string | null };
 type Project = { id: string; name: string; client?: { name: string } | null };
 type Task = TaskRow & { area_id: string };
+type ViewMode = "board" | "list";
 
 export function TaskBoard({
   tasks,
   areas,
   projects = [],
+  view = "board",
 }: {
   tasks: Task[];
   areas: Area[];
   projects?: Project[];
+  view?: ViewMode;
 }) {
   const areaById = new Map(areas.map((a) => [a.id, a]));
   const projectById = new Map(projects.map((p) => [p.id, p]));
   const byStatus = new Map(TASK_STATUS_ORDER.map((s) => [s, [] as Task[]]));
   for (const t of tasks) byStatus.get(asTaskStatus(t.status))!.push(t);
-  const total = Math.max(tasks.length, 1);
+
+  if (view === "list") {
+    return (
+      <TaskListView
+        areas={areas}
+        projects={projects}
+        areaById={areaById}
+        byStatus={byStatus}
+      />
+    );
+  }
 
   return (
-    <div className="min-w-0 rounded-lg border border-border bg-card">
-      <header className="flex flex-col gap-3 border-b border-border px-4 py-3 md:flex-row md:items-center md:justify-between">
-        <div className="min-w-0">
-          <h2 className="text-sm font-semibold">Delivery board</h2>
-          <p className="text-xs text-muted-foreground">
-            Move work from intake to completion with owners, deadlines, and blockers visible.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="rounded-md border border-border bg-background px-2 py-1">
-            {tasks.length} visible tasks
-          </span>
-          <span className="rounded-md border border-border bg-background px-2 py-1">
-            {projects.length} linked projects
-          </span>
-        </div>
-      </header>
+    <div className="-mx-4 min-h-0 overflow-x-auto px-4 py-1 md:mx-0 md:px-0">
+      <div className="grid h-[calc(100vh-var(--topbar-height,58px)-16rem)] min-h-[560px] min-w-[1080px] grid-cols-4 gap-4 2xl:min-w-0">
+        {TASK_STATUS_ORDER.map((status) => {
+          const meta = TASK_STATUS_META[status];
+          const list = byStatus.get(status)!;
 
-      <div className="-mx-4 min-h-0 overflow-x-auto px-4 py-4 md:mx-0 md:px-4">
-        <div className="grid h-[calc(100vh-var(--topbar-height,58px)-19rem)] min-h-[560px] min-w-[1120px] grid-cols-4 gap-3 2xl:min-w-0">
-          {TASK_STATUS_ORDER.map((status) => {
-            const meta = TASK_STATUS_META[status];
-            const Icon = meta.icon;
-            const list = byStatus.get(status)!;
-            const urgentCount = list.filter((t) => t.priority === "urgent").length;
-            const percent = Math.round((list.length / total) * 100);
+          return (
+            <section key={status} className="flex min-h-0 flex-col">
+              <header className="flex shrink-0 items-center gap-2 px-1 pb-2">
+                <span className={cn("size-2.5 rounded-full", statusTone(status, "bar"))} />
+                <h3 className="min-w-0 flex-1 truncate text-xs font-semibold uppercase tracking-wide text-foreground">
+                  {meta.label}
+                </h3>
+                <span className="text-xs tabular-nums text-muted-foreground">{list.length}</span>
+              </header>
 
-            return (
-              <section
-                key={status}
-                className="flex min-h-0 flex-col rounded-lg border border-border bg-muted/35"
-              >
-                <header className="shrink-0 border-b border-border bg-card/70 px-3 py-3">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "flex size-8 items-center justify-center rounded-md bg-background",
-                        status === "not_started" && "text-muted-foreground",
-                        status === "in_progress" && "text-blue-500",
-                        status === "blocked" && "text-red-500",
-                        status === "done" && "text-emerald-500",
-                      )}
-                    >
-                      <Icon className="size-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="truncate text-sm font-semibold tracking-tight">
-                        {meta.label}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        {percent}% of visible work
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-background px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
-                      {list.length}
-                    </span>
-                  </div>
-                  <div className="mt-3 h-1 overflow-hidden rounded-full bg-background">
-                    <div
-                      className={cn(
-                        "h-full rounded-full",
-                        status === "not_started" && "bg-muted-foreground/45",
-                        status === "in_progress" && "bg-blue-500",
-                        status === "blocked" && "bg-red-500",
-                        status === "done" && "bg-emerald-500",
-                      )}
-                      style={{ width: `${Math.max(percent, list.length > 0 ? 6 : 0)}%` }}
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <div className="flex flex-col gap-2">
+                  {list.map((t) => (
+                    <TaskCard
+                      key={t.id}
+                      task={t}
+                      area={areaById.get(t.area_id) ?? undefined}
+                      project={t.project_id ? projectById.get(t.project_id) : undefined}
                     />
-                  </div>
-                  {urgentCount > 0 && (
-                    <p className="mt-2 text-xs font-medium text-destructive">
-                      {urgentCount} urgent in this lane
-                    </p>
-                  )}
-                </header>
-
-                <div className="min-h-0 flex-1 overflow-y-auto p-2.5">
-                  <div className="flex flex-col gap-2">
-                    {list.length === 0 ? (
-                      <div className="rounded-md border border-dashed border-border bg-background/60 px-3 py-8 text-center">
-                        <p className="text-xs font-medium text-foreground">No tasks</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Add work here when this lane needs attention.
-                        </p>
-                      </div>
-                    ) : (
-                      list.map((t) => (
-                        <TaskCard
-                          key={t.id}
-                          task={t}
-                          area={areaById.get(t.area_id) ?? undefined}
-                          project={t.project_id ? projectById.get(t.project_id) : undefined}
-                        />
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div className="shrink-0 border-t border-border p-2">
+                  ))}
                   <NewTaskForm
                     areas={areas}
                     projects={projects}
@@ -129,14 +86,188 @@ export function TaskBoard({
                     triggerLabel="Add task"
                     triggerVariant="ghost"
                     triggerSize="sm"
-                    triggerClassName="w-full justify-start text-muted-foreground"
+                    triggerClassName="w-full justify-start text-muted-foreground hover:bg-muted/60"
                   />
                 </div>
-              </section>
-            );
-          })}
-        </div>
+              </div>
+            </section>
+          );
+        })}
       </div>
     </div>
   );
+}
+
+function TaskListView({
+  areas,
+  projects,
+  areaById,
+  byStatus,
+}: {
+  areas: Area[];
+  projects: Project[];
+  areaById: Map<string, Area>;
+  byStatus: Map<TaskStatus, Task[]>;
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border/70 bg-white shadow-sm">
+      {TASK_STATUS_ORDER.map((status) => {
+        const meta = TASK_STATUS_META[status];
+        const list = byStatus.get(status)!;
+        return (
+          <section key={status} className="border-b border-border/60 last:border-b-0">
+            <header className="flex items-center gap-2 bg-muted/30 px-4 py-3">
+              <span className={cn("h-4 w-1 rounded-full", statusTone(status, "bar"))} />
+              <ChevronDown className="size-4 text-muted-foreground" />
+              <h3 className="text-xs font-semibold uppercase text-muted-foreground">
+                {meta.label} ({list.length})
+              </h3>
+            </header>
+            <div>
+              {list.length === 0 ? (
+                <div className="px-4 py-5 text-xs text-muted-foreground">No tasks in this section.</div>
+              ) : (
+                list.map((task) => (
+                  <TaskListRow
+                    key={task.id}
+                    task={task}
+                    area={areaById.get(task.area_id)}
+                  />
+                ))
+              )}
+              <div className="px-4 py-2">
+                <NewTaskForm
+                  areas={areas}
+                  projects={projects}
+                  defaultStatus={status}
+                  triggerLabel="Add task"
+                  triggerVariant="ghost"
+                  triggerSize="sm"
+                  triggerClassName="text-muted-foreground"
+                />
+              </div>
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function TaskListRow({ task, area }: { task: Task; area?: Area }) {
+  const assignee = (task.assignees ?? []).find((a) => a.profile);
+  const overdue = !!task.due_date && task.status !== "done" && task.due_date < todayIso();
+  const priority =
+    task.priority && task.priority in TASK_PRIORITY_META
+      ? TASK_PRIORITY_META[task.priority as TaskPriority]
+      : null;
+
+  async function markDone() {
+    "use server";
+    await setTaskStatus(task.id, "done");
+  }
+
+  return (
+    <div className="grid grid-cols-[auto_minmax(0,1fr)_8rem_7rem_6rem_10rem] items-center gap-3 border-b border-border/50 px-4 py-2.5 last:border-b-0 hover:bg-gray-50">
+      <form action={markDone}>
+        <button
+          type="submit"
+          aria-label="Mark task done"
+          className={cn(
+            "grid size-4 place-items-center rounded border border-input bg-white text-white transition-colors hover:border-primary",
+            task.status === "done" && "border-emerald-500 bg-emerald-500",
+          )}
+        >
+          {task.status === "done" && <Check className="size-3" />}
+        </button>
+      </form>
+      <Link
+        href={`/workspace/internal/${task.id}`}
+        className="min-w-0 truncate text-sm font-medium text-gray-900 hover:text-primary"
+      >
+        {task.title}
+      </Link>
+      <div className="min-w-0">
+        {assignee?.profile ? (
+          <UserAvatar
+            email={assignee.user_id}
+            name={assignee.profile.full_name ?? "Unknown"}
+            avatarUrl={assignee.profile.avatar_url}
+            size="sm"
+          />
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <UserRound className="size-3.5" />
+            -
+          </span>
+        )}
+      </div>
+      <div
+        className={cn(
+          "inline-flex items-center gap-1 text-xs",
+          overdue ? "font-medium text-red-600" : "text-muted-foreground",
+        )}
+      >
+        {task.due_date ? (
+          <>
+            <CalendarDays className="size-3.5" />
+            {formatDue(task.due_date)}
+          </>
+        ) : (
+          "-"
+        )}
+      </div>
+      <span
+        className={cn(
+          "w-fit rounded-md px-2 py-0.5 text-xs font-medium",
+          task.priority === "urgent" && "bg-red-50 text-red-700",
+          task.priority === "high" && "bg-amber-50 text-amber-700",
+          task.priority === "normal" && "bg-blue-50 text-blue-700",
+          task.priority === "low" && "bg-slate-100 text-slate-600",
+          !priority && "text-muted-foreground",
+        )}
+      >
+        {priority?.label ?? "-"}
+      </span>
+      <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+        {area && (
+          <span
+            aria-hidden
+            className="size-2 shrink-0 rounded-full bg-muted-foreground/50"
+            style={area.color ? { backgroundColor: area.color } : undefined}
+          />
+        )}
+        <span className="truncate">{area?.name ?? "-"}</span>
+      </span>
+    </div>
+  );
+}
+
+function statusTone(status: TaskStatus, part: "soft" | "text" | "bar") {
+  if (status === "in_progress") {
+    return part === "soft" ? "bg-blue-50" : part === "text" ? "text-blue-600" : "bg-blue-500";
+  }
+  if (status === "blocked") {
+    return part === "soft" ? "bg-red-50" : part === "text" ? "text-red-500" : "bg-red-500";
+  }
+  if (status === "done") {
+    return part === "soft" ? "bg-emerald-50" : part === "text" ? "text-emerald-600" : "bg-emerald-500";
+  }
+  return part === "soft" ? "bg-slate-100" : part === "text" ? "text-slate-500" : "bg-slate-300";
+}
+
+function todayIso(): string {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(
+    t.getDate(),
+  ).padStart(2, "0")}`;
+}
+
+function formatDue(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }

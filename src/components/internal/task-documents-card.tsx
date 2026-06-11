@@ -59,7 +59,7 @@ export function TaskDocumentsCard({
   isAdmin: boolean;
 }) {
   return (
-    <section className="rounded-2xl border bg-card shadow-sm">
+    <section className="rounded-xl border border-border/70 bg-white shadow-sm">
       <header className="flex items-center justify-between border-b border-border/60 px-5 py-3">
         <h2 className="flex items-center gap-2 font-heading text-sm font-semibold tracking-tight">
           <Paperclip className="size-4" />
@@ -72,7 +72,7 @@ export function TaskDocumentsCard({
       <div className="space-y-4 px-5 py-4">
         {proofs.length === 0 ? (
           <p className="rounded-lg border border-dashed bg-muted/30 p-5 text-center text-xs text-muted-foreground">
-            No documents yet. Upload one below.
+            No documents
           </p>
         ) : (
           <ul className="space-y-2">

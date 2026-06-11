@@ -94,7 +94,7 @@ export default async function InternalTaskPage({
               {task.title}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <HeaderChip icon={<Layers3 className="size-3.5" />} label={area?.name ?? 'Unassigned workstream'} color={area?.color} />
+              <HeaderChip icon={<Layers3 className="size-3.5" />} label={area?.name ?? 'No section'} color={area?.color} />
               <HeaderChip
                 icon={<BriefcaseBusiness className="size-3.5" />}
                 label={

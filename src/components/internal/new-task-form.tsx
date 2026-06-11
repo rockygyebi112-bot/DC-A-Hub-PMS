@@ -41,6 +41,7 @@ export function NewTaskForm({
   areas,
   projects = [],
   defaultStatus = 'not_started',
+  defaultAreaId,
   triggerLabel = 'New task',
   triggerVariant = 'default',
   triggerSize = 'default',
@@ -49,6 +50,7 @@ export function NewTaskForm({
   areas: { id: string; name: string }[];
   projects?: { id: string; name: string; client?: { name: string } | null }[];
   defaultStatus?: TaskStatus;
+  defaultAreaId?: string;
   triggerLabel?: string;
   triggerVariant?: ComponentProps<typeof Button>['variant'];
   triggerSize?: ComponentProps<typeof Button>['size'];
@@ -127,11 +129,11 @@ export function NewTaskForm({
           />
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <FormField label="Workstream">
-              <Select name="area_id" required>
+            <FormField label="Section">
+              <Select name="area_id" required defaultValue={defaultAreaId}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose area">
-                    {(value: string) => areas.find((a) => a.id === value)?.name ?? 'Choose area'}
+                  <SelectValue placeholder="Choose section">
+                    {(value: string) => areas.find((a) => a.id === value)?.name ?? 'Choose section'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>

@@ -140,7 +140,7 @@ export function TaskDetail({
     const next = value ?? areaId;
     const prev = areaId;
     setAreaId(next);
-    run(() => updateTask(task.id, patch({ area_id: next })), 'Workstream updated', {
+    run(() => updateTask(task.id, patch({ area_id: next })), 'Section updated', {
       refresh: true,
       onError: () => setAreaId(prev),
     });
@@ -264,7 +264,7 @@ export function TaskDetail({
               />
             </Property>
 
-            <Property label="Workstream">
+            <Property label="Section">
               <Select value={areaId} onValueChange={onAreaChange} disabled={pending}>
                 <SelectTrigger size="sm" className="w-full">
                   <SelectValue>

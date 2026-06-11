@@ -5,7 +5,7 @@ import { UserAvatar } from "@/components/admin/ui/user-avatar";
 import { setTaskStatus } from "@/lib/internal/actions";
 import { cn } from "@/lib/utils";
 import { TaskCard, type TaskRow } from "./task-card";
-import { NewTaskForm } from "./new-task-form";
+import { InlineAddTask } from "./inline-add-task";
 import { AddSection, SectionHeading } from "./section-controls";
 import {
   SortableSectionColumns,
@@ -38,12 +38,7 @@ export function TaskBoard({
 
   if (view === "list") {
     return (
-      <TaskListView
-        sections={sections}
-        projects={projects}
-        bySection={bySection}
-        canManage={canManage}
-      />
+      <TaskListView sections={sections} bySection={bySection} canManage={canManage} />
     );
   }
 
@@ -69,15 +64,7 @@ export function TaskBoard({
               project={t.project_id ? projectById.get(t.project_id) : undefined}
             />
           ))}
-          <NewTaskForm
-            areas={sections}
-            projects={projects}
-            defaultAreaId={section.id}
-            triggerLabel="Add task"
-            triggerVariant="ghost"
-            triggerSize="sm"
-            triggerClassName="w-full justify-start text-muted-foreground hover:bg-muted/60"
-          />
+          <InlineAddTask areaId={section.id} variant="board" />
         </div>
       ),
     };
@@ -104,12 +91,10 @@ const LIST_COLS = "grid-cols-[minmax(0,1fr)_11rem_7rem]";
 
 function TaskListView({
   sections,
-  projects,
   bySection,
   canManage,
 }: {
   sections: Section[];
-  projects: Project[];
   bySection: Map<string, Task[]>;
   canManage: boolean;
 }) {
@@ -132,15 +117,7 @@ function TaskListView({
             <TaskListRow key={task.id} task={task} />
           ))}
           <div className="border-t border-border/40 py-1 pl-[28px] pr-3">
-            <NewTaskForm
-              areas={sections}
-              projects={projects}
-              defaultAreaId={section.id}
-              triggerLabel="Add task..."
-              triggerVariant="ghost"
-              triggerSize="sm"
-              triggerClassName="h-8 w-full justify-start px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
-            />
+            <InlineAddTask areaId={section.id} variant="list" />
           </div>
         </>
       ),

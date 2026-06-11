@@ -15,10 +15,12 @@ import {
   listInternalTaskComments,
   listInternalProofComments,
   listInternalTaskProofs,
+  listSubtasks,
 } from '@/lib/internal/queries';
 import { getCurrentProfile } from '@/lib/auth/get-current-profile';
 import { listWorkspaceProjects } from '@/lib/workspace/queries';
 import { TaskDetail } from '@/components/internal/task-detail';
+import { SubtasksCard } from '@/components/internal/subtasks-card';
 import { TaskDocumentsCard } from '@/components/internal/task-documents-card';
 import { TaskCommentsCard } from '@/components/internal/task-comments-card';
 import { Badge } from '@/components/ui/badge';
@@ -35,13 +37,14 @@ export default async function InternalTaskPage({
   params: Promise<{ taskId: string }>;
 }) {
   const { taskId } = await params;
-  const [task, areas, projects, profile, proofs, comments] = await Promise.all([
+  const [task, areas, projects, profile, proofs, comments, subtasks] = await Promise.all([
     getTask(taskId),
     listAreas({ includeArchived: true }),
     listWorkspaceProjects({ sort: 'name' }).catch(() => []),
     getCurrentProfile(),
     listInternalTaskProofs(taskId),
     listInternalTaskComments(taskId),
+    listSubtasks(taskId),
   ]);
   if (!task || !profile) notFound();
 
@@ -117,6 +120,8 @@ export default async function InternalTaskPage({
       </section>
 
       <TaskDetail task={task} areas={areas} projects={projects} />
+
+      <SubtasksCard taskId={taskId} subtasks={subtasks} />
 
       <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <TaskCommentsCard

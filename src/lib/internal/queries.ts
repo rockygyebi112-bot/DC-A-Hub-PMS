@@ -96,6 +96,11 @@ export async function listAreas(opts: { includeArchived?: boolean } = {}) {
   return data ?? [];
 }
 
+const TASK_SELECT =
+  'id, area_id, project_id, title, description, status, priority, due_date, ' +
+  'created_at, updated_at, archived_at, ' +
+  'assignees:internal_task_assignees!internal_task_assignees_task_id_fkey(user_id)';
+
 export async function listTasks(
   filter: {
     areaId?: string;
@@ -105,19 +110,23 @@ export async function listTasks(
   } = {},
 ): Promise<InternalTaskWithAssignees[]> {
   const sb = await createClient();
-  let q = sb
-    .from('internal_tasks')
-    .select(
-      'id, area_id, project_id, title, description, status, priority, due_date, ' +
-      'created_at, updated_at, archived_at, ' +
-      'assignees:internal_task_assignees!internal_task_assignees_task_id_fkey(user_id)',
-    )
-    .is('archived_at', null)
-    .order('updated_at', { ascending: false });
-  if (filter.areaId) q = q.eq('area_id', filter.areaId);
-  if (filter.status) q = q.eq('status', filter.status);
-  if (filter.projectId) q = q.eq('project_id', filter.projectId);
-  const { data, error } = await q;
+  const build = (excludeSubtasks: boolean) => {
+    let q = sb
+      .from('internal_tasks')
+      .select(TASK_SELECT)
+      .is('archived_at', null)
+      .order('updated_at', { ascending: false });
+    // Subtasks (parent_task_id set) only show on the parent's detail page, never
+    // in the board/list. The column is added by migration 0048; fall back to an
+    // unfiltered query if it isn't there yet (no subtasks exist pre-migration).
+    if (excludeSubtasks) q = q.is('parent_task_id', null);
+    if (filter.areaId) q = q.eq('area_id', filter.areaId);
+    if (filter.status) q = q.eq('status', filter.status);
+    if (filter.projectId) q = q.eq('project_id', filter.projectId);
+    return q;
+  };
+  let { data, error } = await build(true);
+  if (error) ({ data, error } = await build(false));
   if (error) throw error;
   // supabase-js generated types don't include the reverse `internal_tasks` →
   // `internal_task_assignees` relation (PostgREST resolves it at runtime via
@@ -151,6 +160,30 @@ export async function getTask(
     data as unknown as RawTaskRow,
   ]);
   return hydrated ?? null;
+}
+
+export type InternalSubtask = {
+  id: string;
+  title: string;
+  status: string;
+  due_date: string | null;
+};
+
+/**
+ * Child tasks of a parent, oldest first. Returns an empty list (rather than
+ * throwing) if migration 0048 hasn't added `parent_task_id` yet, so the detail
+ * page keeps working before the migration is applied.
+ */
+export async function listSubtasks(parentId: string): Promise<InternalSubtask[]> {
+  const sb = await createClient();
+  const { data, error } = await sb
+    .from('internal_tasks')
+    .select('id, title, status, due_date')
+    .eq('parent_task_id', parentId)
+    .is('archived_at', null)
+    .order('created_at', { ascending: true });
+  if (error) return [];
+  return (data ?? []) as InternalSubtask[];
 }
 
 // ---------- documents + comments (0045) ----------

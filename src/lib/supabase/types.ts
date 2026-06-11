@@ -895,6 +895,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          parent_task_id: string | null
           priority: string | null
           project_id: string | null
           status: string
@@ -909,6 +910,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          parent_task_id?: string | null
           priority?: string | null
           project_id?: string | null
           status?: string
@@ -923,6 +925,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          parent_task_id?: string | null
           priority?: string | null
           project_id?: string | null
           status?: string
@@ -935,6 +938,13 @@ export type Database = {
             columns: ["area_id"]
             isOneToOne: false
             referencedRelation: "internal_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "internal_tasks"
             referencedColumns: ["id"]
           },
           {

@@ -212,6 +212,66 @@ export async function setTaskStatus(
   return { ok: true };
 }
 
+// ---------- subtasks (0048) ----------
+
+/** Create a child task under a parent. Subtasks inherit the parent's section. */
+export async function createSubtask(
+  parentId: string,
+  title: string,
+): Promise<ActionResult<{ id: string }>> {
+  const auth = await requireRole(['admin', 'staff']);
+  if (!auth.ok) return auth;
+  const clean = title.trim().slice(0, 200);
+  if (!clean) return { ok: false, error: 'Subtask name is required' };
+
+  const sb = await createClient();
+  const userId = await currentUserId();
+  if (!userId) return { ok: false, error: 'Not authenticated' };
+
+  const { data: parent, error: parentErr } = await sb
+    .from('internal_tasks')
+    .select('area_id')
+    .eq('id', parentId)
+    .single();
+  if (parentErr || !parent) return { ok: false, error: 'Parent task not found' };
+
+  const { data: task, error } = await sb
+    .from('internal_tasks')
+    .insert({
+      area_id: parent.area_id,
+      title: clean,
+      status: 'not_started',
+      created_by: userId,
+      parent_task_id: parentId,
+    })
+    .select('id')
+    .single();
+  if (error || !task) return { ok: false, error: dbErrorMessage(error) };
+
+  // Mirror createTask: add the creator as an assignee so they retain visibility.
+  await sb.from('internal_task_assignees').insert({ task_id: task.id, user_id: userId });
+
+  revalidatePath(`/workspace/internal/${parentId}`);
+  return { ok: true, data: { id: task.id } };
+}
+
+/** Soft-delete a subtask (archives it). */
+export async function deleteSubtask(
+  subtaskId: string,
+  parentId: string,
+): Promise<ActionResult> {
+  const auth = await requireRole(['admin', 'staff']);
+  if (!auth.ok) return auth;
+  const sb = await createClient();
+  const { error } = await sb
+    .from('internal_tasks')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('id', subtaskId);
+  if (error) return { ok: false, error: dbErrorMessage(error) };
+  revalidatePath(`/workspace/internal/${parentId}`);
+  return { ok: true };
+}
+
 export async function addAssignee(
   taskId: string,
   userId: string,

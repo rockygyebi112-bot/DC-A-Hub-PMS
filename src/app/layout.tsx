@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, DM_Mono } from "next/font/google";
+import { DM_Mono, DM_Sans, Syne } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "./providers";
 import { themeScript } from "@/lib/theme/script";
@@ -9,7 +9,7 @@ import "./globals.css";
 // Same family for body and headings, loaded ONCE; both CSS variables point
 // at the single instance. Previously we instantiated `Inter()` twice which
 // downloaded two overlapping weight sets and shipped duplicate WOFF2 files.
-const inter = Inter({
+const dmSans = DM_Sans({
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700", "800"],
@@ -17,6 +17,13 @@ const inter = Inter({
   // natively by next/font. `--font-sans` powers body copy, `--font-heading`
   // is referenced by the `.font-heading` utility in globals.css.
   variable: "--font-sans",
+});
+
+const syne = Syne({
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["500", "600", "700"],
+  variable: "--font-display",
 });
 
 const dmMono = DM_Mono({
@@ -62,7 +69,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${dmMono.variable} h-full antialiased`}
+      className={`${dmSans.variable} ${syne.variable} ${dmMono.variable} h-full antialiased`}
     >
       <head>
         {/* Pre-paint theme application. A raw <script> in <head> runs before

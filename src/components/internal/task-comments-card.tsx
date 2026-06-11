@@ -26,11 +26,11 @@ export function TaskCommentsCard({
   isAdmin: boolean;
 }) {
   return (
-    <section className="rounded-2xl border bg-card shadow-sm">
+    <section className="rounded-xl border border-border/70 bg-white shadow-sm">
       <header className="flex items-center justify-between border-b border-border/60 px-5 py-3">
         <h2 className="flex items-center gap-2 font-heading text-sm font-semibold tracking-tight">
           <MessageSquare className="size-4" />
-          Comments
+          Activity
         </h2>
         <span className="text-[11px] text-muted-foreground">
           {comments.length} {comments.length === 1 ? 'comment' : 'comments'}

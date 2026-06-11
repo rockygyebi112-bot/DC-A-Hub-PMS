@@ -12,6 +12,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 /**
@@ -35,6 +43,7 @@ export function SectionHeading({
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, start] = useTransition();
 
   function rename() {
@@ -58,14 +67,12 @@ export function SectionHeading({
     });
   }
 
-  function remove() {
-    if (!window.confirm(`Delete section “${name}”? Move its tasks out first if it isn't empty.`)) {
-      return;
-    }
+  function confirmDelete() {
     start(async () => {
       const r = await archiveArea(id);
       if (r.ok) {
         toast.success('Section deleted');
+        setConfirmOpen(false);
         router.refresh();
       } else {
         toast.error(r.error ?? 'Could not delete section');
@@ -139,13 +146,43 @@ export function SectionHeading({
               <Pencil className="size-3.5" />
               Rename
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={remove} className="text-destructive">
+            <DropdownMenuItem onClick={() => setConfirmOpen(true)} className="text-destructive">
               <Trash2 className="size-3.5" />
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete section</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Delete <span className="font-medium text-foreground">“{name}”</span>? Move its tasks
+            out first if it isn’t empty. This can’t be undone.
+          </p>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setConfirmOpen(false)}
+              disabled={pending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={pending}
+            >
+              {pending ? 'Deleting…' : 'Delete section'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </span>
   );
 }

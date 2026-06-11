@@ -71,34 +71,18 @@ export default async function InternalWorkspacePage({
     return acc;
   }, {});
 
-  const doneTasks = statusCounts.done ?? 0;
-  const openTasks = allTasks.length - doneTasks;
-
   return (
-    <div className="flex min-h-[calc(100vh-var(--topbar-height,58px)-3rem)] flex-col gap-5">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Kanban className="size-4" />
-          </span>
-          <div className="min-w-0">
-            <h1 className="truncate text-lg font-semibold text-foreground">Internal Workspace</h1>
-            <p className="text-xs text-muted-foreground">
-              {openTasks} open · {allTasks.length} total
-            </p>
-          </div>
+    <div className="flex min-h-[calc(100vh-var(--topbar-height,58px)-3rem)] flex-col gap-4">
+      <header className="flex items-center justify-between gap-2">
+        <div className="inline-flex rounded-lg border border-border/70 bg-card p-0.5">
+          <ViewLink params={params} view="list" active={view === "list"} icon={LayoutList}>
+            List
+          </ViewLink>
+          <ViewLink params={params} view="board" active={view === "board"} icon={Kanban}>
+            Board
+          </ViewLink>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-lg border border-border/70 bg-card p-0.5">
-            <ViewLink params={params} view="list" active={view === "list"} icon={LayoutList}>
-              List
-            </ViewLink>
-            <ViewLink params={params} view="board" active={view === "board"} icon={Kanban}>
-              Board
-            </ViewLink>
-          </div>
-          <NewTaskForm areas={areas} projects={projects} />
-        </div>
+        <NewTaskForm areas={areas} projects={projects} />
       </header>
 
       <div className="flex flex-col gap-2 border-b border-border/70 pb-4">

@@ -95,7 +95,7 @@ export function NewTaskForm({
             variant={triggerVariant}
             size={triggerSize}
             className={cn(
-              triggerVariant === 'default' && 'bg-[#5B6AF0] hover:bg-[#4C59D8]',
+              triggerVariant === 'default' && 'bg-primary text-primary-foreground hover:bg-primary/90',
               triggerClassName,
             )}
           >
@@ -258,7 +258,7 @@ export function NewTaskForm({
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending} className="bg-[#5B6AF0] hover:bg-[#4C59D8]">
+            <Button type="submit" disabled={pending} className="bg-primary text-primary-foreground hover:bg-primary/90">
               {pending ? 'Creating...' : 'Create Task'}
             </Button>
           </DialogFooter>

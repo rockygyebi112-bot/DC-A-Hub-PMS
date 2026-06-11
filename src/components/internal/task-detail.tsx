@@ -159,9 +159,9 @@ export function TaskDetail({
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <section className="rounded-xl border border-border/70 bg-white shadow-sm">
+      <section className="rounded-xl border border-border/70 bg-card shadow-sm">
         <header className="flex items-center justify-between border-b border-border/60 px-5 py-4">
-          <h2 className="text-sm font-semibold text-gray-950">Description</h2>
+          <h2 className="text-sm font-semibold text-foreground">Description</h2>
         </header>
         <form
           action={(fd) => run(() => updateTask(task.id, fd), 'Description saved', { refresh: true })}
@@ -176,7 +176,7 @@ export function TaskDetail({
             className="min-h-72 resize-y border-0 bg-muted/30 p-4 text-sm leading-6 shadow-none focus-visible:ring-2 focus-visible:ring-primary/20"
           />
           <div className="flex justify-end">
-            <Button type="submit" size="sm" disabled={pending} className="bg-[#5B6AF0] hover:bg-[#4C59D8]">
+            <Button type="submit" size="sm" disabled={pending} className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Save className="size-3.5" />
               Save
             </Button>
@@ -185,8 +185,8 @@ export function TaskDetail({
       </section>
 
       <aside className="space-y-5">
-        <section className="rounded-xl border border-border/70 bg-white px-4 py-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-950">Properties</h2>
+        <section className="rounded-xl border border-border/70 bg-card px-4 py-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-foreground">Properties</h2>
           <div className="mt-4 space-y-4">
             <Property label="Status">
               <Select
@@ -330,7 +330,7 @@ export function TaskDetail({
                     No assignees yet.
                   </p>
                 )}
-                <div className="rounded-lg border border-border/70 bg-white p-2">
+                <div className="rounded-lg border border-border/70 bg-card p-2">
                   <AssigneePicker
                     existingIds={assignees.map((a) => a.user_id)}
                     onAdd={(userId) =>

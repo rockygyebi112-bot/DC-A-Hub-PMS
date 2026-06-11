@@ -110,7 +110,7 @@ function TaskListView({
   byStatus: Map<TaskStatus, Task[]>;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border/70 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
       {TASK_STATUS_ORDER.map((status) => {
         const meta = TASK_STATUS_META[status];
         const list = byStatus.get(status)!;
@@ -168,13 +168,13 @@ function TaskListRow({ task, area }: { task: Task; area?: Area }) {
   }
 
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)_8rem_7rem_6rem_10rem] items-center gap-3 border-b border-border/50 px-4 py-2.5 last:border-b-0 hover:bg-gray-50">
+    <div className="grid grid-cols-[auto_minmax(0,1fr)_8rem_7rem_6rem_10rem] items-center gap-3 border-b border-border/50 px-4 py-2.5 last:border-b-0 hover:bg-muted/40">
       <form action={markDone}>
         <button
           type="submit"
           aria-label="Mark task done"
           className={cn(
-            "grid size-4 place-items-center rounded border border-input bg-white text-white transition-colors hover:border-primary",
+            "grid size-4 place-items-center rounded border border-input bg-background text-white transition-colors hover:border-primary",
             task.status === "done" && "border-emerald-500 bg-emerald-500",
           )}
         >
@@ -183,7 +183,7 @@ function TaskListRow({ task, area }: { task: Task; area?: Area }) {
       </form>
       <Link
         href={`/workspace/internal/${task.id}`}
-        className="min-w-0 truncate text-sm font-medium text-gray-900 hover:text-primary"
+        className="min-w-0 truncate text-sm font-medium text-foreground hover:text-primary"
       >
         {task.title}
       </Link>

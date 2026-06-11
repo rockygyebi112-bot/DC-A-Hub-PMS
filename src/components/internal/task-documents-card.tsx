@@ -59,9 +59,9 @@ export function TaskDocumentsCard({
   isAdmin: boolean;
 }) {
   return (
-    <section className="rounded-xl border border-border/70 bg-white shadow-sm">
+    <section className="rounded-xl border border-border/70 bg-card shadow-sm">
       <header className="flex items-center justify-between border-b border-border/60 px-5 py-3">
-        <h2 className="flex items-center gap-2 font-heading text-sm font-semibold tracking-tight">
+        <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground">
           <Paperclip className="size-4" />
           Documents
         </h2>

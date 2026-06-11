@@ -14,11 +14,11 @@ function formValue(fd: FormData, key: string) {
   return (fd.get(key) ?? '') as string;
 }
 
-// ---------- areas (admin only) ----------
+// ---------- sections (a.k.a. areas) — staff + admin (migration 0047) ----------
 export async function createArea(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
-  const auth = await requireRole('admin');
+  const auth = await requireRole(['admin', 'staff']);
   if (!auth.ok) return auth;
   const parsed = areaSchema.safeParse({
     name: formValue(formData, 'name'),
@@ -43,7 +43,7 @@ export async function updateArea(
   areaId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  const auth = await requireRole('admin');
+  const auth = await requireRole(['admin', 'staff']);
   if (!auth.ok) return auth;
   const parsed = areaSchema.safeParse({
     name: formValue(formData, 'name'),
@@ -63,7 +63,7 @@ export async function updateArea(
 }
 
 export async function archiveArea(areaId: string): Promise<ActionResult> {
-  const auth = await requireRole('admin');
+  const auth = await requireRole(['admin', 'staff']);
   if (!auth.ok) return auth;
   const sb = await createClient();
   const { count } = await sb
@@ -74,7 +74,7 @@ export async function archiveArea(areaId: string): Promise<ActionResult> {
   if ((count ?? 0) > 0) {
     return {
       ok: false,
-      error: 'Area has active tasks — reassign or archive them first.',
+      error: 'Section has active tasks — move or archive them first.',
     };
   }
   const { error } = await sb
@@ -83,6 +83,36 @@ export async function archiveArea(areaId: string): Promise<ActionResult> {
     .eq('id', areaId);
   if (error) return { ok: false, error: dbErrorMessage(error) };
   revalidatePath('/admin/internal/areas');
+  revalidatePath('/workspace/internal');
+  return { ok: true };
+}
+
+/**
+ * Persist a new section ordering. Takes the full ordered list of section ids
+ * and renumbers `position` in steps of 1000. Requires migration 0046 (the
+ * `position` column); on older databases the update simply errors and the UI
+ * surfaces the message.
+ */
+export async function reorderSections(orderedIds: string[]): Promise<ActionResult> {
+  const auth = await requireRole(['admin', 'staff']);
+  if (!auth.ok) return auth;
+  const ids = idsSchema.safeParse(orderedIds);
+  if (!ids.success || ids.data.length === 0) {
+    return { ok: false, error: 'Invalid section order' };
+  }
+  const sb = await createClient();
+  const results = await Promise.all(
+    ids.data.map((id, i) =>
+      sb
+        .from('internal_areas')
+        // `position` is added by migration 0046; the generated Supabase types
+        // lag the migration until regenerated, so cast the payload.
+        .update({ position: (i + 1) * 1000 } as never)
+        .eq('id', id),
+    ),
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { ok: false, error: dbErrorMessage(failed.error) };
   revalidatePath('/workspace/internal');
   return { ok: true };
 }

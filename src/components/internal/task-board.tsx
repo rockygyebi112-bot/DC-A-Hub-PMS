@@ -6,7 +6,12 @@ import { setTaskStatus } from "@/lib/internal/actions";
 import { cn } from "@/lib/utils";
 import { TaskCard, type TaskRow } from "./task-card";
 import { NewTaskForm } from "./new-task-form";
-import { AddSection, CollapsibleSection, SectionHeading } from "./section-controls";
+import { AddSection, SectionHeading } from "./section-controls";
+import {
+  SortableSectionColumns,
+  SortableSectionList,
+  type SortableItem,
+} from "./sortable-sections";
 import { TASK_STATUS_META, asTaskStatus, type TaskStatus } from "./task-meta";
 
 type Section = { id: string; name: string; color?: string | null };
@@ -42,53 +47,55 @@ export function TaskBoard({
     );
   }
 
+  const boardItems: SortableItem[] = sections.map((section) => {
+    const list = bySection.get(section.id) ?? [];
+    return {
+      id: section.id,
+      header: (
+        <SectionHeading
+          id={section.id}
+          name={section.name}
+          count={list.length}
+          color={section.color}
+          canManage={canManage}
+        />
+      ),
+      body: (
+        <div className="flex flex-col gap-2">
+          {list.map((t) => (
+            <TaskCard
+              key={t.id}
+              task={t}
+              project={t.project_id ? projectById.get(t.project_id) : undefined}
+            />
+          ))}
+          <NewTaskForm
+            areas={sections}
+            projects={projects}
+            defaultAreaId={section.id}
+            triggerLabel="Add task"
+            triggerVariant="ghost"
+            triggerSize="sm"
+            triggerClassName="w-full justify-start text-muted-foreground hover:bg-muted/60"
+          />
+        </div>
+      ),
+    };
+  });
+
   return (
     <div className="-mx-4 min-h-0 overflow-x-auto px-4 py-1 md:mx-0 md:px-0">
-      <div className="flex h-[calc(100vh-var(--topbar-height,58px)-16rem)] min-h-[560px] gap-4">
-        {sections.map((section) => {
-          const list = bySection.get(section.id) ?? [];
-          return (
-            <section key={section.id} className="group/col flex w-[300px] shrink-0 flex-col">
-              <header className="flex shrink-0 items-center px-1 pb-2">
-                <SectionHeading
-                  id={section.id}
-                  name={section.name}
-                  count={list.length}
-                  color={section.color}
-                  canManage={canManage}
-                />
-              </header>
-
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <div className="flex flex-col gap-2">
-                  {list.map((t) => (
-                    <TaskCard
-                      key={t.id}
-                      task={t}
-                      project={t.project_id ? projectById.get(t.project_id) : undefined}
-                    />
-                  ))}
-                  <NewTaskForm
-                    areas={sections}
-                    projects={projects}
-                    defaultAreaId={section.id}
-                    triggerLabel="Add task"
-                    triggerVariant="ghost"
-                    triggerSize="sm"
-                    triggerClassName="w-full justify-start text-muted-foreground hover:bg-muted/60"
-                  />
-                </div>
-              </div>
-            </section>
-          );
-        })}
-
-        {canManage && (
-          <div className="w-[260px] shrink-0 pt-0.5">
-            <AddSection variant="board" />
-          </div>
-        )}
-      </div>
+      <SortableSectionColumns
+        items={boardItems}
+        canReorder={canManage}
+        trailer={
+          canManage ? (
+            <div className="w-[260px] shrink-0 pt-0.5">
+              <AddSection variant="board" />
+            </div>
+          ) : null
+        }
+      />
     </div>
   );
 }
@@ -106,6 +113,40 @@ function TaskListView({
   bySection: Map<string, Task[]>;
   canManage: boolean;
 }) {
+  const listItems: SortableItem[] = sections.map((section) => {
+    const list = bySection.get(section.id) ?? [];
+    return {
+      id: section.id,
+      header: (
+        <SectionHeading
+          id={section.id}
+          name={section.name}
+          count={list.length}
+          color={section.color}
+          canManage={canManage}
+        />
+      ),
+      body: (
+        <>
+          {list.map((task) => (
+            <TaskListRow key={task.id} task={task} />
+          ))}
+          <div className="border-t border-border/40 py-1 pl-[28px] pr-3">
+            <NewTaskForm
+              areas={sections}
+              projects={projects}
+              defaultAreaId={section.id}
+              triggerLabel="Add task..."
+              triggerVariant="ghost"
+              triggerSize="sm"
+              triggerClassName="h-8 w-full justify-start px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+            />
+          </div>
+        </>
+      ),
+    };
+  });
+
   return (
     <div className="-mx-4 overflow-x-auto md:mx-0">
       <div className="min-w-[680px]">
@@ -120,38 +161,7 @@ function TaskListView({
           <span>Due date</span>
         </div>
 
-        {sections.map((section) => {
-          const list = bySection.get(section.id) ?? [];
-          return (
-            <CollapsibleSection
-              key={section.id}
-              header={
-                <SectionHeading
-                  id={section.id}
-                  name={section.name}
-                  count={list.length}
-                  color={section.color}
-                  canManage={canManage}
-                />
-              }
-            >
-              {list.map((task) => (
-                <TaskListRow key={task.id} task={task} />
-              ))}
-              <div className="border-t border-border/40 py-1 pl-[28px] pr-3">
-                <NewTaskForm
-                  areas={sections}
-                  projects={projects}
-                  defaultAreaId={section.id}
-                  triggerLabel="Add task..."
-                  triggerVariant="ghost"
-                  triggerSize="sm"
-                  triggerClassName="h-8 w-full justify-start px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
-                />
-              </div>
-            </CollapsibleSection>
-          );
-        })}
+        <SortableSectionList items={listItems} canReorder={canManage} />
 
         {canManage && (
           <div className="px-3 py-3">

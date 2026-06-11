@@ -46,7 +46,10 @@ export default async function InternalWorkspacePage({
     listTasks({ projectId: params.project }),
   ]);
 
-  const isAdmin = profile.role === "admin";
+  // Both staff and admin can manage sections (create/rename/reorder/delete)
+  // once migration 0047 opens the write policy. The page is already gated to
+  // those two roles, so everyone who reaches it can manage.
+  const canManageSections = true;
   const projectOptions = projects.map((p) => ({
     value: p.id,
     label: p.client?.name ? `${p.name} - ${p.client.name}` : p.name,
@@ -120,7 +123,7 @@ export default async function InternalWorkspacePage({
         sections={areas}
         projects={projects}
         view={view}
-        canManage={isAdmin}
+        canManage={canManageSections}
       />
     </div>
   );

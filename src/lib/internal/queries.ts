@@ -77,12 +77,21 @@ async function hydrateAssigneeProfiles(
 
 export async function listAreas(opts: { includeArchived?: boolean } = {}) {
   const sb = await createClient();
-  let q = sb
-    .from('internal_areas')
-    .select('id, name, description, color, archived_at')
+  const base = () => {
+    const q = sb
+      .from('internal_areas')
+      .select('id, name, description, color, archived_at');
+    return opts.includeArchived ? q : q.is('archived_at', null);
+  };
+  // Prefer explicit section order (migration 0046). Fall back to name ordering
+  // if the `position` column isn't there yet, so the workspace keeps working
+  // before the migration is applied.
+  let { data, error } = await base()
+    .order('position', { ascending: true })
     .order('name');
-  if (!opts.includeArchived) q = q.is('archived_at', null);
-  const { data, error } = await q;
+  if (error) {
+    ({ data, error } = await base().order('name'));
+  }
   if (error) throw error;
   return data ?? [];
 }

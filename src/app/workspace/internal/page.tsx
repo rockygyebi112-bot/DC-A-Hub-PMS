@@ -30,7 +30,7 @@ export default async function InternalWorkspacePage({
   }
 
   const params = await searchParams;
-  const view = params.view === "list" ? "list" : "board";
+  const view = params.view === "board" ? "board" : "list";
   const [areas, projects, tasks, allTasks] = await Promise.all([
     listAreas(),
     listWorkspaceProjects({ sort: "name" }).catch(() => []),
@@ -78,11 +78,11 @@ export default async function InternalWorkspacePage({
         </div>
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-lg border border-border/70 bg-card p-0.5">
-            <ViewLink params={params} view="board" active={view === "board"} icon={Kanban}>
-              Board
-            </ViewLink>
             <ViewLink params={params} view="list" active={view === "list"} icon={LayoutList}>
               List
+            </ViewLink>
+            <ViewLink params={params} view="board" active={view === "board"} icon={Kanban}>
+              Board
             </ViewLink>
           </div>
           <NewTaskForm areas={areas} projects={projects} />

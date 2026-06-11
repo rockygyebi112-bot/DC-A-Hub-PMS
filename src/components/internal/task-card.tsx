@@ -1,14 +1,16 @@
 import Link from "next/link";
-import {
-  AlertTriangle,
-  CalendarDays,
-  UserRound,
-} from "lucide-react";
+import { AlertTriangle, CalendarDays, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
 import { cn } from "@/lib/utils";
-import { TASK_PRIORITY_META, type TaskPriority } from "./task-meta";
+import {
+  TASK_PRIORITY_META,
+  TASK_STATUS_META,
+  asTaskStatus,
+  type TaskPriority,
+  type TaskStatus,
+} from "./task-meta";
 
 export type TaskRow = {
   id: string;
@@ -32,7 +34,6 @@ export type TaskRow = {
     | null;
 };
 
-export type TaskCardArea = { name: string; color?: string | null };
 export type TaskCardProject = { name: string; client?: { name: string } | null };
 
 function formatDue(iso: string): string {
@@ -51,21 +52,34 @@ function todayIso(): string {
   ).padStart(2, "0")}`;
 }
 
+function statusDot(status: TaskStatus) {
+  if (status === "in_progress") return "bg-blue-500";
+  if (status === "blocked") return "bg-red-500";
+  if (status === "done") return "bg-emerald-500";
+  return "bg-slate-400";
+}
+
+function statusPill(status: TaskStatus) {
+  if (status === "in_progress") return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
+  if (status === "blocked") return "bg-red-500/10 text-red-600 dark:text-red-400";
+  if (status === "done") return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+  return "bg-muted text-muted-foreground";
+}
+
 export function TaskCard({
   task,
-  area,
   project,
 }: {
   task: TaskRow;
-  area?: TaskCardArea;
   project?: TaskCardProject;
 }) {
   const assignees = (task.assignees ?? []).filter((a) => a.profile);
   const visible = assignees.slice(0, 3);
   const overflow = assignees.length - visible.length;
 
-  const overdue =
-    !!task.due_date && task.status !== "done" && task.due_date < todayIso();
+  const status = asTaskStatus(task.status);
+  const statusMeta = TASK_STATUS_META[status];
+  const overdue = !!task.due_date && status !== "done" && task.due_date < todayIso();
 
   const priority =
     task.priority && task.priority in TASK_PRIORITY_META
@@ -80,21 +94,21 @@ export function TaskCard({
         "hover:border-border hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
       )}
     >
-      <div className="flex items-start gap-2">
-        {area && (
-          <span
-            aria-hidden
-            className="mt-1 size-2 shrink-0 rounded-full bg-muted-foreground/40"
-            style={area.color ? { backgroundColor: area.color } : undefined}
-          />
-        )}
-        <h3 className="line-clamp-2 flex-1 text-sm font-medium leading-snug text-foreground">
-          {task.title}
-        </h3>
-      </div>
+      <h3 className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
+        {task.title}
+      </h3>
 
       <div className="mt-2.5 flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
+        <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium",
+              statusPill(status),
+            )}
+          >
+            <span className={cn("size-1.5 rounded-full", statusDot(status))} />
+            {statusMeta.label}
+          </span>
           {task.due_date && (
             <span
               className={cn(
@@ -128,11 +142,11 @@ export function TaskCard({
                   name={a.profile?.full_name ?? "Unknown"}
                   avatarUrl={a.profile?.avatar_url}
                   size="sm"
-                  className="ring-2 ring-white"
+                  className="ring-2 ring-card"
                 />
               ))}
               {overflow > 0 && (
-                <span className="inline-flex size-6 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground ring-2 ring-white">
+                <span className="inline-flex size-6 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground ring-2 ring-card">
                   +{overflow}
                 </span>
               )}

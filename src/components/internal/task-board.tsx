@@ -1,65 +1,62 @@
 import Link from "next/link";
-import { Check, ChevronRight } from "lucide-react";
+import { Check } from "lucide-react";
 
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
 import { setTaskStatus } from "@/lib/internal/actions";
 import { cn } from "@/lib/utils";
 import { TaskCard, type TaskRow } from "./task-card";
 import { NewTaskForm } from "./new-task-form";
-import {
-  TASK_STATUS_META,
-  TASK_STATUS_ORDER,
-  asTaskStatus,
-  type TaskStatus,
-} from "./task-meta";
+import { AddSection, SectionHeading } from "./section-controls";
+import { TASK_STATUS_META, asTaskStatus, type TaskStatus } from "./task-meta";
 
-type Area = { id: string; name: string; color?: string | null };
+type Section = { id: string; name: string; color?: string | null };
 type Project = { id: string; name: string; client?: { name: string } | null };
 type Task = TaskRow & { area_id: string };
 type ViewMode = "board" | "list";
 
 export function TaskBoard({
   tasks,
-  areas,
+  sections,
   projects = [],
-  view = "board",
+  view = "list",
+  canManage = false,
 }: {
   tasks: Task[];
-  areas: Area[];
+  sections: Section[];
   projects?: Project[];
   view?: ViewMode;
+  canManage?: boolean;
 }) {
-  const areaById = new Map(areas.map((a) => [a.id, a]));
   const projectById = new Map(projects.map((p) => [p.id, p]));
-  const byStatus = new Map(TASK_STATUS_ORDER.map((s) => [s, [] as Task[]]));
-  for (const t of tasks) byStatus.get(asTaskStatus(t.status))!.push(t);
+  const bySection = new Map(sections.map((s) => [s.id, [] as Task[]]));
+  for (const t of tasks) bySection.get(t.area_id)?.push(t);
 
   if (view === "list") {
     return (
       <TaskListView
-        areas={areas}
+        sections={sections}
         projects={projects}
-        areaById={areaById}
-        byStatus={byStatus}
+        bySection={bySection}
+        canManage={canManage}
       />
     );
   }
 
   return (
     <div className="-mx-4 min-h-0 overflow-x-auto px-4 py-1 md:mx-0 md:px-0">
-      <div className="grid h-[calc(100vh-var(--topbar-height,58px)-16rem)] min-h-[560px] min-w-[1080px] grid-cols-4 gap-4 2xl:min-w-0">
-        {TASK_STATUS_ORDER.map((status) => {
-          const meta = TASK_STATUS_META[status];
-          const list = byStatus.get(status)!;
-
+      <div className="flex h-[calc(100vh-var(--topbar-height,58px)-16rem)] min-h-[560px] gap-4">
+        {sections.map((section) => {
+          const list = bySection.get(section.id) ?? [];
           return (
-            <section key={status} className="flex min-h-0 flex-col">
-              <header className="flex shrink-0 items-center gap-2 px-1 pb-2">
-                <span className={cn("size-2.5 rounded-full", statusDot(status))} />
-                <h3 className="min-w-0 flex-1 truncate text-xs font-semibold uppercase tracking-wide text-foreground">
-                  {meta.label}
-                </h3>
-                <span className="text-xs tabular-nums text-muted-foreground">{list.length}</span>
+            <section key={section.id} className="group/col flex w-[300px] shrink-0 flex-col">
+              <header className="flex shrink-0 items-center px-1 pb-2">
+                <SectionHeading
+                  id={section.id}
+                  name={section.name}
+                  count={list.length}
+                  color={section.color}
+                  canManage={canManage}
+                />
               </header>
 
               <div className="min-h-0 flex-1 overflow-y-auto">
@@ -68,14 +65,13 @@ export function TaskBoard({
                     <TaskCard
                       key={t.id}
                       task={t}
-                      area={areaById.get(t.area_id) ?? undefined}
                       project={t.project_id ? projectById.get(t.project_id) : undefined}
                     />
                   ))}
                   <NewTaskForm
-                    areas={areas}
+                    areas={sections}
                     projects={projects}
-                    defaultStatus={status}
+                    defaultAreaId={section.id}
                     triggerLabel="Add task"
                     triggerVariant="ghost"
                     triggerSize="sm"
@@ -86,6 +82,12 @@ export function TaskBoard({
             </section>
           );
         })}
+
+        {canManage && (
+          <div className="w-[260px] shrink-0 pt-0.5">
+            <AddSection variant="board" />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -94,15 +96,15 @@ export function TaskBoard({
 const LIST_COLS = "grid-cols-[minmax(0,1fr)_11rem_7rem]";
 
 function TaskListView({
-  areas,
+  sections,
   projects,
-  areaById,
-  byStatus,
+  bySection,
+  canManage,
 }: {
-  areas: Area[];
+  sections: Section[];
   projects: Project[];
-  areaById: Map<string, Area>;
-  byStatus: Map<TaskStatus, Task[]>;
+  bySection: Map<string, Task[]>;
+  canManage: boolean;
 }) {
   return (
     <div className="-mx-4 overflow-x-auto md:mx-0">
@@ -118,27 +120,29 @@ function TaskListView({
           <span>Due date</span>
         </div>
 
-        {TASK_STATUS_ORDER.map((status) => {
-          const meta = TASK_STATUS_META[status];
-          const list = byStatus.get(status)!;
+        {sections.map((section) => {
+          const list = bySection.get(section.id) ?? [];
           return (
-            <details key={status} open className="group/sec border-b border-border/60">
-              <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 hover:bg-muted/30">
-                <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-[[open]]/sec:rotate-90" />
-                <span className={cn("size-2 shrink-0 rounded-full", statusDot(status))} />
-                <span className="text-sm font-semibold text-foreground">{meta.label}</span>
-                <span className="text-xs tabular-nums text-muted-foreground">{list.length}</span>
-              </summary>
+            <div key={section.id} className="group/sec border-b border-border/60">
+              <div className="flex items-center px-3 py-2.5">
+                <SectionHeading
+                  id={section.id}
+                  name={section.name}
+                  count={list.length}
+                  color={section.color}
+                  canManage={canManage}
+                />
+              </div>
 
               <div>
                 {list.map((task) => (
-                  <TaskListRow key={task.id} task={task} area={areaById.get(task.area_id)} />
+                  <TaskListRow key={task.id} task={task} />
                 ))}
-                <div className="border-t border-border/40 py-1 pl-[42px] pr-3">
+                <div className="border-t border-border/40 py-1 pl-[28px] pr-3">
                   <NewTaskForm
-                    areas={areas}
+                    areas={sections}
                     projects={projects}
-                    defaultStatus={status}
+                    defaultAreaId={section.id}
                     triggerLabel="Add task..."
                     triggerVariant="ghost"
                     triggerSize="sm"
@@ -146,17 +150,24 @@ function TaskListView({
                   />
                 </div>
               </div>
-            </details>
+            </div>
           );
         })}
+
+        {canManage && (
+          <div className="px-3 py-3">
+            <AddSection variant="list" />
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function TaskListRow({ task, area }: { task: Task; area?: Area }) {
+function TaskListRow({ task }: { task: Task }) {
   const assignee = (task.assignees ?? []).find((a) => a.profile);
-  const done = asTaskStatus(task.status) === "done";
+  const status = asTaskStatus(task.status);
+  const done = status === "done";
   const overdue = !!task.due_date && !done && task.due_date < todayIso();
 
   async function toggleDone() {
@@ -186,14 +197,11 @@ function TaskListRow({ task, area }: { task: Task; area?: Area }) {
             <Check className="size-3" strokeWidth={3} />
           </button>
         </form>
-        {area && (
-          <span
-            aria-hidden
-            className="size-2 shrink-0 rounded-full bg-muted-foreground/40"
-            style={area.color ? { backgroundColor: area.color } : undefined}
-            title={area.name}
-          />
-        )}
+        <span
+          aria-hidden
+          className={cn("size-2 shrink-0 rounded-full", statusDot(status))}
+          title={TASK_STATUS_META[status].label}
+        />
         <Link
           href={`/workspace/internal/${task.id}`}
           className={cn(
@@ -247,7 +255,7 @@ function statusDot(status: TaskStatus) {
   if (status === "in_progress") return "bg-blue-500";
   if (status === "blocked") return "bg-red-500";
   if (status === "done") return "bg-emerald-500";
-  return "bg-slate-300";
+  return "bg-slate-400";
 }
 
 function todayIso(): string {

@@ -6,7 +6,11 @@ import { Kanban, LayoutList, type LucideIcon } from "lucide-react";
 import { FilterChips } from "@/components/admin/ui/filter-chips";
 import { NewTaskForm } from "@/components/internal/new-task-form";
 import { TaskBoard } from "@/components/internal/task-board";
-import { asTaskStatus } from "@/components/internal/task-meta";
+import {
+  TASK_STATUS_META,
+  TASK_STATUS_ORDER,
+  asTaskStatus,
+} from "@/components/internal/task-meta";
 import { cn } from "@/lib/utils";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { listAreas, listTasks } from "@/lib/internal/queries";
@@ -42,15 +46,11 @@ export default async function InternalWorkspacePage({
     listTasks({ projectId: params.project }),
   ]);
 
-  const areaOptions = areas.map((a) => ({ value: a.id, label: a.name }));
+  const isAdmin = profile.role === "admin";
   const projectOptions = projects.map((p) => ({
     value: p.id,
     label: p.client?.name ? `${p.name} - ${p.client.name}` : p.name,
   }));
-  const areaCounts = areas.reduce<Record<string, number>>((acc, area) => {
-    acc[area.id] = allTasks.filter((task) => task.area_id === area.id).length;
-    return acc;
-  }, {});
   const projectCounts = projects.reduce<Record<string, number>>((acc, project) => {
     acc[project.id] = allTasks.filter((task) => task.project_id === project.id).length;
     return acc;
@@ -59,7 +59,16 @@ export default async function InternalWorkspacePage({
     (project) => (projectCounts[project.value] ?? 0) > 0,
   );
 
-  const doneTasks = allTasks.filter((task) => asTaskStatus(task.status) === "done").length;
+  const statusOptions = TASK_STATUS_ORDER.map((status) => ({
+    value: status,
+    label: TASK_STATUS_META[status].label,
+  }));
+  const statusCounts = TASK_STATUS_ORDER.reduce<Record<string, number>>((acc, status) => {
+    acc[status] = allTasks.filter((task) => asTaskStatus(task.status) === status).length;
+    return acc;
+  }, {});
+
+  const doneTasks = statusCounts.done ?? 0;
   const openTasks = allTasks.length - doneTasks;
 
   return (
@@ -89,28 +98,30 @@ export default async function InternalWorkspacePage({
         </div>
       </header>
 
-      {(areaOptions.length > 0 || linkedProjectOptions.length > 0) && (
-        <div className="flex flex-col gap-2 border-b border-border/70 pb-4">
-          {areaOptions.length > 0 && (
-            <FilterChips
-              paramName="area"
-              options={areaOptions}
-              allLabel="All workstreams"
-              counts={areaCounts}
-            />
-          )}
-          {linkedProjectOptions.length > 0 && (
-            <FilterChips
-              paramName="project"
-              options={linkedProjectOptions}
-              allLabel="All projects"
-              counts={projectCounts}
-            />
-          )}
-        </div>
-      )}
+      <div className="flex flex-col gap-2 border-b border-border/70 pb-4">
+        <FilterChips
+          paramName="status"
+          options={statusOptions}
+          allLabel="All tasks"
+          counts={statusCounts}
+        />
+        {linkedProjectOptions.length > 0 && (
+          <FilterChips
+            paramName="project"
+            options={linkedProjectOptions}
+            allLabel="All projects"
+            counts={projectCounts}
+          />
+        )}
+      </div>
 
-      <TaskBoard tasks={tasks} areas={areas} projects={projects} view={view} />
+      <TaskBoard
+        tasks={tasks}
+        sections={areas}
+        projects={projects}
+        view={view}
+        canManage={isAdmin}
+      />
     </div>
   );
 }

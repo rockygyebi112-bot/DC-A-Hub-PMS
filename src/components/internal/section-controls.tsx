@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, MoreHorizontal, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Check, ChevronRight, MoreHorizontal, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { archiveArea, createArea, updateArea } from '@/lib/internal/actions';
@@ -147,6 +147,40 @@ export function SectionHeading({
         </DropdownMenu>
       )}
     </span>
+  );
+}
+
+/**
+ * Client wrapper that makes a list section collapsible. The header (with its own
+ * interactive rename/delete menu) and the server-rendered rows are passed as
+ * props so the toggle stays purely client-side without swallowing their events.
+ */
+export function CollapsibleSection({
+  header,
+  children,
+  defaultOpen = true,
+}: {
+  header: ReactNode;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="group/sec border-b border-border/60">
+      <div className="flex items-center gap-1 px-3 py-2.5">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-label={open ? 'Collapse section' : 'Expand section'}
+          className="grid size-5 shrink-0 place-items-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <ChevronRight className={cn('size-3.5 transition-transform', open && 'rotate-90')} />
+        </button>
+        {header}
+      </div>
+      {open && <div>{children}</div>}
+    </div>
   );
 }
 

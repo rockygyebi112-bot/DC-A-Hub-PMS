@@ -6,7 +6,7 @@ import { setTaskStatus } from "@/lib/internal/actions";
 import { cn } from "@/lib/utils";
 import { TaskCard, type TaskRow } from "./task-card";
 import { NewTaskForm } from "./new-task-form";
-import { AddSection, SectionHeading } from "./section-controls";
+import { AddSection, CollapsibleSection, SectionHeading } from "./section-controls";
 import { TASK_STATUS_META, asTaskStatus, type TaskStatus } from "./task-meta";
 
 type Section = { id: string; name: string; color?: string | null };
@@ -123,8 +123,9 @@ function TaskListView({
         {sections.map((section) => {
           const list = bySection.get(section.id) ?? [];
           return (
-            <div key={section.id} className="group/sec border-b border-border/60">
-              <div className="flex items-center px-3 py-2.5">
+            <CollapsibleSection
+              key={section.id}
+              header={
                 <SectionHeading
                   id={section.id}
                   name={section.name}
@@ -132,25 +133,23 @@ function TaskListView({
                   color={section.color}
                   canManage={canManage}
                 />
+              }
+            >
+              {list.map((task) => (
+                <TaskListRow key={task.id} task={task} />
+              ))}
+              <div className="border-t border-border/40 py-1 pl-[28px] pr-3">
+                <NewTaskForm
+                  areas={sections}
+                  projects={projects}
+                  defaultAreaId={section.id}
+                  triggerLabel="Add task..."
+                  triggerVariant="ghost"
+                  triggerSize="sm"
+                  triggerClassName="h-8 w-full justify-start px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+                />
               </div>
-
-              <div>
-                {list.map((task) => (
-                  <TaskListRow key={task.id} task={task} />
-                ))}
-                <div className="border-t border-border/40 py-1 pl-[28px] pr-3">
-                  <NewTaskForm
-                    areas={sections}
-                    projects={projects}
-                    defaultAreaId={section.id}
-                    triggerLabel="Add task..."
-                    triggerVariant="ghost"
-                    triggerSize="sm"
-                    triggerClassName="h-8 w-full justify-start px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
-                  />
-                </div>
-              </div>
-            </div>
+            </CollapsibleSection>
           );
         })}
 

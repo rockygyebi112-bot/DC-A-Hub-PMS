@@ -93,10 +93,10 @@ export default async function NewWorkspaceActivityPage({
             />
           </label>
           <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-gray-800 dark:text-gray-100">
+            <legend className="text-sm font-medium text-foreground">
               Visibility <span className="text-red-600">*</span>
             </legend>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Internal-only activities are hidden from the client portal but visible to admin and assigned staff.
             </p>
             <div className="flex gap-4">

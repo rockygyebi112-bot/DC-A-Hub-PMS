@@ -66,18 +66,18 @@ export default async function InternalWorkspacePage({
     <div className="flex min-h-[calc(100vh-var(--topbar-height,58px)-3rem)] flex-col gap-5">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#5B6AF0] text-white">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Kanban className="size-4" />
           </span>
           <div className="min-w-0">
-            <h1 className="truncate text-lg font-semibold text-gray-950">Internal Workspace</h1>
+            <h1 className="truncate text-lg font-semibold text-foreground">Internal Workspace</h1>
             <p className="text-xs text-muted-foreground">
               {openTasks} open · {allTasks.length} total
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-lg border border-border/70 bg-white p-0.5">
+          <div className="inline-flex rounded-lg border border-border/70 bg-card p-0.5">
             <ViewLink params={params} view="board" active={view === "board"} icon={Kanban}>
               Board
             </ViewLink>

@@ -76,8 +76,8 @@ export function TaskCard({
     <Link
       href={`/workspace/internal/${task.id}`}
       className={cn(
-        "group block rounded-lg border border-border/60 bg-white p-3 shadow-sm transition-colors duration-150",
-        "hover:border-border hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "group block rounded-lg border border-border/60 bg-card p-3 shadow-sm transition-colors duration-150",
+        "hover:border-border hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
       )}
     >
       <div className="flex items-start gap-2">
@@ -88,7 +88,7 @@ export function TaskCard({
             style={area.color ? { backgroundColor: area.color } : undefined}
           />
         )}
-        <h3 className="line-clamp-2 flex-1 text-sm font-medium leading-snug text-gray-900">
+        <h3 className="line-clamp-2 flex-1 text-sm font-medium leading-snug text-foreground">
           {task.title}
         </h3>
       </div>

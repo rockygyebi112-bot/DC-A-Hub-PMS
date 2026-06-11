@@ -34,7 +34,7 @@ export function AreasTable({ areas }: { areas: Area[] }) {
           <label className="block text-xs text-gray-500">Color (#hex)</label>
           <input name="color" placeholder="#7c3aed" className="rounded border px-2 py-1 text-sm" />
         </div>
-        <button disabled={pending} className="rounded-md bg-gray-900 px-3 py-1 text-sm text-white">+ Add area</button>
+        <button disabled={pending} className="rounded-md bg-primary px-3 py-1 text-sm text-primary-foreground">+ Add area</button>
       </form>
 
       <table className="w-full text-sm">
@@ -47,7 +47,7 @@ export function AreasTable({ areas }: { areas: Area[] }) {
               <td className="py-2">
                 <form action={(fd) => start(() => run(updateArea(a.id, fd)))} className="flex gap-2">
                   <input name="name" defaultValue={a.name} className="rounded border px-2 py-1 text-sm" />
-                  <button className="text-xs text-gray-500 hover:text-gray-900">Save</button>
+                  <button className="text-xs text-muted-foreground hover:text-foreground">Save</button>
                 </form>
               </td>
               <td><span className="inline-block h-4 w-4 rounded" style={{ background: a.color ?? '#ccc' }} /></td>

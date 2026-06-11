@@ -67,7 +67,7 @@ export default async function InternalTaskPage({
   const isAdmin = profile.role === 'admin';
 
   return (
-    <div className="space-y-5 bg-[hsl(220_14%_97%)]">
+    <div className="space-y-5">
       <section className="border-b border-border/70 pb-5">
         <Link
           href="/workspace/internal"
@@ -90,7 +90,7 @@ export default async function InternalTaskPage({
                 </Badge>
               )}
             </div>
-            <h1 className="mt-3 max-w-5xl text-2xl font-semibold leading-tight text-gray-950 md:text-3xl">
+            <h1 className="mt-3 max-w-5xl text-2xl font-semibold leading-tight text-foreground md:text-3xl">
               {task.title}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -159,7 +159,7 @@ function HeaderChip({
   color?: string | null;
 }) {
   return (
-    <span className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-white px-2.5 py-1 shadow-sm">
+    <span className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 shadow-sm">
       {color && (
         <span
           aria-hidden

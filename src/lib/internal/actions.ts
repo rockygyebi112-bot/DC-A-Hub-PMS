@@ -105,9 +105,7 @@ export async function reorderSections(orderedIds: string[]): Promise<ActionResul
     ids.data.map((id, i) =>
       sb
         .from('internal_areas')
-        // `position` is added by migration 0046; the generated Supabase types
-        // lag the migration until regenerated, so cast the payload.
-        .update({ position: (i + 1) * 1000 } as never)
+        .update({ position: (i + 1) * 1000 })
         .eq('id', id),
     ),
   );

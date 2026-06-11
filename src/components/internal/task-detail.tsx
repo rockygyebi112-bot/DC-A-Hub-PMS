@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  CheckCircle2,
   Flag,
   Save,
   X,
@@ -156,9 +157,28 @@ export function TaskDetail({
   }
 
   const assignees = (task.assignees ?? []).filter((a) => a.profile);
+  const isDone = status === 'done';
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="space-y-5">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => onStatusChange(isDone ? 'not_started' : 'done')}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50',
+            isDone
+              ? 'border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600'
+              : 'border-border bg-card text-foreground hover:border-emerald-500 hover:text-emerald-600',
+          )}
+        >
+          <CheckCircle2 className="size-4" />
+          {isDone ? 'Completed' : 'Mark complete'}
+        </button>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
       <section className="rounded-xl border border-border/70 bg-card shadow-sm">
         <header className="flex items-center justify-between border-b border-border/60 px-5 py-4">
           <h2 className="text-sm font-semibold text-foreground">Description</h2>
@@ -352,6 +372,7 @@ export function TaskDetail({
           </div>
         </section>
       </aside>
+      </div>
     </div>
   );
 }

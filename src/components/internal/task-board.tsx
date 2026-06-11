@@ -1,10 +1,5 @@
 import Link from "next/link";
-import {
-  CalendarDays,
-  Check,
-  ChevronDown,
-  UserRound,
-} from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
 import { setTaskStatus } from "@/lib/internal/actions";
@@ -12,11 +7,9 @@ import { cn } from "@/lib/utils";
 import { TaskCard, type TaskRow } from "./task-card";
 import { NewTaskForm } from "./new-task-form";
 import {
-  TASK_PRIORITY_META,
   TASK_STATUS_META,
   TASK_STATUS_ORDER,
   asTaskStatus,
-  type TaskPriority,
   type TaskStatus,
 } from "./task-meta";
 
@@ -62,7 +55,7 @@ export function TaskBoard({
           return (
             <section key={status} className="flex min-h-0 flex-col">
               <header className="flex shrink-0 items-center gap-2 px-1 pb-2">
-                <span className={cn("size-2.5 rounded-full", statusTone(status, "bar"))} />
+                <span className={cn("size-2.5 rounded-full", statusDot(status))} />
                 <h3 className="min-w-0 flex-1 truncate text-xs font-semibold uppercase tracking-wide text-foreground">
                   {meta.label}
                 </h3>
@@ -98,6 +91,8 @@ export function TaskBoard({
   );
 }
 
+const LIST_COLS = "grid-cols-[minmax(0,1fr)_11rem_7rem]";
+
 function TaskListView({
   areas,
   projects,
@@ -110,150 +105,149 @@ function TaskListView({
   byStatus: Map<TaskStatus, Task[]>;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-      {TASK_STATUS_ORDER.map((status) => {
-        const meta = TASK_STATUS_META[status];
-        const list = byStatus.get(status)!;
-        return (
-          <section key={status} className="border-b border-border/60 last:border-b-0">
-            <header className="flex items-center gap-2 bg-muted/30 px-4 py-3">
-              <span className={cn("h-4 w-1 rounded-full", statusTone(status, "bar"))} />
-              <ChevronDown className="size-4 text-muted-foreground" />
-              <h3 className="text-xs font-semibold uppercase text-muted-foreground">
-                {meta.label} ({list.length})
-              </h3>
-            </header>
-            <div>
-              {list.length === 0 ? (
-                <div className="px-4 py-5 text-xs text-muted-foreground">No tasks in this section.</div>
-              ) : (
-                list.map((task) => (
-                  <TaskListRow
-                    key={task.id}
-                    task={task}
-                    area={areaById.get(task.area_id)}
+    <div className="-mx-4 overflow-x-auto md:mx-0">
+      <div className="min-w-[680px]">
+        <div
+          className={cn(
+            "grid items-center gap-3 border-y border-border px-3 py-2 text-xs font-medium text-muted-foreground",
+            LIST_COLS,
+          )}
+        >
+          <span className="pl-[26px]">Name</span>
+          <span>Assignee</span>
+          <span>Due date</span>
+        </div>
+
+        {TASK_STATUS_ORDER.map((status) => {
+          const meta = TASK_STATUS_META[status];
+          const list = byStatus.get(status)!;
+          return (
+            <details key={status} open className="group/sec border-b border-border/60">
+              <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 hover:bg-muted/30">
+                <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-[[open]]/sec:rotate-90" />
+                <span className={cn("size-2 shrink-0 rounded-full", statusDot(status))} />
+                <span className="text-sm font-semibold text-foreground">{meta.label}</span>
+                <span className="text-xs tabular-nums text-muted-foreground">{list.length}</span>
+              </summary>
+
+              <div>
+                {list.map((task) => (
+                  <TaskListRow key={task.id} task={task} area={areaById.get(task.area_id)} />
+                ))}
+                <div className="border-t border-border/40 py-1 pl-[42px] pr-3">
+                  <NewTaskForm
+                    areas={areas}
+                    projects={projects}
+                    defaultStatus={status}
+                    triggerLabel="Add task..."
+                    triggerVariant="ghost"
+                    triggerSize="sm"
+                    triggerClassName="h-8 w-full justify-start px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
                   />
-                ))
-              )}
-              <div className="px-4 py-2">
-                <NewTaskForm
-                  areas={areas}
-                  projects={projects}
-                  defaultStatus={status}
-                  triggerLabel="Add task"
-                  triggerVariant="ghost"
-                  triggerSize="sm"
-                  triggerClassName="text-muted-foreground"
-                />
+                </div>
               </div>
-            </div>
-          </section>
-        );
-      })}
+            </details>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 function TaskListRow({ task, area }: { task: Task; area?: Area }) {
   const assignee = (task.assignees ?? []).find((a) => a.profile);
-  const overdue = !!task.due_date && task.status !== "done" && task.due_date < todayIso();
-  const priority =
-    task.priority && task.priority in TASK_PRIORITY_META
-      ? TASK_PRIORITY_META[task.priority as TaskPriority]
-      : null;
+  const done = asTaskStatus(task.status) === "done";
+  const overdue = !!task.due_date && !done && task.due_date < todayIso();
 
-  async function markDone() {
+  async function toggleDone() {
     "use server";
-    await setTaskStatus(task.id, "done");
+    await setTaskStatus(task.id, done ? "not_started" : "done");
   }
 
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)_8rem_7rem_6rem_10rem] items-center gap-3 border-b border-border/50 px-4 py-2.5 last:border-b-0 hover:bg-muted/40">
-      <form action={markDone}>
-        <button
-          type="submit"
-          aria-label="Mark task done"
-          className={cn(
-            "grid size-4 place-items-center rounded border border-input bg-background text-white transition-colors hover:border-primary",
-            task.status === "done" && "border-emerald-500 bg-emerald-500",
-          )}
-        >
-          {task.status === "done" && <Check className="size-3" />}
-        </button>
-      </form>
-      <Link
-        href={`/workspace/internal/${task.id}`}
-        className="min-w-0 truncate text-sm font-medium text-foreground hover:text-primary"
-      >
-        {task.title}
-      </Link>
-      <div className="min-w-0">
-        {assignee?.profile ? (
-          <UserAvatar
-            email={assignee.user_id}
-            name={assignee.profile.full_name ?? "Unknown"}
-            avatarUrl={assignee.profile.avatar_url}
-            size="sm"
-          />
-        ) : (
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <UserRound className="size-3.5" />
-            -
-          </span>
-        )}
-      </div>
-      <div
-        className={cn(
-          "inline-flex items-center gap-1 text-xs",
-          overdue ? "font-medium text-red-600" : "text-muted-foreground",
-        )}
-      >
-        {task.due_date ? (
-          <>
-            <CalendarDays className="size-3.5" />
-            {formatDue(task.due_date)}
-          </>
-        ) : (
-          "-"
-        )}
-      </div>
-      <span
-        className={cn(
-          "w-fit rounded-md px-2 py-0.5 text-xs font-medium",
-          task.priority === "urgent" && "bg-red-50 text-red-700",
-          task.priority === "high" && "bg-amber-50 text-amber-700",
-          task.priority === "normal" && "bg-blue-50 text-blue-700",
-          task.priority === "low" && "bg-slate-100 text-slate-600",
-          !priority && "text-muted-foreground",
-        )}
-      >
-        {priority?.label ?? "-"}
-      </span>
-      <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+    <div
+      className={cn(
+        "group/row grid items-center gap-3 border-t border-border/40 px-3 py-2 hover:bg-muted/30",
+        LIST_COLS,
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        <form action={toggleDone} className="flex">
+          <button
+            type="submit"
+            aria-label={done ? "Mark task incomplete" : "Mark task complete"}
+            className={cn(
+              "grid size-[18px] shrink-0 place-items-center rounded-full border transition-colors",
+              done
+                ? "border-emerald-500 bg-emerald-500 text-white"
+                : "border-muted-foreground/40 text-transparent hover:border-emerald-500 hover:text-emerald-500",
+            )}
+          >
+            <Check className="size-3" strokeWidth={3} />
+          </button>
+        </form>
         {area && (
           <span
             aria-hidden
-            className="size-2 shrink-0 rounded-full bg-muted-foreground/50"
+            className="size-2 shrink-0 rounded-full bg-muted-foreground/40"
             style={area.color ? { backgroundColor: area.color } : undefined}
+            title={area.name}
           />
         )}
-        <span className="truncate">{area?.name ?? "-"}</span>
-      </span>
+        <Link
+          href={`/workspace/internal/${task.id}`}
+          className={cn(
+            "min-w-0 truncate text-sm text-foreground hover:underline",
+            done && "text-muted-foreground line-through",
+          )}
+        >
+          {task.title}
+        </Link>
+      </div>
+
+      <div className="min-w-0">
+        {assignee?.profile ? (
+          <span className="flex min-w-0 items-center gap-2">
+            <UserAvatar
+              email={assignee.user_id}
+              name={assignee.profile.full_name ?? "Unknown"}
+              avatarUrl={assignee.profile.avatar_url}
+              size="sm"
+            />
+            <span className="truncate text-xs text-muted-foreground">
+              {assignee.profile.full_name ?? "Unknown"}
+            </span>
+          </span>
+        ) : (
+          <span className="grid size-6 place-items-center rounded-full border border-dashed border-border text-[10px] text-muted-foreground">
+            —
+          </span>
+        )}
+      </div>
+
+      <div>
+        {task.due_date ? (
+          <span
+            className={cn(
+              "inline-flex items-center rounded-md px-1.5 py-0.5 text-xs",
+              overdue ? "bg-red-500/10 font-medium text-red-600" : "text-muted-foreground",
+            )}
+          >
+            {formatDue(task.due_date)}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </div>
     </div>
   );
 }
 
-function statusTone(status: TaskStatus, part: "soft" | "text" | "bar") {
-  if (status === "in_progress") {
-    return part === "soft" ? "bg-blue-50" : part === "text" ? "text-blue-600" : "bg-blue-500";
-  }
-  if (status === "blocked") {
-    return part === "soft" ? "bg-red-50" : part === "text" ? "text-red-500" : "bg-red-500";
-  }
-  if (status === "done") {
-    return part === "soft" ? "bg-emerald-50" : part === "text" ? "text-emerald-600" : "bg-emerald-500";
-  }
-  return part === "soft" ? "bg-slate-100" : part === "text" ? "text-slate-500" : "bg-slate-300";
+function statusDot(status: TaskStatus) {
+  if (status === "in_progress") return "bg-blue-500";
+  if (status === "blocked") return "bg-red-500";
+  if (status === "done") return "bg-emerald-500";
+  return "bg-slate-300";
 }
 
 function todayIso(): string {

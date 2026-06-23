@@ -5,8 +5,16 @@ hard filter first, then scores the remaining opportunities.
 
 ## Hard filter (pass/fail — applied before scoring)
 
-Drop the opportunity entirely if **Capability fit = 0** (it does not match any DC&A
-Hub service: MEL, evaluation, research, data collection, learning systems).
+Drop the opportunity entirely if ANY of these is true:
+
+1. **Capability fit = 0** — it does not match any DC&A Hub service (MEL, evaluation,
+   research, data collection, learning systems).
+2. **Not firm-biddable** — it is an individual employment / staff position (e.g. a
+   "MEAL Officer", "M&E Advisor" job advert) rather than a tender, RFP, EOI, or
+   consultancy assignment a firm can bid. Keep only firm-biddable calls.
+3. **Deadline already passed** — the stated submission deadline is before today.
+   (If no deadline is stated, keep it but score Win probability conservatively and
+   set confidence no higher than Medium.)
 
 ## Criteria (score each 0–3)
 

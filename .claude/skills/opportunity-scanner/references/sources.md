@@ -5,10 +5,16 @@ Tier A and Tier B, and lists Tier C as "check manually". Keep entries concise.
 
 ## Tier A — Feed / API (read directly, most reliable)
 
+> **Setup required (one-time):** ReliefWeb's API now needs a free, pre-registered
+> `appname` (a domain or email you control). Register at
+> https://apidoc.reliefweb.int/parameters#appname then replace `YOUR_APPNAME` below.
+> The old `v1` API is decommissioned — use `v2`. Until an appname is registered,
+> the API returns HTTP 403; in that case rely on the ReliefWeb **Tier B** search row.
+
 | Source | Endpoint / how to fetch | Notes |
 |---|---|---|
-| ReliefWeb jobs | `https://api.reliefweb.int/v1/jobs?appname=dcahub-scanner&profile=list&limit=30&query[value]=monitoring%20OR%20evaluation%20OR%20research%20OR%20MEL` | Public JSON API. Filter results by relevance (Section: capability filter). Add `&query[value]=...Ghana` variants for country focus. |
-| ReliefWeb reports (tenders) | `https://api.reliefweb.int/v1/reports?appname=dcahub-scanner&profile=list&limit=30&query[value]=tender%20OR%20procurement%20OR%20RFP%20evaluation` | Catches procurement notices posted as reports. |
+| ReliefWeb jobs (API) | `https://api.reliefweb.int/v2/jobs?appname=YOUR_APPNAME&profile=list&limit=30&query[value]=monitoring%20OR%20evaluation%20OR%20research%20OR%20MEL` | Needs registered appname (see setup note). Add `Ghana` to `query[value]` for country focus. |
+| ReliefWeb reports (API) | `https://api.reliefweb.int/v2/reports?appname=YOUR_APPNAME&profile=list&limit=30&query[value]=tender%20OR%20procurement%20OR%20RFP%20evaluation` | Catches procurement notices posted as reports. Needs appname. |
 
 ## Tier B — Public web search (use WebSearch, then WebFetch the listing)
 
@@ -16,6 +22,7 @@ Run a WebSearch for each, then fetch and read the most relevant 1-3 result pages
 
 | Source | Suggested WebSearch query |
 |---|---|
+| ReliefWeb (search fallback) | `site:reliefweb.int (tender OR procurement OR RFP OR EOI OR consultancy) monitoring evaluation Africa` |
 | World Bank procurement | `World Bank consulting opportunity monitoring evaluation site:worldbank.org` |
 | UN Development Business | `UN Development Business tender monitoring evaluation consultancy` |
 | UNGM | `UNGM tender notice evaluation research consultancy` |

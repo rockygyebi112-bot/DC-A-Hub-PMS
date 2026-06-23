@@ -30,8 +30,11 @@ For every candidate opportunity, capture: `title`, `donor/agency`, `country`,
 and a one-line `description`. Use "not stated" where a field is missing.
 
 ### 3. Hard filter
-Drop anything where **Capability fit = 0** per `rubric.md` (no match to any DC&A Hub
-service). Do not include filtered-out items in the digest.
+Apply ALL hard-filter gates in `rubric.md` and drop anything that fails: (a) Capability
+fit = 0 (no match to any DC&A Hub service), (b) not firm-biddable — an individual
+staff/employment job rather than a tender/RFP/EOI/consultancy, (c) deadline already
+passed (before today). Do not include filtered-out items in the digest, but you may
+note how many were dropped and why in the NO-BID section or Run metadata.
 
 ### 4. Score
 Score each surviving opportunity on the 7 criteria in `rubric.md` (0–3 each),

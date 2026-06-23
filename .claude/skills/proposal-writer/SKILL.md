@@ -60,3 +60,8 @@ number of open `[REVIEW]` items).
 - **Honour the ToR's mandated structure/forms**; otherwise use the house-style structure.
 - If the firm profile still has `[CONFIRM]` markers (e.g. registration facts), surface
   them as `[REVIEW]` items where the ToR asks for that information.
+- **Man-days / level of effort:** when the ToR states days per deliverable, report each
+  deliverable's days as given and show the simple additive total, but flag with
+  `[ASSUMPTION]` that overlapping calendar windows may imply concurrent (not additive)
+  effort — the firm confirms before pricing. Keep the total consistent across the
+  workplan, budget, and compliance checklist.

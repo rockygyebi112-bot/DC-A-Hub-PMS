@@ -21,6 +21,10 @@ Each row answers one evaluation (sub-)question:
 Every question must have at least one source, one method, and an analysis approach.
 Triangulate: most questions draw on ≥2 sources/methods.
 
+**GESI/equity placement:** the GESI/equity lens appears in **two** places — woven into the
+*analysis approach* of every row (disaggregation), AND as at least one **dedicated matrix
+row** with its own GESI/equity evaluation question.
+
 ## Evaluation approaches (pick per assignment)
 - **Theory-based** — test the programme's theory of change / results chain.
 - **Mixed-methods** — combine quantitative breadth with qualitative depth (default).
@@ -36,6 +40,9 @@ Triangulate: most questions draw on ≥2 sources/methods.
 - **Document / secondary review** — programme docs, MIS data, results frameworks, reports.
 - **Observation** — site/service verification.
 - **Outcome harvesting / MSC** — qualitative outcome and contribution evidence.
+- **Data Quality Assessment (DQA)** — assess the integrity of programme MIS/MIS data
+  (accuracy, reliability, completeness, timeliness); standard for evaluations that rely
+  on a management information system.
 
 ## Sampling
 - **Probability sampling** (e.g. multi-stage cluster, stratified) — for representative

@@ -67,11 +67,21 @@ assignments (UK, USA, EU institutions).
 | Transition from School to Work | Univ. of Birmingham & King's College London (UK) | Ghana | Employment / education | Data collection |
 
 ## Team & associate experts
-Multidisciplinary core team of researchers, MEL specialists, and data analysts, with a
-backstopping pool of statisticians, economists, local-governance experts, IT
-professionals, and field managers. Standby "External Agents" (statisticians & research
-assistants from universities/polytechnics) in all 16 regions of Ghana for rapid
-mobilisation.
+**Named core staff** (from EOI):
+- **Prof. James Kwame Mensah** — Managing Partner. PhD Development Administration; MPhil
+  Public Administration; BA Sociology with Political Science. Expertise: MEL; quantitative
+  & qualitative research; local governance; PPP/LED; policy development; institutional
+  reform & strengthening; training & capacity building; urbanisation; climate change;
+  sustainable development.
+- **Mr. Selom Apanya** — Head of Consultancy Department. MPhil Economics; BA Economics.
+  Expertise: MEL; quantitative & qualitative research; economic analysis; PPP/LED; WASH;
+  policy development; strategic planning.
+
+Supported by a multidisciplinary team of researchers, MEL specialists, and data analysts,
+plus associate consultants and a backstopping pool of statisticians, economists,
+local-governance experts, IT professionals, and field managers. Standby "External Agents"
+(statisticians & research assistants from universities/polytechnics) in all 16 regions of
+Ghana for rapid mobilisation. **[CONFIRM]** full associate-consultant roster.
 
 ## Firm parameters
 - Minimum contract value we pursue: **[CONFIRM]**

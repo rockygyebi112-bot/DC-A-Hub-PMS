@@ -44,6 +44,9 @@ yarn-error.log*
 # Opportunity scanner runtime state
 opportunity-scans/.seen.json
 
+# Proposal-writer: raw proprietary proposals kept local, not committed
+.claude/skills/proposal-writer/references/winning-proposals/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

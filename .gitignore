@@ -37,8 +37,12 @@ yarn-error.log*
 # vercel
 .vercel
 
-# Claude Code internal files
-.claude/
+# Claude Code internal files (but track shared project skills)
+.claude/*
+!.claude/skills/
+
+# Opportunity scanner runtime state
+opportunity-scans/.seen.json
 
 # typescript
 *.tsbuildinfo

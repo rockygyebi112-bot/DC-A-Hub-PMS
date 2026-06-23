@@ -62,3 +62,6 @@ next-env.d.ts
 
 # Local development worktrees
 /.worktrees/
+
+# Proposal-writer: per-run docx build scratch
+proposals/**/build-docx.js

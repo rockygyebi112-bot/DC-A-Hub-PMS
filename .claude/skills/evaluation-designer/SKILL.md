@@ -24,6 +24,12 @@ midterm/endline/impact/process); **scope** (period, geography, components, exclu
 any **stated evaluation questions** and **criteria**; **methodological requirements**;
 deliverables, timeline, **page limit**, language. Record anything unclear as `[REVIEW]`.
 
+If the ToR is **not itself an evaluation ToR** (e.g. it is a framework/programme ToR that
+only *implies* an evaluation), derive the evaluand from the programme it describes and the
+evaluation purpose/type from the review/evaluation needs the ToR states (e.g. "mid-term
+review", "evaluation of outcomes and impact"); flag the inferred purpose/type/scope as
+`[ASSUMPTION]` to be confirmed.
+
 ### 2. Develop the evaluation framework
 Organise the evaluation questions against OECD-DAC criteria (use the ToR's criteria if
 given; otherwise the standard six trimmed to what the assignment needs, plus GESI/equity).

@@ -9,8 +9,8 @@ Turn a ToR/RFP into a complete first-draft submission as a Word .docx.
 
 ## Inputs (read these first)
 1. The **ToR/RFP** file the user provides (PDF or Word). If none is provided, ask for it.
-2. `references/house-style.md` — DC&A Hub's proposal structure and tone.
-3. `../opportunity-scanner/references/dcahub-profile.md` — firm profile + track record (for org text, relevant experience, team).
+2. `../_shared/house-style.md` — DC&A Hub's proposal structure and tone.
+3. `../_shared/dcahub-profile.md` — firm profile + track record (for org text, relevant experience, team).
 4. `references/winning-proposals/` — past proposals for deeper reference if needed (local; Word files, read by extracting `word/document.xml`).
 
 ## Procedure

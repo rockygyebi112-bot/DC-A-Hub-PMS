@@ -3,6 +3,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { getWorkspaceLayoutData } from "@/lib/workspace/queries";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
+import { AgentDock } from "@/components/agents/agent-dock";
 
 export default async function WorkspaceLayout({
   children,
@@ -37,11 +38,6 @@ export default async function WorkspaceLayout({
           href: "/workspace/internal",
           label: "Internal",
           icon: "inbox" as const,
-        },
-        {
-          href: "/workspace/agents",
-          label: "Business Development",
-          icon: "sparkles" as const,
         },
       ],
     },
@@ -85,6 +81,7 @@ export default async function WorkspaceLayout({
       topbarExtra={<NotificationsBell surface="workspace" />}
     >
       {children}
+      <AgentDock />
     </AppShell>
   );
 }

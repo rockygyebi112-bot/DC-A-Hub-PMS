@@ -13,7 +13,7 @@ Turn an evaluation ToR into an inception-ready evaluation design as a Word .docx
    objectives/results, scope (period, geography), and intended users.
 2. `references/evaluation-methods.md` — OECD-DAC criteria, the matrix template, methods,
    sampling, GESI/ethics.
-3. `../proposal-writer/references/house-style.md` — DC&A Hub's voice/tone.
+3. `../_shared/house-style.md` — DC&A Hub's voice/tone.
 
 ## Procedure
 

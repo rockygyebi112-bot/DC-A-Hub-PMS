@@ -12,9 +12,12 @@ Drop the opportunity entirely if ANY of these is true:
 2. **Not firm-biddable** — it is an individual employment / staff position (e.g. a
    "MEAL Officer", "M&E Advisor" job advert) rather than a tender, RFP, EOI, or
    consultancy assignment a firm can bid. Keep only firm-biddable calls.
-3. **Deadline already passed** — the stated submission deadline is before today.
-   (If no deadline is stated, keep it but score Win probability conservatively and
-   set confidence no higher than Medium.)
+3. **Deadline already passed** — the stated submission deadline (parsed to a
+   calendar date) is before today's date in the runtime context, i.e. `days_left < 0`.
+   This is an automatic, unconditional drop: an expired opportunity must not appear
+   in BID, CONSIDER, or NO-BID, and must not be retained "as evidence of fit" or "to
+   validate the pipeline". (If no deadline is stated, keep it but score Win
+   probability conservatively and set confidence no higher than Medium.)
 
 ## Criteria (score each 0–3)
 

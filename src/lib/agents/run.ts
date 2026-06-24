@@ -33,6 +33,30 @@ your response:
 - Do not describe what you would do — produce the actual draft.
 `.trim();
 
+// Anchor the model to a real "today". Without this the model guesses the date
+// from its training cut-off and lets stale opportunities through. Ghana runs on
+// GMT (UTC+0), so the UTC calendar date is the local date.
+function runtimeContext(agentId: AgentId): string {
+  const now = new Date();
+  const iso = now.toISOString().slice(0, 10);
+  const weekday = now.toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" });
+  const lines = [
+    "# Runtime context (authoritative — overrides any date you infer)",
+    `- Today's date is ${weekday}, ${iso} (GMT). Use this as "today" for every`,
+    "  date judgement. Do not rely on your training cut-off or guess the date.",
+  ];
+  if (AGENTS[agentId].inputMode === "scan") {
+    lines.push(
+      "- Deadlines: parse each stated submission deadline into a calendar date.",
+      `  If that date is before ${iso}, the opportunity is EXPIRED — drop it`,
+      "  entirely (see the hard filter). Never surface an expired opportunity in",
+      "  any section under any rationale. For every opportunity you DO surface,",
+      "  compute the whole number of days remaining (deadline − today) and state it.",
+    );
+  }
+  return lines.join("\n");
+}
+
 export type AgentRunResult =
   | { ok: true; text: string; model: string }
   | { ok: false; code: "no_api_key" | "bad_request" | "upstream"; error: string };
@@ -72,7 +96,9 @@ export async function runAgent(args: {
   }
 
   const agent = AGENTS[args.agentId];
-  const system = `${await buildSystemPrompt(args.agentId)}\n\n---\n\n${WEB_MODE_INSTRUCTIONS}`;
+  const system = `${runtimeContext(args.agentId)}\n\n---\n\n${await buildSystemPrompt(
+    args.agentId,
+  )}\n\n---\n\n${WEB_MODE_INSTRUCTIONS}`;
   const client = new Anthropic({ apiKey });
 
   const tools = agent.webSearch

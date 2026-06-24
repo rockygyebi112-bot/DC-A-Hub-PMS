@@ -8,7 +8,7 @@ description: Use when the user wants to find new business opportunities (tenders
 Find and rank business opportunities for DC&A Hub, then write a dated digest.
 
 ## Inputs (read these first, every run)
-1. `references/dcahub-profile.md` — what DC&A Hub does (score fit against this).
+1. `../_shared/dcahub-profile.md` — what DC&A Hub does (score fit against this).
 2. `references/sources.md` — where to look.
 3. `references/rubric.md` — how to score and label each opportunity.
 4. `../../../opportunity-scans/.seen.json` — opportunities already shown (for dedup).

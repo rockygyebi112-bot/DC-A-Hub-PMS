@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import Image from "next/image";
 import {
   Check,
   ChevronLeft,
@@ -41,7 +43,13 @@ export function AgentDock() {
   const [output, setOutput] = useState<string | null>(null);
   const [model, setModel] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const outputRef = useRef<HTMLPreElement>(null);
+
+  // Render via a portal to <body> so the fixed launcher/panel is positioned
+  // against the viewport, not against any transformed/scrolling ancestor in
+  // the app shell (which would otherwise push it below the fold).
+  useEffect(() => setMounted(true), []);
 
   const agent = agentId ? AGENTS[agentId] : null;
   const torRequired = agent?.inputMode === "tor";
@@ -121,7 +129,9 @@ export function AgentDock() {
     URL.revokeObjectURL(url);
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <>
       {/* Launcher */}
       {!open && (
@@ -129,9 +139,9 @@ export function AgentDock() {
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open DC&A AI agents"
-          className="fixed bottom-20 right-4 z-50 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-2 ring-primary/20 transition-transform hover:scale-105 active:scale-95 md:bottom-6"
+          className="fixed bottom-20 right-4 z-50 flex size-14 items-center justify-center rounded-full bg-white shadow-lg ring-2 ring-primary/30 transition-transform hover:scale-105 active:scale-95 md:bottom-6"
         >
-          <Sparkles className="size-6" />
+          <Image src="/logo.png" alt="DC&A Hub" width={34} height={34} className="object-contain" />
         </button>
       )}
 
@@ -168,8 +178,8 @@ export function AgentDock() {
                   <ChevronLeft className="size-4" />
                 </button>
               ) : (
-                <span className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Sparkles className="size-4" />
+                <span className="flex size-7 items-center justify-center rounded-md bg-white ring-1 ring-border">
+                  <Image src="/logo.png" alt="DC&A Hub" width={18} height={18} className="object-contain" />
                 </span>
               )}
               <div className="min-w-0">
@@ -277,6 +287,7 @@ export function AgentDock() {
           </div>
         </div>
       )}
-    </>
+    </>,
+    document.body,
   );
 }

@@ -64,7 +64,12 @@ export const AGENTS: Record<AgentId, AgentDef> = {
       "Optional: narrow the scan, e.g. \"WASH and MEL tenders in West Africa\" or leave blank for a broad sweep.",
     runLabel: "Run scan",
     webSearch: true,
-    references: ["_shared/dcahub-profile.md", "references/sources.md", "references/rubric.md"],
+    references: [
+      "_shared/writing-style.md",
+      "_shared/dcahub-profile.md",
+      "references/sources.md",
+      "references/rubric.md",
+    ],
   },
   "proposal-writer": {
     id: "proposal-writer",
@@ -78,7 +83,7 @@ export const AGENTS: Record<AgentId, AgentDef> = {
       "Paste the full Terms of Reference or RFP here (copy the text out of the PDF/Word file)…",
     runLabel: "Draft proposal",
     webSearch: false,
-    references: ["_shared/house-style.md", "_shared/dcahub-profile.md"],
+    references: ["_shared/writing-style.md", "_shared/house-style.md", "_shared/dcahub-profile.md"],
   },
   "evaluation-designer": {
     id: "evaluation-designer",
@@ -92,7 +97,7 @@ export const AGENTS: Record<AgentId, AgentDef> = {
       "Paste the full evaluation Terms of Reference here (copy the text out of the PDF/Word file)…",
     runLabel: "Design evaluation",
     webSearch: false,
-    references: ["references/evaluation-methods.md", "_shared/house-style.md"],
+    references: ["_shared/writing-style.md", "references/evaluation-methods.md", "_shared/house-style.md"],
   },
 };
 

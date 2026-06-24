@@ -50,6 +50,9 @@ Observed in the Ghana CE & Investment Planning EOI:
    Areas/Themes (drawn from the firm profile track record).
 
 ## Tone & conventions
+- **Plain and direct first** — follow `_shared/writing-style.md`. The framings below
+  add domain substance; they are not licence for AI-ish padding, buzzwords, or
+  meta-narration. If a sentence does not add information, cut it.
 - **First-person plural, formal**: "We understand that…", "Our approach…", "We will…".
 - **Evidence-led**: reference specific past projects by name and client to prove capacity.
 - **Technically fluent**: correct MEL / OECD-DAC / research terminology; mixed methods

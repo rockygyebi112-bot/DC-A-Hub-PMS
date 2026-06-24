@@ -10,7 +10,6 @@ import {
   LayoutDashboard,
   ListChecks,
   Settings,
-  Sparkles,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -30,8 +29,7 @@ export type IconName =
   | "clipboard-list"
   | "file-text"
   | "inbox"
-  | "settings"
-  | "sparkles";
+  | "settings";
 
 export const NAV_ICONS: Record<string, LucideIcon> = {
   "layout-dashboard": LayoutDashboard,
@@ -46,7 +44,6 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "file-text": FileText,
   inbox: Inbox,
   settings: Settings,
-  sparkles: Sparkles,
 };
 
 /** Resolve a string icon key to its Lucide component, defaulting to a

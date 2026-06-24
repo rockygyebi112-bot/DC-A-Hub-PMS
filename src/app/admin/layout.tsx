@@ -4,6 +4,7 @@ import { NotificationsBell } from "@/components/notifications/notifications-bell
 import { SidebarBrandCard } from "@/components/admin/ui/sidebar-brand-card";
 import { getAdminLayoutData } from "@/lib/admin/queries";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
+import { AgentDock } from "@/components/agents/agent-dock";
 
 function timeBasedGreeting(date = new Date()) {
   const h = date.getHours();
@@ -117,6 +118,7 @@ export default async function AdminLayout({
       topbarExtra={<NotificationsBell surface="workspace" />}
     >
       {children}
+      <AgentDock />
     </AppShell>
   );
 }

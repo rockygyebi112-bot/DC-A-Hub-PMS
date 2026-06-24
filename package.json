@@ -15,6 +15,7 @@
     "seed:admin": "tsx scripts/seed-admin.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.105.0",
     "@base-ui/react": "^1.3.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-slot": "^1.2.4",

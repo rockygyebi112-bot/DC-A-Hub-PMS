@@ -54,6 +54,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  // The AI-agents API route reads the Claude Code skill markdown at runtime
+  // (`.claude/skills/**`). Next only bundles files it can statically see being
+  // imported, so trace these in explicitly or they're missing in production.
+  outputFileTracingIncludes: {
+    "/api/agents/[agent]/run": [".claude/skills/**/*.md"],
+  },
   images: {
     // Cache optimized images for 31 days. Default is 60s which causes the
     // same source image to be re-transformed repeatedly, burning through the

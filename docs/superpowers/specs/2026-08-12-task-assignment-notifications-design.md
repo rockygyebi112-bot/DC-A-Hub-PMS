@@ -75,6 +75,7 @@ create table user_notifications (
   title            text not null,          -- task title
   subtitle         text,                   -- section (area) name
   href             text,
+  actor_name       text,                   -- denormalised for display
   actor_user_id    uuid references auth.users(id) on delete set null,
   internal_task_id uuid references internal_tasks(id) on delete cascade,
   created_at       timestamptz not null default now()
@@ -94,6 +95,14 @@ to someone else under their own credentials.
 
 **Realtime.** Added to the `supabase_realtime` publication using the same
 existence guard as migration 0017.
+
+**`actor_name` is denormalised** alongside `actor_user_id`. `profiles` RLS only
+exposes self, admin, and shared-project rows, so a user-scoped feed query
+cannot resolve a colleague's name — `src/lib/internal/queries.ts` already works
+around this with a service-role read. A notification row is a *rendered*
+message, not a normalised event, so storing the display name at write time
+keeps the feed query on the plain user client. `actor_user_id` is retained for
+provenance.
 
 **No `read_at` column.** Read state is already a per-user cursor —
 `user_notification_reads.last_read_at`, upserted by `markNotificationsRead()`.
@@ -179,13 +188,16 @@ New rows map onto the existing render path:
 | `action` | `"internal_task_assigned"` |
 | `activity_name` | task title (renders as the headline suffix) |
 | `project_name` | section name (renders as the subtitle) |
-| `actor_name` | assigner's name |
+| `actor_name` | assigner's name (read straight off the row) |
 | `href` | `/workspace/internal/<taskId>` |
 | `project_id` | `null` |
 
-**`src/lib/notifications/labels.ts`** — `internal_task_assigned` is added to
-both maps: `"You were assigned a task"` (bell headline) and `"assigned you"`
-(feed verb).
+**`src/lib/notifications/labels.ts`** — a separate `NOTIFICATION_ONLY_LABEL`
+map holds `internal_task_assigned` → `"You were assigned a task"`, and
+`actionLabel()` falls through to it. The existing `ActivityAction` union stays
+strictly in sync with the `activity_log.action` DB enum, as its comment
+promises, and no `VERB` entry is needed — the admin dashboard feed reads
+`activity_log` only.
 
 **`NotificationsBell`** — one added `.on("postgres_changes", …)` for INSERTs on
 `user_notifications`, filtered to `user_id=eq.<uid>`, on the existing channel

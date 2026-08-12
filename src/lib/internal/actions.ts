@@ -8,6 +8,7 @@ import { currentUserId } from '@/lib/auth/session';
 import { requireRole } from '@/lib/auth/require-role-server';
 import { dbErrorMessage } from '@/lib/db-errors';
 import { areaSchema, taskSchema } from './schemas';
+import { notifyInternalTaskAssigned } from './notifications';
 import type { ActionResult } from '@/lib/action-result';
 
 function formValue(fd: FormData, key: string) {
@@ -162,6 +163,15 @@ export async function createTask(
           parsedIds.data.map((uid) => ({ task_id: task.id, user_id: uid })),
           { onConflict: 'task_id,user_id', ignoreDuplicates: true },
         );
+      // Notification failures must never fail the assignment — same pattern as
+      // notifyClientViewersActivityDone in src/lib/workspace/actions.ts.
+      await notifyInternalTaskAssigned({
+        taskId: task.id,
+        assigneeIds: parsedIds.data,
+        actorUserId: userId,
+      }).catch((err) => {
+        console.error('[createTask] assignment notification failed', err);
+      });
     }
   }
 
@@ -279,13 +289,29 @@ export async function addAssignee(
   const auth = await requireRole(['admin', 'staff']);
   if (!auth.ok) return auth;
   const sb = await createClient();
-  const { error } = await sb
+  // `.select()` so an ignored duplicate comes back as an empty array: re-adding
+  // an existing assignee changes nothing and must not notify.
+  const { data: inserted, error } = await sb
     .from('internal_task_assignees')
     .upsert(
       { task_id: taskId, user_id: userId },
       { onConflict: 'task_id,user_id', ignoreDuplicates: true },
-    );
+    )
+    .select('user_id');
   if (error) return { ok: false, error: dbErrorMessage(error) };
+
+  const actorUserId = await currentUserId();
+  if (actorUserId && (inserted?.length ?? 0) > 0) {
+    // Notification failures must never fail the assignment.
+    await notifyInternalTaskAssigned({
+      taskId,
+      assigneeIds: [userId],
+      actorUserId,
+    }).catch((err) => {
+      console.error('[addAssignee] assignment notification failed', err);
+    });
+  }
+
   revalidatePath(`/workspace/internal/${taskId}`);
   return { ok: true };
 }

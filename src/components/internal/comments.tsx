@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { UserAvatar } from '@/components/admin/ui/user-avatar';
 import { formatTimestamp } from '@/components/workspace/activity-detail-view/format';
 import type { InternalComment } from '@/lib/internal/queries';
-import { findMentionQuery } from '@/lib/internal/mentions';
+import { findMentionQuery, toMentionMarkup } from '@/lib/internal/mentions';
 import { cn } from '@/lib/utils';
 import { CommentBody } from './comment-body';
 
@@ -30,11 +30,14 @@ const MAX_SUGGESTIONS = 6;
  * Inline comment composer. Posts a single `body` field; the bound server
  * action persists it and revalidates the page so the thread re-renders.
  *
- * Typing `@` opens a picker of staff colleagues. Picking one inserts
- * `@[Full Name](user-id)` — markup anchored to the id, so the mention survives
- * a rename and stays unambiguous between people who share a first name. The
- * raw markup is visible only while composing; posted comments render it as a
- * chip via `CommentBody`.
+ * Typing `@` opens a picker of staff colleagues. The textarea shows the plain
+ * `@Full Name` — nobody should have to look at a UUID while writing a
+ * sentence — and the names picked from the list are converted to id-anchored
+ * `@[Full Name](user-id)` markup on submit, so the stored mention survives a
+ * rename and stays unambiguous between people sharing a first name.
+ *
+ * A name merely typed by hand is never converted: it has no id, so it renders
+ * as written and notifies nobody.
  */
 export function CommentComposer({
   action,
@@ -54,6 +57,11 @@ export function CommentComposer({
     null,
   );
   const [highlight, setHighlight] = useState(0);
+  // Names this author actually picked from the list, so submit knows which
+  // plain "@Name" strings have an id behind them. A ref, not state: changing
+  // it must not re-render, and it has to survive a failed post so a retry
+  // still anchors the same mentions.
+  const picked = useRef(new Map<string, string>());
 
   // Same source and same failure mode as AssigneePicker: if this fails the
   // picker simply never offers anyone, and plain comments still post.
@@ -84,31 +92,34 @@ export function CommentComposer({
     const el = inputRef.current;
     if (!el || !query) return;
     const caret = el.selectionStart ?? value.length;
-    const markup = `@[${pick.full_name}](${pick.user_id}) `;
-    const next = value.slice(0, query.start) + markup + value.slice(caret);
+    const label = `@${pick.full_name} `;
+    const next = value.slice(0, query.start) + label + value.slice(caret);
+    picked.current.set(pick.full_name, pick.user_id);
     setValue(next);
     setQuery(null);
     // Restore focus and drop the caret after the inserted mention, once React
     // has committed the new value.
     requestAnimationFrame(() => {
-      const at = query.start + markup.length;
+      const at = query.start + label.length;
       el.focus();
       el.setSelectionRange(at, at);
     });
   }
 
   function submit(formData: FormData) {
-    const body = String(formData.get('body') ?? '').trim();
-    if (!body) {
+    const typed = String(formData.get('body') ?? '').trim();
+    if (!typed) {
       toast.error('Write something first.');
       return;
     }
+    const body = toMentionMarkup(typed, picked.current);
     if (body.length > MAX_BODY) {
       // Mention markup counts toward the DB limit, so the visible text can be
-      // well under 4000 while the stored body is not.
+      // comfortably under 4000 while the stored body is not.
       toast.error(`That comment is too long by ${body.length - MAX_BODY} characters.`);
       return;
     }
+    formData.set('body', body);
     setValue('');
     setQuery(null);
     if (inputRef.current) inputRef.current.style.height = 'auto';
@@ -117,7 +128,8 @@ export function CommentComposer({
       const res = await action(formData);
       if (!res.ok) {
         toast.error(res.error ?? 'Could not post comment');
-        setValue(body);
+        // Restore what the author typed, not the markup they never saw.
+        setValue(typed);
       }
     });
   }

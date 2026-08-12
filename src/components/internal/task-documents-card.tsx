@@ -14,9 +14,11 @@ import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { fileVisuals } from '@/components/workspace/activity-detail-view/file-visuals';
 import {
   formatBytes,
@@ -115,13 +117,18 @@ function DocumentRow({
   const [open, setOpen] = useState(false);
   const meta = visuals(proof);
   const commentCount = comments.length;
+  const canDelete = isAdmin || proof.uploaded_by === currentUserId;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <div className="group/file relative">
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group/file flex w-full items-center gap-3 rounded-xl border bg-background p-2.5 text-left transition-colors hover:bg-muted/40"
+        className={cn(
+          'flex w-full items-center gap-3 rounded-xl border bg-background p-2.5 text-left transition-colors hover:bg-muted/40',
+          // Room for the delete button so a long filename never runs under it.
+          canDelete && 'pr-11',
+        )}
       >
         <span
           className={cn(
@@ -152,6 +159,17 @@ function DocumentRow({
         </span>
       </button>
 
+      {/* Sibling of the row rather than inside it — a button cannot nest in a
+          button. Always visible on touch, where there is no hover to reveal it. */}
+      {canDelete && (
+        <DeleteDocButton
+          taskId={taskId}
+          proof={proof}
+          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-100 transition-opacity focus-visible:opacity-100 sm:opacity-0 sm:group-hover/file:opacity-100"
+        />
+      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 pr-6">
@@ -176,13 +194,6 @@ function DocumentRow({
             </span>
             <div className="flex shrink-0 items-center gap-1">
               <OpenButton proofId={proof.id} />
-              {(isAdmin || proof.uploaded_by === currentUserId) && (
-                <DeleteDocButton
-                  taskId={taskId}
-                  proofId={proof.id}
-                  onDeleted={() => setOpen(false)}
-                />
-              )}
             </div>
           </div>
 
@@ -207,7 +218,8 @@ function DocumentRow({
           </div>
         </div>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+    </div>
   );
 }
 
@@ -243,41 +255,93 @@ function OpenButton({ proofId }: { proofId: string }) {
   );
 }
 
+/**
+ * Delete a document, behind a confirmation. Rendered only where the caller has
+ * established the right to delete (uploader or admin); this does not gate on
+ * role itself, matching `PermanentDeleteButton`.
+ *
+ * Deleting removes the storage object and cascades to the document's comment
+ * thread, so it asks first — the old version deleted on a single click of an
+ * unlabelled icon.
+ */
 function DeleteDocButton({
   taskId,
-  proofId,
-  onDeleted,
+  proof,
+  className,
 }: {
   taskId: string;
-  proofId: string;
-  onDeleted: () => void;
+  proof: InternalProof;
+  className?: string;
 }) {
+  const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
-  function remove() {
+
+  function confirm() {
     start(async () => {
-      const res = await deleteInternalTaskProof(taskId, proofId);
+      const res = await deleteInternalTaskProof(taskId, proof.id);
       if (res.ok) {
         toast.success('Document deleted');
-        onDeleted();
+        setOpen(false);
       } else {
         toast.error(res.error ?? 'Could not delete document');
       }
     });
   }
+
   return (
-    <button
-      type="button"
-      onClick={remove}
-      disabled={pending}
-      aria-label="Delete document"
-      className="grid size-7 place-items-center rounded-md border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-50"
-    >
-      {pending ? (
-        <Loader2 className="size-3.5 animate-spin" />
-      ) : (
-        <Trash2 className="size-3.5" />
-      )}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        disabled={pending}
+        aria-label={`Delete ${proof.file_name}`}
+        title="Delete document"
+        className={cn(
+          'grid size-7 place-items-center rounded-md border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-50',
+          className,
+        )}
+      >
+        {pending ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <Trash2 className="size-3.5" />
+        )}
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete document</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Permanently delete{' '}
+            <span className="font-medium text-foreground">
+              &ldquo;{proof.file_name}&rdquo;
+            </span>
+            ? Any comments on it go too, and the file is removed from storage.
+            This cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setOpen(false)}
+              disabled={pending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={confirm}
+              disabled={pending}
+            >
+              {pending ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

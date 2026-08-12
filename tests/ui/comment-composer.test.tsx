@@ -67,12 +67,35 @@ describe('CommentComposer mention picker', () => {
     );
   });
 
-  it('inserts id-anchored markup when a name is picked with Enter', async () => {
+  it('shows the plain name in the box, never the raw markup', async () => {
     const { textarea } = setup();
     type(textarea, 'Hi @kwa');
     await screen.findByRole('listbox');
     fireEvent.keyDown(textarea, { key: 'Enter' });
-    expect(textarea.value).toBe(`Hi @[Kwame Gyebi](${KWAME}) `);
+    expect(textarea.value).toBe('Hi @Kwame Gyebi ');
+    expect(textarea.value).not.toContain(KWAME);
+  });
+
+  it('anchors the picked name to its id when the comment is posted', async () => {
+    const action = okAction();
+    const { textarea } = setup(action);
+    type(textarea, 'Hi @kwa');
+    await screen.findByRole('listbox');
+    fireEvent.keyDown(textarea, { key: 'Enter' });
+    fireEvent.keyDown(textarea, { key: 'Enter', ctrlKey: true });
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    const [formData] = action.mock.calls[0] ?? [];
+    expect(String(formData?.get('body'))).toBe(`Hi @[Kwame Gyebi](${KWAME})`);
+  });
+
+  it('posts a hand-typed name as plain text, with no id behind it', async () => {
+    const action = okAction();
+    const { textarea } = setup(action);
+    type(textarea, 'Ask @Kwame Gyebi about it');
+    fireEvent.keyDown(textarea, { key: 'Enter', ctrlKey: true });
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    const [formData] = action.mock.calls[0] ?? [];
+    expect(String(formData?.get('body'))).toBe('Ask @Kwame Gyebi about it');
   });
 
   it('picks the highlighted name after arrowing down', async () => {
@@ -81,7 +104,7 @@ describe('CommentComposer mention picker', () => {
     await screen.findByRole('listbox');
     fireEvent.keyDown(textarea, { key: 'ArrowDown' });
     fireEvent.keyDown(textarea, { key: 'Enter' });
-    expect(textarea.value).toBe(`@[Ama Serwaa](${AMA}) `);
+    expect(textarea.value).toBe('@Ama Serwaa ');
   });
 
   it('closes the list on Escape without inserting anything', async () => {

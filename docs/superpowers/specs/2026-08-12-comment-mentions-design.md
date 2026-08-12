@@ -93,6 +93,12 @@ export function findMentionQuery(
   text: string,
   caret: number,
 ): { query: string; start: number } | null;
+
+/** Convert the composer's plain "@Full Name" text into stored markup. */
+export function toMentionMarkup(
+  text: string,
+  picked: ReadonlyMap<string, string>,
+): string;
 ```
 
 An earlier draft also specified a `stripMentions` helper to keep markup out of
@@ -117,10 +123,18 @@ so both surfaces gain mentions from one change.
 - Render matches in a list below the textarea. ArrowUp/ArrowDown move, Enter or
   Tab picks, Escape dismisses. While the list is open, Enter picks rather than
   submits.
-- Picking replaces the typed `@query` with `@[Full Name](user_id) `.
-- The textarea shows the raw markup while composing. Rich inline chips inside a
-  textarea would need a contenteditable overlay — disproportionate here, and
-  the markup is only visible for the seconds before posting.
+- Picking replaces the typed `@query` with the plain `@Full Name `, and records
+  the name → id pair in a ref. On submit, `toMentionMarkup` converts the names
+  that were actually picked into `@[Full Name](user_id)`.
+
+  The first build inserted the markup straight into the textarea. It worked,
+  but it meant staring at a UUID mid-sentence, which testing on the real app
+  immediately showed to be unacceptable. Converting at submit keeps the box
+  readable without giving up id anchoring.
+
+  A name merely typed by hand is never converted: it has no id, so it renders
+  as plain text and notifies nobody. Rich inline chips inside the textarea
+  would need a contenteditable overlay — disproportionate for the gain.
 
 The DB constraint is `length(body) <= 4000`, and markup counts toward it. The
 composer measures the stored form, not the visible text.
@@ -206,7 +220,9 @@ they were checked against a deliberate mutation (markup replaced with a plain
 
 ## Known trade-offs
 
-- **Raw markup is visible while composing.** Accepted; see §2.
+- **A hand-typed `@Name` does not notify anyone.** Only names picked from the
+  list carry an id. The chip rendering makes the difference visible, so an
+  author can see whether a mention actually landed.
 - **A deleted user's mentions keep their stored name.** The chip renders the
   fallback name and stops resolving. Better than a mention vanishing from
   history.

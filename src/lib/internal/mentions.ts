@@ -62,6 +62,37 @@ export function parseMentions(body: string): MentionSegment[] {
   return segments;
 }
 
+const REGEX_SPECIAL = /[.*+?^${}()|[\]\\]/g;
+
+/**
+ * Convert the plain `@Full Name` text the composer shows into the stored
+ * `@[Full Name](id)` markup, using the names the author actually picked from
+ * the mention list.
+ *
+ * The composer deliberately keeps markup out of the textarea — nobody should
+ * have to look at a UUID while writing a sentence — so the anchoring happens
+ * here, once, on submit. A name the author merely typed was never picked, has
+ * no id, and stays plain text: it renders as written and notifies nobody.
+ */
+export function toMentionMarkup(
+  text: string,
+  picked: ReadonlyMap<string, string>,
+): string {
+  // Longest first, so "Ama Serwaa Mensah" is not clobbered by "Ama Serwaa".
+  const names = [...picked.keys()].sort((a, b) => b.length - a.length);
+  let out = text;
+  for (const name of names) {
+    const escaped = name.replace(REGEX_SPECIAL, '\\$&');
+    // Leading boundary keeps an email address (kofi@Ama) from converting;
+    // the trailing one stops a longer word from matching a shorter name.
+    const pattern = new RegExp(`(^|\\s)@${escaped}(?!\\w)`, 'g');
+    out = out.replace(pattern, (_match, lead: string) =>
+      `${lead}@[${name}](${picked.get(name)})`,
+    );
+  }
+  return out;
+}
+
 /**
  * The in-progress `@query` the caret sits in, or null when the picker should
  * be closed. Encodes three rules the composer depends on:

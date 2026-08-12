@@ -127,3 +127,15 @@ export async function deleteInternalAreas(areaIds: string[]): Promise<void> {
   await admin.from('internal_tasks').delete().in('area_id', areaIds);
   await admin.from('internal_areas').delete().in('id', areaIds);
 }
+
+/**
+ * Delete specific test auth users by id (cascades profiles, memberships, and
+ * user_notifications). Id-scoped for the same reason as deleteInternalAreas:
+ * vitest parallelises files, and the global @example.com sweep in
+ * cleanupTestData() would delete a concurrent file's in-flight fixtures.
+ */
+export async function deleteTestUsers(userIds: string[]): Promise<void> {
+  if (!userIds.length) return;
+  const admin = adminClient();
+  for (const id of userIds) await admin.auth.admin.deleteUser(id);
+}

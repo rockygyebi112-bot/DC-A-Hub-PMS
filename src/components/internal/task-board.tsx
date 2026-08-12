@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { ArchiveRestore, Check, Trash2 } from "lucide-react";
 
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
-import { setTaskStatus } from "@/lib/internal/actions";
+import { archiveTask, restoreTask, setTaskStatus } from "@/lib/internal/actions";
 import { cn } from "@/lib/utils";
 import { TaskCard, type TaskRow } from "./task-card";
 import { InlineAddTask } from "./inline-add-task";
@@ -14,9 +14,14 @@ import {
 } from "./sortable-sections";
 import { TASK_STATUS_META, asTaskStatus, type TaskStatus } from "./task-meta";
 
-type Section = { id: string; name: string; color?: string | null };
+type Section = {
+  id: string;
+  name: string;
+  color?: string | null;
+  archived_at?: string | null;
+};
 type Project = { id: string; name: string; client?: { name: string } | null };
-type Task = TaskRow & { area_id: string };
+type Task = TaskRow & { area_id: string; archived_at?: string | null };
 type ViewMode = "board" | "list";
 
 export function TaskBoard({
@@ -25,12 +30,14 @@ export function TaskBoard({
   projects = [],
   view = "list",
   canManage = false,
+  canArchiveSections = false,
 }: {
   tasks: Task[];
   sections: Section[];
   projects?: Project[];
   view?: ViewMode;
   canManage?: boolean;
+  canArchiveSections?: boolean;
 }) {
   const projectById = new Map(projects.map((p) => [p.id, p]));
   const bySection = new Map(sections.map((s) => [s.id, [] as Task[]]));
@@ -38,7 +45,12 @@ export function TaskBoard({
 
   if (view === "list") {
     return (
-      <TaskListView sections={sections} bySection={bySection} canManage={canManage} />
+      <TaskListView
+        sections={sections}
+        bySection={bySection}
+        canManage={canManage}
+        canArchiveSections={canArchiveSections}
+      />
     );
   }
 
@@ -53,18 +65,24 @@ export function TaskBoard({
           count={list.length}
           color={section.color}
           canManage={canManage}
+          canArchive={canArchiveSections}
+          archived={Boolean(section.archived_at)}
         />
       ),
       body: (
         <div className="flex flex-col gap-2">
           {list.map((t) => (
-            <TaskCard
-              key={t.id}
-              task={t}
-              project={t.project_id ? projectById.get(t.project_id) : undefined}
-            />
+            <div key={t.id} className={cn(t.archived_at && "opacity-60")}>
+              <TaskCard
+                task={t}
+                project={t.project_id ? projectById.get(t.project_id) : undefined}
+              />
+              {t.archived_at && <ArchivedTaskFooter taskId={t.id} />}
+            </div>
           ))}
-          <InlineAddTask areaId={section.id} variant="board" />
+          {!section.archived_at && (
+            <InlineAddTask areaId={section.id} variant="board" />
+          )}
         </div>
       ),
     };
@@ -87,16 +105,19 @@ export function TaskBoard({
   );
 }
 
-const LIST_COLS = "grid-cols-[minmax(0,1fr)_11rem_7rem]";
+// Trailing column holds the hover-revealed archive/restore control.
+const LIST_COLS = "grid-cols-[minmax(0,1fr)_11rem_7rem_1.75rem]";
 
 function TaskListView({
   sections,
   bySection,
   canManage,
+  canArchiveSections,
 }: {
   sections: Section[];
   bySection: Map<string, Task[]>;
   canManage: boolean;
+  canArchiveSections: boolean;
 }) {
   const listItems: SortableItem[] = sections.map((section) => {
     const list = bySection.get(section.id) ?? [];
@@ -109,6 +130,8 @@ function TaskListView({
           count={list.length}
           color={section.color}
           canManage={canManage}
+          canArchive={canArchiveSections}
+          archived={Boolean(section.archived_at)}
         />
       ),
       body: (
@@ -116,9 +139,11 @@ function TaskListView({
           {list.map((task) => (
             <TaskListRow key={task.id} task={task} />
           ))}
-          <div className="border-t border-border/40 py-1 pl-[28px] pr-3">
-            <InlineAddTask areaId={section.id} variant="list" />
-          </div>
+          {!section.archived_at && (
+            <div className="border-t border-border/40 py-1 pl-[28px] pr-3">
+              <InlineAddTask areaId={section.id} variant="list" />
+            </div>
+          )}
         </>
       ),
     };
@@ -136,6 +161,7 @@ function TaskListView({
           <span className="pl-[26px]">Name</span>
           <span>Assignee</span>
           <span>Due date</span>
+          <span />
         </div>
 
         <SortableSectionList items={listItems} canReorder={canManage} />
@@ -150,15 +176,46 @@ function TaskListView({
   );
 }
 
+/** Restore control under an archived card in board view. */
+function ArchivedTaskFooter({ taskId }: { taskId: string }) {
+  async function restore() {
+    "use server";
+    await restoreTask(taskId);
+  }
+
+  return (
+    <form action={restore} className="mt-1 flex justify-end">
+      <button
+        type="submit"
+        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArchiveRestore className="size-3" />
+        Restore
+      </button>
+    </form>
+  );
+}
+
 function TaskListRow({ task }: { task: Task }) {
   const assignee = (task.assignees ?? []).find((a) => a.profile);
   const status = asTaskStatus(task.status);
   const done = status === "done";
-  const overdue = !!task.due_date && !done && task.due_date < todayIso();
+  const archived = Boolean(task.archived_at);
+  const overdue = !!task.due_date && !done && !archived && task.due_date < todayIso();
 
   async function toggleDone() {
     "use server";
     await setTaskStatus(task.id, done ? "not_started" : "done");
+  }
+
+  async function archive() {
+    "use server";
+    await archiveTask(task.id);
+  }
+
+  async function restore() {
+    "use server";
+    await restoreTask(task.id);
   }
 
   return (
@@ -166,6 +223,7 @@ function TaskListRow({ task }: { task: Task }) {
       className={cn(
         "group/row grid items-center gap-3 border-t border-border/40 px-3 py-2 hover:bg-muted/30",
         LIST_COLS,
+        archived && "opacity-60",
       )}
     >
       <div className="flex min-w-0 items-center gap-2">
@@ -233,6 +291,26 @@ function TaskListRow({ task }: { task: Task }) {
           <span className="text-xs text-muted-foreground">—</span>
         )}
       </div>
+
+      <form action={archived ? restore : archive} className="flex justify-end">
+        <button
+          type="submit"
+          aria-label={archived ? "Restore task" : "Delete task"}
+          title={archived ? "Restore task" : "Delete task"}
+          className={cn(
+            "grid size-6 place-items-center rounded text-muted-foreground transition",
+            archived
+              ? "hover:bg-muted hover:text-foreground"
+              : "opacity-0 hover:bg-muted hover:text-destructive focus-visible:opacity-100 group-hover/row:opacity-100",
+          )}
+        >
+          {archived ? (
+            <ArchiveRestore className="size-3.5" />
+          ) : (
+            <Trash2 className="size-3.5" />
+          )}
+        </button>
+      </form>
     </div>
   );
 }

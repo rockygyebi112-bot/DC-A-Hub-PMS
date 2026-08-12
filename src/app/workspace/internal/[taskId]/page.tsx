@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import {
+  Archive,
   ArrowLeft,
   BriefcaseBusiness,
   CalendarDays,
@@ -96,6 +97,15 @@ export default async function InternalTaskPage({
             <h1 className="mt-3 max-w-5xl text-2xl font-semibold leading-tight text-foreground md:text-3xl">
               {task.title}
             </h1>
+            {task.archived_at && (
+              // Archived tasks stay reachable rather than 404ing: notification
+              // links and bookmarks pointing here must not dead-end.
+              <p className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                <Archive className="size-3.5" />
+                This task is archived. It is hidden from the board unless
+                &ldquo;Show archived&rdquo; is on.
+              </p>
+            )}
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <HeaderChip icon={<Layers3 className="size-3.5" />} label={area?.name ?? 'No section'} color={area?.color} />
               <HeaderChip

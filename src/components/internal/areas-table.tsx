@@ -1,7 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
-import { createArea, updateArea, archiveArea } from '@/lib/internal/actions';
+import { createArea, updateArea, archiveArea, restoreArea } from '@/lib/internal/actions';
 import type { ActionResult } from '@/lib/action-result';
 
 type Area = {
@@ -53,11 +53,21 @@ export function AreasTable({ areas }: { areas: Area[] }) {
               <td><span className="inline-block h-4 w-4 rounded" style={{ background: a.color ?? '#ccc' }} /></td>
               <td>{a.archived_at ? 'Archived' : 'Active'}</td>
               <td className="text-right">
-                {!a.archived_at && (
+                {a.archived_at ? (
+                  <button
+                    disabled={pending}
+                    onClick={() => start(() => run(restoreArea(a.id)))}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Restore
+                  </button>
+                ) : (
                   <button
                     disabled={pending}
                     onClick={() => start(() => run(archiveArea(a.id)))}
                     className="text-xs text-red-600"
+                    // Archiving here cascades to every task in the area.
+                    title="Archives the area and all its active tasks"
                   >
                     Archive
                   </button>

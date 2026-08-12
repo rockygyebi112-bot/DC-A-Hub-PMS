@@ -4,16 +4,20 @@ import type { ReactNode } from 'react';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  ArchiveRestore,
   CheckCircle2,
   Flag,
   Save,
+  Trash2,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
   addAssignee,
+  archiveTask,
   removeAssignee,
+  restoreTask,
   setTaskStatus,
   updateTask,
 } from '@/lib/internal/actions';
@@ -61,6 +65,7 @@ type Task = {
   due_date?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  archived_at?: string | null;
   assignees?: Assignee[] | null;
 };
 
@@ -158,6 +163,16 @@ export function TaskDetail({
 
   const assignees = (task.assignees ?? []).filter((a) => a.profile);
   const isDone = status === 'done';
+  const archived = Boolean(task.archived_at);
+
+  function onArchiveToggle() {
+    // Subtasks follow the parent both ways — see `archiveTaskTree`.
+    run(
+      () => (archived ? restoreTask(task.id) : archiveTask(task.id)),
+      archived ? 'Task restored' : 'Task deleted',
+      { refresh: true },
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -175,6 +190,28 @@ export function TaskDetail({
         >
           <CheckCircle2 className="size-4" />
           {isDone ? 'Completed' : 'Mark complete'}
+        </button>
+
+        <button
+          type="button"
+          disabled={pending}
+          onClick={onArchiveToggle}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors disabled:opacity-50',
+            archived ? 'hover:text-foreground' : 'hover:border-destructive hover:text-destructive',
+          )}
+        >
+          {archived ? (
+            <>
+              <ArchiveRestore className="size-4" />
+              Restore
+            </>
+          ) : (
+            <>
+              <Trash2 className="size-4" />
+              Delete
+            </>
+          )}
         </button>
       </div>
 

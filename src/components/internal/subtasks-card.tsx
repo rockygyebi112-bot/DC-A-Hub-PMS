@@ -2,10 +2,15 @@
 
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, ListChecks, Plus, Trash2 } from 'lucide-react';
+import { ArchiveRestore, Check, ListChecks, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { createSubtask, deleteSubtask, setTaskStatus } from '@/lib/internal/actions';
+import {
+  archiveSubtask,
+  createSubtask,
+  restoreSubtask,
+  setTaskStatus,
+} from '@/lib/internal/actions';
 import type { InternalSubtask } from '@/lib/internal/queries';
 import { asTaskStatus } from './task-meta';
 import { cn } from '@/lib/utils';
@@ -17,7 +22,10 @@ export function SubtasksCard({
   taskId: string;
   subtasks: InternalSubtask[];
 }) {
-  const done = subtasks.filter((s) => asTaskStatus(s.status) === 'done').length;
+  const [showArchived, setShowArchived] = useState(false);
+  const active = subtasks.filter((s) => !s.archived_at);
+  const archived = subtasks.filter((s) => s.archived_at);
+  const done = active.filter((s) => asTaskStatus(s.status) === 'done').length;
 
   return (
     <section className="rounded-xl border border-border/70 bg-card shadow-sm">
@@ -26,16 +34,31 @@ export function SubtasksCard({
           <ListChecks className="size-4" />
           Subtasks
         </h2>
-        {subtasks.length > 0 && (
-          <span className="text-[11px] tabular-nums text-muted-foreground">
-            {done}/{subtasks.length} done
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {archived.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowArchived((v) => !v)}
+              className="text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {showArchived ? 'Hide' : 'Show'} archived ({archived.length})
+            </button>
+          )}
+          {active.length > 0 && (
+            <span className="text-[11px] tabular-nums text-muted-foreground">
+              {done}/{active.length} done
+            </span>
+          )}
+        </div>
       </header>
       <div className="px-3 py-2">
-        {subtasks.map((s) => (
+        {active.map((s) => (
           <SubtaskRow key={s.id} taskId={taskId} subtask={s} />
         ))}
+        {showArchived &&
+          archived.map((s) => (
+            <SubtaskRow key={s.id} taskId={taskId} subtask={s} />
+          ))}
         <AddSubtask taskId={taskId} />
       </div>
     </section>
@@ -52,6 +75,7 @@ function SubtaskRow({
   const router = useRouter();
   const [pending, start] = useTransition();
   const done = asTaskStatus(subtask.status) === 'done';
+  const archived = Boolean(subtask.archived_at);
 
   function toggle() {
     start(async () => {
@@ -63,18 +87,31 @@ function SubtaskRow({
 
   function remove() {
     start(async () => {
-      const r = await deleteSubtask(subtask.id, taskId);
+      const r = await archiveSubtask(subtask.id, taskId);
       if (r.ok) router.refresh();
       else toast.error(r.error ?? 'Could not delete subtask');
     });
   }
 
+  function restore() {
+    start(async () => {
+      const r = await restoreSubtask(subtask.id, taskId);
+      if (r.ok) router.refresh();
+      else toast.error(r.error ?? 'Could not restore subtask');
+    });
+  }
+
   return (
-    <div className="group/sub flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/40">
+    <div
+      className={cn(
+        'group/sub flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/40',
+        archived && 'opacity-60',
+      )}
+    >
       <button
         type="button"
         onClick={toggle}
-        disabled={pending}
+        disabled={pending || archived}
         aria-label={done ? 'Mark subtask incomplete' : 'Mark subtask complete'}
         className={cn(
           'grid size-[18px] shrink-0 place-items-center rounded-full border transition-colors',
@@ -93,14 +130,28 @@ function SubtaskRow({
       >
         {subtask.title}
       </span>
+      {archived && (
+        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Archived
+        </span>
+      )}
       <button
         type="button"
-        onClick={remove}
+        onClick={archived ? restore : remove}
         disabled={pending}
-        aria-label="Delete subtask"
-        className="grid size-6 shrink-0 place-items-center rounded text-muted-foreground opacity-0 transition hover:bg-muted hover:text-destructive group-hover/sub:opacity-100 disabled:opacity-50"
+        aria-label={archived ? 'Restore subtask' : 'Delete subtask'}
+        className={cn(
+          'grid size-6 shrink-0 place-items-center rounded text-muted-foreground transition disabled:opacity-50',
+          archived
+            ? 'hover:bg-muted hover:text-foreground'
+            : 'opacity-0 hover:bg-muted hover:text-destructive group-hover/sub:opacity-100',
+        )}
       >
-        <Trash2 className="size-3.5" />
+        {archived ? (
+          <ArchiveRestore className="size-3.5" />
+        ) : (
+          <Trash2 className="size-3.5" />
+        )}
       </button>
     </div>
   );

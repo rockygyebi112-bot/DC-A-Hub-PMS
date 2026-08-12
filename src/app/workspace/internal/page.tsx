@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { Kanban, LayoutList, type LucideIcon } from "lucide-react";
+import { Archive, Kanban, LayoutList, type LucideIcon } from "lucide-react";
 
 import { FilterChips } from "@/components/admin/ui/filter-chips";
 import { TaskBoard } from "@/components/internal/task-board";
@@ -20,6 +20,7 @@ type PageParams = {
   status?: string;
   project?: string;
   view?: string;
+  archived?: string;
 };
 
 export default async function InternalWorkspacePage({
@@ -34,21 +35,25 @@ export default async function InternalWorkspacePage({
 
   const params = await searchParams;
   const view = params.view === "board" ? "board" : "list";
+  const showArchived = params.archived === "1";
   const [areas, projects, tasks, allTasks] = await Promise.all([
-    listAreas(),
+    listAreas({ includeArchived: showArchived }),
     listWorkspaceProjects({ sort: "name" }).catch(() => []),
     listTasks({
       areaId: params.area,
       status: params.status,
       projectId: params.project,
+      includeArchived: showArchived,
     }),
     listTasks({ projectId: params.project }),
   ]);
 
-  // Both staff and admin can manage sections (create/rename/reorder/delete)
-  // once migration 0047 opens the write policy. The page is already gated to
-  // those two roles, so everyone who reaches it can manage.
+  // Both staff and admin can manage sections (create/rename/reorder) once
+  // migration 0047 opens the write policy. The page is already gated to those
+  // two roles, so everyone who reaches it can manage. Archiving is the
+  // exception: it cascades to every task in the section, so it is admin-only.
   const canManageSections = true;
+  const canArchiveSections = profile.role === "admin";
   const projectOptions = projects.map((p) => ({
     value: p.id,
     label: p.client?.name ? `${p.name} - ${p.client.name}` : p.name,
@@ -81,6 +86,19 @@ export default async function InternalWorkspacePage({
             Board
           </ViewLink>
         </div>
+
+        <Link
+          href={hrefFor(params, { archived: showArchived ? undefined : "1" })}
+          className={cn(
+            "inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors",
+            showArchived
+              ? "border-border bg-muted text-foreground"
+              : "border-border/70 bg-card text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Archive className="size-3.5" />
+          {showArchived ? "Hide archived" : "Show archived"}
+        </Link>
       </header>
 
       <div className="flex flex-col gap-2 border-b border-border/70 pb-4">
@@ -106,6 +124,7 @@ export default async function InternalWorkspacePage({
         projects={projects}
         view={view}
         canManage={canManageSections}
+        canArchiveSections={canArchiveSections}
       />
     </div>
   );
@@ -113,7 +132,7 @@ export default async function InternalWorkspacePage({
 
 function hrefFor(params: PageParams, updates: Partial<PageParams>) {
   const next = new URLSearchParams();
-  for (const key of ["area", "status", "project", "view"] as const) {
+  for (const key of ["area", "status", "project", "view", "archived"] as const) {
     const resolved = Object.prototype.hasOwnProperty.call(updates, key) ? updates[key] : params[key];
     if (resolved) next.set(key, resolved);
   }

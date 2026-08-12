@@ -107,6 +107,8 @@ export async function listTasks(
     status?: string;
     assigneeId?: string;
     projectId?: string;
+    /** Include archived tasks, for the board's "Show archived" toggle. */
+    includeArchived?: boolean;
   } = {},
 ): Promise<InternalTaskWithAssignees[]> {
   const sb = await createClient();
@@ -114,8 +116,8 @@ export async function listTasks(
     let q = sb
       .from('internal_tasks')
       .select(TASK_SELECT)
-      .is('archived_at', null)
       .order('updated_at', { ascending: false });
+    if (!filter.includeArchived) q = q.is('archived_at', null);
     // Subtasks (parent_task_id set) only show on the parent's detail page, never
     // in the board/list. The column is added by migration 0048; fall back to an
     // unfiltered query if it isn't there yet (no subtasks exist pre-migration).
@@ -167,20 +169,23 @@ export type InternalSubtask = {
   title: string;
   status: string;
   due_date: string | null;
+  archived_at: string | null;
 };
 
 /**
  * Child tasks of a parent, oldest first. Returns an empty list (rather than
  * throwing) if migration 0048 hasn't added `parent_task_id` yet, so the detail
  * page keeps working before the migration is applied.
+ *
+ * Archived subtasks come back too: the card splits them out itself so it can
+ * offer a restore without a second round trip.
  */
 export async function listSubtasks(parentId: string): Promise<InternalSubtask[]> {
   const sb = await createClient();
   const { data, error } = await sb
     .from('internal_tasks')
-    .select('id, title, status, due_date')
+    .select('id, title, status, due_date, archived_at')
     .eq('parent_task_id', parentId)
-    .is('archived_at', null)
     .order('created_at', { ascending: true });
   if (error) return [];
   return (data ?? []) as InternalSubtask[];

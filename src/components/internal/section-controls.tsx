@@ -1,11 +1,25 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, MoreHorizontal, Pencil, Plus, Trash2, X } from 'lucide-react';
+import {
+  ArchiveRestore,
+  Check,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
-import { archiveArea, createArea, updateArea } from '@/lib/internal/actions';
+import {
+  archiveArea,
+  countSectionTasks,
+  createArea,
+  restoreArea,
+  updateArea,
+} from '@/lib/internal/actions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,18 +47,38 @@ export function SectionHeading({
   count,
   color,
   canManage,
+  canArchive = false,
+  archived = false,
 }: {
   id: string;
   name: string;
   count: number;
   color?: string | null;
   canManage: boolean;
+  /** Archiving cascades to every task in the section, so it is admin-only. */
+  canArchive?: boolean;
+  archived?: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [taskCount, setTaskCount] = useState<number | null>(null);
   const [pending, start] = useTransition();
+
+  // Counted when the dialog opens rather than passed in: the board's own count
+  // reflects the active status/project filters, and the confirmation has to
+  // speak for everything that will actually be archived.
+  useEffect(() => {
+    if (!confirmOpen) return;
+    let cancelled = false;
+    countSectionTasks(id).then((r) => {
+      if (!cancelled && r.ok) setTaskCount(r.data?.count ?? 0);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [confirmOpen, id]);
 
   function rename() {
     const next = value.trim();
@@ -67,15 +101,27 @@ export function SectionHeading({
     });
   }
 
-  function confirmDelete() {
+  function confirmArchive() {
     start(async () => {
       const r = await archiveArea(id);
       if (r.ok) {
-        toast.success('Section deleted');
+        toast.success('Section archived');
         setConfirmOpen(false);
         router.refresh();
       } else {
-        toast.error(r.error ?? 'Could not delete section');
+        toast.error(r.error ?? 'Could not archive section');
+      }
+    });
+  }
+
+  function restore() {
+    start(async () => {
+      const r = await restoreArea(id);
+      if (r.ok) {
+        toast.success('Section restored');
+        router.refresh();
+      } else {
+        toast.error(r.error ?? 'Could not restore section');
       }
     });
   }
@@ -126,9 +172,32 @@ export function SectionHeading({
       {color && (
         <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
       )}
-      <span className="truncate text-sm font-semibold text-foreground">{name}</span>
+      <span
+        className={cn(
+          'truncate text-sm font-semibold text-foreground',
+          archived && 'text-muted-foreground line-through',
+        )}
+      >
+        {name}
+      </span>
       <span className="text-xs tabular-nums text-muted-foreground">{count}</span>
-      {canManage && (
+      {archived && (
+        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Archived
+        </span>
+      )}
+      {archived && canArchive && (
+        <button
+          type="button"
+          onClick={restore}
+          disabled={pending}
+          className="inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+        >
+          <ArchiveRestore className="size-3" />
+          Restore
+        </button>
+      )}
+      {canManage && !archived && (
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -146,10 +215,20 @@ export function SectionHeading({
               <Pencil className="size-3.5" />
               Rename
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setConfirmOpen(true)} className="text-destructive">
-              <Trash2 className="size-3.5" />
-              Delete
-            </DropdownMenuItem>
+            {canArchive && (
+              <DropdownMenuItem
+                onClick={() => {
+                  // Cleared here rather than in the effect so the dialog never
+                  // shows a stale count from a previous open.
+                  setTaskCount(null);
+                  setConfirmOpen(true);
+                }}
+                className="text-destructive"
+              >
+                <Trash2 className="size-3.5" />
+                Delete
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       )}
@@ -160,8 +239,14 @@ export function SectionHeading({
             <DialogTitle>Delete section</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Delete <span className="font-medium text-foreground">“{name}”</span>? Move its tasks
-            out first if it isn’t empty. This can’t be undone.
+            Delete <span className="font-medium text-foreground">“{name}”</span>
+            {taskCount === null
+              ? '?'
+              : taskCount === 0
+                ? '? It has no active tasks.'
+                : ` and its ${taskCount} active task${taskCount === 1 ? '' : 's'}?`}{' '}
+            Everything is archived together, so you can bring it all back with
+            Show archived.
           </p>
           <DialogFooter>
             <Button
@@ -175,7 +260,7 @@ export function SectionHeading({
             <Button
               type="button"
               variant="destructive"
-              onClick={confirmDelete}
+              onClick={confirmArchive}
               disabled={pending}
             >
               {pending ? 'Deleting…' : 'Delete section'}

@@ -9,6 +9,13 @@ import { requireRole } from '@/lib/auth/require-role-server';
 import { dbErrorMessage } from '@/lib/db-errors';
 import { areaSchema, taskSchema } from './schemas';
 import { notifyInternalTaskAssigned } from './notifications';
+import {
+  archiveAreaWithTasks,
+  archiveTaskTree,
+  countActiveAreaTasks,
+  restoreAreaWithTasks,
+  restoreTaskTree,
+} from './archive';
 import type { ActionResult } from '@/lib/action-result';
 
 function formValue(fd: FormData, key: string) {
@@ -63,29 +70,45 @@ export async function updateArea(
   return { ok: true };
 }
 
-export async function archiveArea(areaId: string): Promise<ActionResult> {
-  const auth = await requireRole(['admin', 'staff']);
-  if (!auth.ok) return auth;
-  const sb = await createClient();
-  const { count } = await sb
-    .from('internal_tasks')
-    .select('id', { count: 'exact', head: true })
-    .eq('area_id', areaId)
-    .is('archived_at', null);
-  if ((count ?? 0) > 0) {
-    return {
-      ok: false,
-      error: 'Section has active tasks — move or archive them first.',
-    };
-  }
-  const { error } = await sb
-    .from('internal_areas')
-    .update({ archived_at: new Date().toISOString() })
-    .eq('id', areaId);
-  if (error) return { ok: false, error: dbErrorMessage(error) };
+function revalidateInternal() {
   revalidatePath('/admin/internal/areas');
   revalidatePath('/workspace/internal');
+}
+
+/**
+ * Archive a section together with every active task inside it.
+ *
+ * Admin-only: one click here can sweep away dozens of other people's tasks.
+ * Note the restriction is enforced here rather than in RLS — migration 0047
+ * deliberately lets staff update `internal_areas`, and a policy cannot tell
+ * "archiving" apart from the renames staff legitimately do.
+ */
+export async function archiveArea(areaId: string): Promise<ActionResult> {
+  const auth = await requireRole(['admin']);
+  if (!auth.ok) return auth;
+  const result = await archiveAreaWithTasks(await createClient(), areaId);
+  if (!result.ok) return result;
+  revalidateInternal();
   return { ok: true };
+}
+
+/** Bring back a section and the tasks that `archiveArea` took with it. */
+export async function restoreArea(areaId: string): Promise<ActionResult> {
+  const auth = await requireRole(['admin']);
+  if (!auth.ok) return auth;
+  const result = await restoreAreaWithTasks(await createClient(), areaId);
+  if (!result.ok) return result;
+  revalidateInternal();
+  return { ok: true };
+}
+
+/** How many active tasks a section holds — the confirmation dialog's count. */
+export async function countSectionTasks(
+  areaId: string,
+): Promise<ActionResult<{ count: number }>> {
+  const auth = await requireRole(['admin', 'staff']);
+  if (!auth.ok) return auth;
+  return countActiveAreaTasks(await createClient(), areaId);
 }
 
 /**
@@ -273,19 +296,55 @@ export async function createSubtask(
   return { ok: true, data: { id: task.id } };
 }
 
-/** Soft-delete a subtask (archives it). */
-export async function deleteSubtask(
+/** Archive a task. Its subtasks go with it and come back with it. */
+export async function archiveTask(taskId: string): Promise<ActionResult> {
+  const auth = await requireRole(['admin', 'staff']);
+  if (!auth.ok) return auth;
+  const sb = await createClient();
+  const result = await archiveTaskTree(sb, taskId);
+  if (!result.ok) return result;
+  revalidateInternal();
+  revalidatePath(`/workspace/internal/${taskId}`);
+  return { ok: true };
+}
+
+export async function restoreTask(taskId: string): Promise<ActionResult> {
+  const auth = await requireRole(['admin', 'staff']);
+  if (!auth.ok) return auth;
+  const sb = await createClient();
+  const result = await restoreTaskTree(sb, taskId);
+  if (!result.ok) return result;
+  revalidateInternal();
+  revalidatePath(`/workspace/internal/${taskId}`);
+  return { ok: true };
+}
+
+/**
+ * Archive a subtask. Same machinery as `archiveTask`; separate only so the
+ * parent's detail page is the thing revalidated.
+ */
+export async function archiveSubtask(
   subtaskId: string,
   parentId: string,
 ): Promise<ActionResult> {
   const auth = await requireRole(['admin', 'staff']);
   if (!auth.ok) return auth;
   const sb = await createClient();
-  const { error } = await sb
-    .from('internal_tasks')
-    .update({ archived_at: new Date().toISOString() })
-    .eq('id', subtaskId);
-  if (error) return { ok: false, error: dbErrorMessage(error) };
+  const result = await archiveTaskTree(sb, subtaskId);
+  if (!result.ok) return result;
+  revalidatePath(`/workspace/internal/${parentId}`);
+  return { ok: true };
+}
+
+export async function restoreSubtask(
+  subtaskId: string,
+  parentId: string,
+): Promise<ActionResult> {
+  const auth = await requireRole(['admin', 'staff']);
+  if (!auth.ok) return auth;
+  const sb = await createClient();
+  const result = await restoreTaskTree(sb, subtaskId);
+  if (!result.ok) return result;
   revalidatePath(`/workspace/internal/${parentId}`);
   return { ok: true };
 }

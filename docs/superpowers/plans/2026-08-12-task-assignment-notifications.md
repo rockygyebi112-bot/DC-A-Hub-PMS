@@ -823,7 +823,10 @@ a subtask later go through `addAssignee`.
 npx tsc --noEmit && npm run lint
 ```
 
-Expected: no errors.
+Expected: `tsc` clean. `npm run lint` reports 14 pre-existing problems (3 errors)
+in unrelated files — `proposals/build-docx.js` and some test files — and exits
+non-zero because of them. That is the baseline, not a regression. What matters
+is that none of the files you touched appear in the output.
 
 - [ ] **Step 5: Commit**
 
@@ -1129,10 +1132,18 @@ Replace with:
 - [ ] **Step 9: Verify typecheck, lint and the full suite**
 
 ```bash
-npx tsc --noEmit && npm run lint && npm test
+npx tsc --noEmit
+npm run lint
+npx vitest run tests/internal tests/ui tests/workspace tests/admin tests/auth tests/csv tests/evaluations
 ```
 
-Expected: no type errors, no lint errors, all tests pass.
+Expected: `tsc` clean. `npm run lint` reports the pre-existing 14 problems
+(3 errors) in unrelated files and exits non-zero — the baseline; confirm none
+of your files appear. The vitest command deliberately excludes `tests/rls`,
+which fails 5 tests when run as a directory for a pre-existing reason (several
+files concurrently delete each other's shared `@example.com` fixtures). Run the
+RLS suite separately, file by file, if you need it:
+`npx vitest run tests/rls/user-notifications.test.ts`.
 
 - [ ] **Step 10: Commit**
 
@@ -1203,4 +1214,10 @@ commit.
 - The bell shows the entry on the workspace surface and live-refreshes.
 - The portal bell is unchanged.
 - A notification failure leaves the assignment intact.
-- `npx tsc --noEmit`, `npm run lint`, `npm test`, and `npm run test:rls` all pass.
+- `npx tsc --noEmit` is clean, and no file touched by this work appears in
+  `npm run lint` output (the suite has 14 pre-existing problems in unrelated
+  files).
+- Every vitest suite except `tests/rls` passes as a whole; `tests/rls`
+  passes file-by-file, including `tests/rls/user-notifications.test.ts`. Running
+  `tests/rls` as a directory fails 5 tests for a pre-existing reason tracked
+  separately.

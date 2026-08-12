@@ -251,8 +251,10 @@ Create `src/lib/internal/notification-recipients.ts`:
  * matters — never notify someone about their own action — lives here where it
  * can be tested directly.
  *
- * `createTask` always auto-assigns the creator for visibility, so the actor
- * appearing in the assignee list is the normal case, not an edge case.
+ * The actor can appear in `assigneeIds` when someone picks themselves in the
+ * assignee picker — neither the picker nor the form excludes self. The
+ * creator's auto-assignment in `createTask` is a separate insert and never
+ * reaches here.
  */
 export function resolveAssignmentRecipients(
   assigneeIds: string[],
@@ -656,6 +658,14 @@ with:
 
 - [ ] **Step 3: Notify from `addAssignee`**
 
+The existing upsert uses `ignoreDuplicates: true`, so re-adding someone who is
+already assigned is a database no-op. Notifying unconditionally would then send
+a fresh bell row to a person whose assignment did not change. Adding `.select()`
+makes the upsert report what it actually inserted, so the notification fires
+only on a real assignment. (The UI filters current assignees out of the picker,
+so this is reachable only from a stale client — but "nothing changed" should
+mean "nothing sent".)
+
 Replace the whole `addAssignee` function with:
 
 ```ts
@@ -666,16 +676,19 @@ export async function addAssignee(
   const auth = await requireRole(['admin', 'staff']);
   if (!auth.ok) return auth;
   const sb = await createClient();
-  const { error } = await sb
+  // `.select()` so an ignored duplicate comes back as an empty array: re-adding
+  // an existing assignee changes nothing and must not notify.
+  const { data: inserted, error } = await sb
     .from('internal_task_assignees')
     .upsert(
       { task_id: taskId, user_id: userId },
       { onConflict: 'task_id,user_id', ignoreDuplicates: true },
-    );
+    )
+    .select('user_id');
   if (error) return { ok: false, error: dbErrorMessage(error) };
 
   const actorUserId = await currentUserId();
-  if (actorUserId) {
+  if (actorUserId && (inserted?.length ?? 0) > 0) {
     // Notification failures must never fail the assignment.
     await notifyInternalTaskAssigned({
       taskId,

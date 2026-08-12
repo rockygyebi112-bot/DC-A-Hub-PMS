@@ -130,8 +130,10 @@ export async function notifyInternalTaskAssigned({
 Sequence:
 
 1. Dedupe `assigneeIds` and remove `actorUserId`. Return `{ ok: true }`
-   immediately if nothing remains — this is the common case for `createTask`,
-   where the creator is auto-assigned for visibility.
+   immediately if nothing remains. The actor reaches this list only by picking
+   themselves in the assignee picker, which nothing prevents — the creator's
+   auto-assignment in `createTask` is a separate insert that never flows into
+   `assignee_ids`.
 2. Via the admin client, fetch the task (`title`, `due_date`, `priority`,
    `area_id`), its area name, the recipients' profiles (`user_id`, `email`,
    `full_name`), and the actor's `full_name`.

@@ -1,11 +1,14 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { Send, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/admin/ui/user-avatar';
 import { formatTimestamp } from '@/components/workspace/activity-detail-view/format';
 import type { InternalComment } from '@/lib/internal/queries';
+import { findMentionQuery } from '@/lib/internal/mentions';
+import { cn } from '@/lib/utils';
+import { CommentBody } from './comment-body';
 
 export type ComposerUser = {
   name: string;
@@ -15,9 +18,23 @@ export type ComposerUser = {
 
 type ActionResultLike = { ok: boolean; error?: string };
 
+type Staff = { user_id: string; full_name: string };
+
+/** Matches the `length(body) <= 4000` CHECK on both comment tables. */
+const MAX_BODY = 4000;
+
+/** How many names the @ picker shows at once. */
+const MAX_SUGGESTIONS = 6;
+
 /**
  * Inline comment composer. Posts a single `body` field; the bound server
  * action persists it and revalidates the page so the thread re-renders.
+ *
+ * Typing `@` opens a picker of staff colleagues. Picking one inserts
+ * `@[Full Name](user-id)` — markup anchored to the id, so the mention survives
+ * a rename and stays unambiguous between people who share a first name. The
+ * raw markup is visible only while composing; posted comments render it as a
+ * chip via `CommentBody`.
  */
 export function CommentComposer({
   action,
@@ -31,6 +48,54 @@ export function CommentComposer({
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [pending, start] = useTransition();
+  const [value, setValue] = useState('');
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [query, setQuery] = useState<{ query: string; start: number } | null>(
+    null,
+  );
+  const [highlight, setHighlight] = useState(0);
+
+  // Same source and same failure mode as AssigneePicker: if this fails the
+  // picker simply never offers anyone, and plain comments still post.
+  useEffect(() => {
+    fetch('/api/internal/staff')
+      .then((r) => r.json())
+      .then(setStaff)
+      .catch(() => setStaff([]));
+  }, []);
+
+  const matches = useMemo(() => {
+    if (!query) return [];
+    const needle = query.query.trim().toLowerCase();
+    return staff
+      .filter((s) => s.full_name.toLowerCase().includes(needle))
+      .slice(0, MAX_SUGGESTIONS);
+  }, [query, staff]);
+
+  const pickerOpen = query !== null && matches.length > 0;
+
+  /** Recompute the active @query from the live caret position. */
+  function syncQuery(el: HTMLTextAreaElement) {
+    setQuery(findMentionQuery(el.value, el.selectionStart ?? 0));
+    setHighlight(0);
+  }
+
+  function insertMention(pick: Staff) {
+    const el = inputRef.current;
+    if (!el || !query) return;
+    const caret = el.selectionStart ?? value.length;
+    const markup = `@[${pick.full_name}](${pick.user_id}) `;
+    const next = value.slice(0, query.start) + markup + value.slice(caret);
+    setValue(next);
+    setQuery(null);
+    // Restore focus and drop the caret after the inserted mention, once React
+    // has committed the new value.
+    requestAnimationFrame(() => {
+      const at = query.start + markup.length;
+      el.focus();
+      el.setSelectionRange(at, at);
+    });
+  }
 
   function submit(formData: FormData) {
     const body = String(formData.get('body') ?? '').trim();
@@ -38,15 +103,21 @@ export function CommentComposer({
       toast.error('Write something first.');
       return;
     }
-    // Eager reset; the captured FormData still carries the value.
-    formRef.current?.reset();
+    if (body.length > MAX_BODY) {
+      // Mention markup counts toward the DB limit, so the visible text can be
+      // well under 4000 while the stored body is not.
+      toast.error(`That comment is too long by ${body.length - MAX_BODY} characters.`);
+      return;
+    }
+    setValue('');
+    setQuery(null);
     if (inputRef.current) inputRef.current.style.height = 'auto';
     inputRef.current?.focus();
     start(async () => {
       const res = await action(formData);
       if (!res.ok) {
         toast.error(res.error ?? 'Could not post comment');
-        if (inputRef.current) inputRef.current.value = body;
+        setValue(body);
       }
     });
   }
@@ -55,7 +126,7 @@ export function CommentComposer({
     <form
       ref={formRef}
       action={submit}
-      className="rounded-2xl border bg-background p-2.5 pl-3 transition-shadow focus-within:shadow-sm focus-within:ring-2 focus-within:ring-primary/15"
+      className="relative rounded-2xl border bg-background p-2.5 pl-3 transition-shadow focus-within:shadow-sm focus-within:ring-2 focus-within:ring-primary/15"
     >
       <div className="flex items-start gap-3">
         <UserAvatar
@@ -68,17 +139,59 @@ export function CommentComposer({
           ref={inputRef}
           name="body"
           rows={1}
+          value={value}
           placeholder={placeholder}
+          role="combobox"
+          aria-expanded={pickerOpen}
+          aria-controls="mention-picker"
+          aria-autocomplete="list"
           className="min-h-7 flex-1 resize-none bg-transparent py-1 text-sm outline-none placeholder:text-muted-foreground"
+          onChange={(e) => {
+            setValue(e.currentTarget.value);
+            syncQuery(e.currentTarget);
+          }}
+          onClick={(e) => syncQuery(e.currentTarget)}
+          onBlur={() => setQuery(null)}
           onInput={(e) => {
             const el = e.currentTarget;
             el.style.height = 'auto';
             el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
           }}
           onKeyDown={(e) => {
+            if (pickerOpen) {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setHighlight((h) => (h + 1) % matches.length);
+                return;
+              }
+              if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setHighlight((h) => (h - 1 + matches.length) % matches.length);
+                return;
+              }
+              if (e.key === 'Enter' || e.key === 'Tab') {
+                // While the list is open Enter picks a name; it must not also
+                // post the half-written comment.
+                e.preventDefault();
+                insertMention(matches[highlight]);
+                return;
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                setQuery(null);
+                return;
+              }
+            }
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
               formRef.current?.requestSubmit();
+            }
+          }}
+          onKeyUp={(e) => {
+            // Arrow/Home/End move the caret without changing the value, which
+            // can carry it out of (or into) a mention query.
+            if (e.key.startsWith('Arrow') || e.key === 'Home' || e.key === 'End') {
+              if (!pickerOpen) syncQuery(e.currentTarget);
             }
           }}
           disabled={pending}
@@ -92,6 +205,37 @@ export function CommentComposer({
           {pending ? 'Posting…' : 'Post'}
         </button>
       </div>
+
+      {pickerOpen && (
+        <ul
+          id="mention-picker"
+          role="listbox"
+          aria-label="Mention a colleague"
+          className="absolute left-12 right-3 top-full z-20 mt-1 overflow-hidden rounded-lg border bg-popover shadow-md"
+        >
+          {matches.map((s, i) => (
+            <li key={s.user_id}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={i === highlight}
+                // The textarea's blur fires before click; mousedown wins.
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  insertMention(s);
+                }}
+                onMouseEnter={() => setHighlight(i)}
+                className={cn(
+                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
+                  i === highlight ? 'bg-muted text-foreground' : 'text-foreground/80',
+                )}
+              >
+                {s.full_name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </form>
   );
 }
@@ -126,6 +270,7 @@ export function CommentList({
         <CommentRow
           key={c.id}
           comment={c}
+          currentUserId={currentUserId}
           canDelete={isAdmin || c.author_user_id === currentUserId}
           deleteAction={deleteAction}
         />
@@ -136,10 +281,12 @@ export function CommentList({
 
 function CommentRow({
   comment,
+  currentUserId,
   canDelete,
   deleteAction,
 }: {
   comment: InternalComment;
+  currentUserId: string;
   canDelete: boolean;
   deleteAction: (commentId: string) => Promise<ActionResultLike>;
 }) {
@@ -186,9 +333,7 @@ function CommentRow({
             </button>
           )}
         </div>
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-          {comment.body}
-        </p>
+        <CommentBody body={comment.body} currentUserId={currentUserId} />
       </div>
     </li>
   );

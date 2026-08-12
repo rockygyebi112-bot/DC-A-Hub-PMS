@@ -5,7 +5,11 @@ import { getAppUrl } from "@/lib/app-url";
 import { formatDate } from "@/lib/format/date";
 import { sendEmail } from "@/lib/email/send";
 import { renderTaskAssignedEmail } from "@/lib/email/templates/task-assigned";
-import { resolveAssignmentRecipients } from "./notification-recipients";
+import {
+  resolveAssignmentRecipients,
+  resolveMentionRecipients,
+} from "./notification-recipients";
+import { extractMentionIds } from "./mentions";
 import { priorityLabel } from "./task-labels";
 
 /**
@@ -34,6 +38,90 @@ export async function notifyInternalTaskAssigned(params: {
     console.error("[notify-task-assigned] unexpected failure", err);
     return { ok: false, reason };
   }
+}
+
+/**
+ * Notify staff that they were @mentioned in an internal task comment: one
+ * `user_notifications` row each, and no email — mentions are higher-volume
+ * and lower-stakes than assignment, so the bell carries them alone.
+ *
+ * Same service-role reasoning and same never-throws contract as
+ * {@link notifyInternalTaskAssigned}: the comment is already saved by the time
+ * this runs, and must stay saved even if notifying fails.
+ */
+export async function notifyInternalTaskMentioned(params: {
+  taskId: string;
+  body: string;
+  actorUserId: string;
+}): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    return await deliverMentions(params);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error("[notify-task-mentioned] unexpected failure", err);
+    return { ok: false, reason };
+  }
+}
+
+async function deliverMentions({
+  taskId,
+  body,
+  actorUserId,
+}: {
+  taskId: string;
+  body: string;
+  actorUserId: string;
+}): Promise<{ ok: boolean; reason?: string }> {
+  const recipients = resolveMentionRecipients(
+    extractMentionIds(body),
+    actorUserId,
+  );
+  if (recipients.length === 0) return { ok: true };
+
+  const admin = createAdminClient();
+
+  const { data: task } = await admin
+    .from("internal_tasks")
+    .select("id, title, area_id")
+    .eq("id", taskId)
+    .single();
+  if (!task) {
+    const reason = "Task not found";
+    console.error("[notify-task-mentioned]", reason);
+    return { ok: false, reason };
+  }
+
+  const [{ data: area }, { data: actor }] = await Promise.all([
+    admin.from("internal_areas").select("name").eq("id", task.area_id).maybeSingle(),
+    admin
+      .from("profiles")
+      .select("full_name")
+      .eq("user_id", actorUserId)
+      .maybeSingle(),
+  ]);
+
+  // A mention names someone who may not be on the task at all — that is the
+  // point of mentioning them — so unlike assignment there is no membership to
+  // check. The picker only offers staff and admins, and `user_notifications`
+  // is readable solely by its recipient.
+  const { error: insertError } = await admin.from("user_notifications").insert(
+    recipients.map((userId) => ({
+      user_id: userId,
+      type: "internal_task_mentioned",
+      title: task.title,
+      subtitle: area?.name ?? null,
+      href: `/workspace/internal/${taskId}`,
+      actor_name: actor?.full_name ?? "A colleague",
+      actor_user_id: actorUserId,
+      internal_task_id: taskId,
+    })),
+  );
+  if (insertError) {
+    console.error("[notify-task-mentioned] bell insert failed", insertError);
+    return { ok: false, reason: insertError.message };
+  }
+
+  return { ok: true };
 }
 
 async function deliver({

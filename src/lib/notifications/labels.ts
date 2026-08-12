@@ -57,6 +57,7 @@ export const ACTIVITY_ACTION_VERB: Record<ActivityAction, string> = {
  */
 export const NOTIFICATION_ONLY_LABEL: Record<string, string> = {
   internal_task_assigned: "You were assigned a task",
+  internal_task_mentioned: "You were mentioned",
 };
 
 /** Look up the headline label; fallback humanises unknown action codes. */

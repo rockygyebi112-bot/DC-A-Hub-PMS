@@ -11,6 +11,7 @@ import {
   sanitizeFileName,
   checkUploadContent,
 } from '@/lib/uploads';
+import { notifyInternalTaskMentioned } from '@/lib/internal/notifications';
 import type { ActionResult } from '@/lib/action-result';
 
 const STAFF = ['admin', 'staff'] as const;
@@ -168,6 +169,11 @@ export async function postInternalTaskComment(
     body,
   });
   if (error) return { ok: false, error: dbErrorMessage(error) };
+  // Deliberately awaited-and-swallowed: the comment is already saved, and a
+  // notification failure must not turn a posted comment into an error toast.
+  await notifyInternalTaskMentioned({ taskId, body, actorUserId: userId }).catch(
+    () => undefined,
+  );
   revalidateTask(taskId);
   return { ok: true };
 }
@@ -210,6 +216,11 @@ export async function addInternalProofComment(
     body,
   });
   if (error) return { ok: false, error: dbErrorMessage(error) };
+  // The bell links to the task, not the document: a proof thread lives inside
+  // a dialog with no addressable URL of its own.
+  await notifyInternalTaskMentioned({ taskId, body, actorUserId: userId }).catch(
+    () => undefined,
+  );
   revalidateTask(taskId);
   return { ok: true };
 }

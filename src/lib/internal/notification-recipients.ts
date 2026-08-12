@@ -20,3 +20,18 @@ export function resolveAssignmentRecipients(
     (id) => id !== actorUserId,
   );
 }
+
+/**
+ * Who gets notified for an @mention in a comment.
+ *
+ * Same rule, same reason: mentioning yourself while writing (to note who you
+ * are speaking for, or after picking your own name from the list) must not
+ * put a notification in your own bell. Repeats collapse because a body may
+ * name the same person several times in one comment.
+ */
+export function resolveMentionRecipients(
+  mentionedIds: string[],
+  actorUserId: string,
+): string[] {
+  return resolveAssignmentRecipients(mentionedIds, actorUserId);
+}

@@ -8,6 +8,7 @@
  *
  * Nothing here is a hard delete. "Delete" in the UI means `archived_at` is set;
  * the rows stay put and the "Show archived" toggle brings them back into view.
+ * Permanent deletion is the separate second step in `./purge.ts`.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 

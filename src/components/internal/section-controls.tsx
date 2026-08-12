@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { PermanentDeleteButton } from './permanent-delete-button';
 import { cn } from '@/lib/utils';
 
 /**
@@ -187,15 +188,18 @@ export function SectionHeading({
         </span>
       )}
       {archived && canArchive && (
-        <button
-          type="button"
-          onClick={restore}
-          disabled={pending}
-          className="inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-        >
-          <ArchiveRestore className="size-3" />
-          Restore
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={restore}
+            disabled={pending}
+            className="inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            <ArchiveRestore className="size-3" />
+            Restore
+          </button>
+          <PermanentDeleteButton target="area" id={id} name={name} />
+        </>
       )}
       {canManage && !archived && (
         <DropdownMenu>

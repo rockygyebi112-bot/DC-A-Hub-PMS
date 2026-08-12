@@ -16,6 +16,7 @@ import {
   restoreAreaWithTasks,
   restoreTaskTree,
 } from './archive';
+import { purgeArea, purgeTask, summariseTaskDeletion } from './purge';
 import type { ActionResult } from '@/lib/action-result';
 
 function formValue(fd: FormData, key: string) {
@@ -109,6 +110,45 @@ export async function countSectionTasks(
   const auth = await requireRole(['admin', 'staff']);
   if (!auth.ok) return auth;
   return countActiveAreaTasks(await createClient(), areaId);
+}
+
+// ---------- permanent deletion (archived items only, admin-only) ----------
+
+/**
+ * Destroy an archived task for good, with its subtasks, comments and uploaded
+ * files. Admin-only and irreversible; `purgeTask` refuses anything not already
+ * archived, so this is always the deliberate second step.
+ */
+export async function deleteTaskPermanently(
+  taskId: string,
+  parentId?: string,
+): Promise<ActionResult> {
+  const auth = await requireRole(['admin']);
+  if (!auth.ok) return auth;
+  const result = await purgeTask(await createClient(), taskId);
+  if (!result.ok) return result;
+  revalidateInternal();
+  if (parentId) revalidatePath(`/workspace/internal/${parentId}`);
+  return { ok: true };
+}
+
+/** Destroy an archived section and every task in it for good. Admin-only. */
+export async function deleteAreaPermanently(areaId: string): Promise<ActionResult> {
+  const auth = await requireRole(['admin']);
+  if (!auth.ok) return auth;
+  const result = await purgeArea(await createClient(), areaId);
+  if (!result.ok) return result;
+  revalidateInternal();
+  return { ok: true };
+}
+
+/** What a permanent delete would take — drives the confirmation copy. */
+export async function describeTaskDeletion(
+  taskId: string,
+): Promise<ActionResult<{ subtasks: number; documents: number; comments: number }>> {
+  const auth = await requireRole(['admin']);
+  if (!auth.ok) return auth;
+  return summariseTaskDeletion(await createClient(), taskId);
 }
 
 /**

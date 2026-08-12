@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react';
 import { createArea, updateArea, archiveArea, restoreArea } from '@/lib/internal/actions';
+import { PermanentDeleteButton } from './permanent-delete-button';
 import type { ActionResult } from '@/lib/action-result';
 
 type Area = {
@@ -54,13 +55,16 @@ export function AreasTable({ areas }: { areas: Area[] }) {
               <td>{a.archived_at ? 'Archived' : 'Active'}</td>
               <td className="text-right">
                 {a.archived_at ? (
-                  <button
-                    disabled={pending}
-                    onClick={() => start(() => run(restoreArea(a.id)))}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Restore
-                  </button>
+                  <span className="inline-flex items-center gap-2">
+                    <button
+                      disabled={pending}
+                      onClick={() => start(() => run(restoreArea(a.id)))}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Restore
+                    </button>
+                    <PermanentDeleteButton target="area" id={a.id} name={a.name} />
+                  </span>
                 ) : (
                   <button
                     disabled={pending}

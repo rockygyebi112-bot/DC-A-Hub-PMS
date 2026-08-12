@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { TaskCard, type TaskRow } from "./task-card";
 import { InlineAddTask } from "./inline-add-task";
 import { AddSection, SectionHeading } from "./section-controls";
+import { PermanentDeleteButton } from "./permanent-delete-button";
 import {
   SortableSectionColumns,
   SortableSectionList,
@@ -30,14 +31,15 @@ export function TaskBoard({
   projects = [],
   view = "list",
   canManage = false,
-  canArchiveSections = false,
+  isAdmin = false,
 }: {
   tasks: Task[];
   sections: Section[];
   projects?: Project[];
   view?: ViewMode;
   canManage?: boolean;
-  canArchiveSections?: boolean;
+  /** Archiving a section and deleting anything for good are admin-only. */
+  isAdmin?: boolean;
 }) {
   const projectById = new Map(projects.map((p) => [p.id, p]));
   const bySection = new Map(sections.map((s) => [s.id, [] as Task[]]));
@@ -49,7 +51,7 @@ export function TaskBoard({
         sections={sections}
         bySection={bySection}
         canManage={canManage}
-        canArchiveSections={canArchiveSections}
+        isAdmin={isAdmin}
       />
     );
   }
@@ -65,7 +67,7 @@ export function TaskBoard({
           count={list.length}
           color={section.color}
           canManage={canManage}
-          canArchive={canArchiveSections}
+          canArchive={isAdmin}
           archived={Boolean(section.archived_at)}
         />
       ),
@@ -77,7 +79,13 @@ export function TaskBoard({
                 task={t}
                 project={t.project_id ? projectById.get(t.project_id) : undefined}
               />
-              {t.archived_at && <ArchivedTaskFooter taskId={t.id} />}
+              {t.archived_at && (
+                <ArchivedTaskFooter
+                  taskId={t.id}
+                  title={t.title}
+                  isAdmin={isAdmin}
+                />
+              )}
             </div>
           ))}
           {!section.archived_at && (
@@ -105,19 +113,20 @@ export function TaskBoard({
   );
 }
 
-// Trailing column holds the hover-revealed archive/restore control.
-const LIST_COLS = "grid-cols-[minmax(0,1fr)_11rem_7rem_1.75rem]";
+// Trailing column holds the hover-revealed archive/restore control, plus the
+// permanent delete an admin sees on archived rows.
+const LIST_COLS = "grid-cols-[minmax(0,1fr)_11rem_7rem_3.5rem]";
 
 function TaskListView({
   sections,
   bySection,
   canManage,
-  canArchiveSections,
+  isAdmin,
 }: {
   sections: Section[];
   bySection: Map<string, Task[]>;
   canManage: boolean;
-  canArchiveSections: boolean;
+  isAdmin: boolean;
 }) {
   const listItems: SortableItem[] = sections.map((section) => {
     const list = bySection.get(section.id) ?? [];
@@ -130,14 +139,14 @@ function TaskListView({
           count={list.length}
           color={section.color}
           canManage={canManage}
-          canArchive={canArchiveSections}
+          canArchive={isAdmin}
           archived={Boolean(section.archived_at)}
         />
       ),
       body: (
         <>
           {list.map((task) => (
-            <TaskListRow key={task.id} task={task} />
+            <TaskListRow key={task.id} task={task} isAdmin={isAdmin} />
           ))}
           {!section.archived_at && (
             <div className="border-t border-border/40 py-1 pl-[28px] pr-3">
@@ -176,27 +185,38 @@ function TaskListView({
   );
 }
 
-/** Restore control under an archived card in board view. */
-function ArchivedTaskFooter({ taskId }: { taskId: string }) {
+/** Restore (and, for admins, permanent delete) under an archived board card. */
+function ArchivedTaskFooter({
+  taskId,
+  title,
+  isAdmin,
+}: {
+  taskId: string;
+  title: string;
+  isAdmin: boolean;
+}) {
   async function restore() {
     "use server";
     await restoreTask(taskId);
   }
 
   return (
-    <form action={restore} className="mt-1 flex justify-end">
-      <button
-        type="submit"
-        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArchiveRestore className="size-3" />
-        Restore
-      </button>
-    </form>
+    <div className="mt-1 flex items-center justify-end gap-1">
+      <form action={restore} className="flex">
+        <button
+          type="submit"
+          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArchiveRestore className="size-3" />
+          Restore
+        </button>
+      </form>
+      {isAdmin && <PermanentDeleteButton target="task" id={taskId} name={title} />}
+    </div>
   );
 }
 
-function TaskListRow({ task }: { task: Task }) {
+function TaskListRow({ task, isAdmin }: { task: Task; isAdmin: boolean }) {
   const assignee = (task.assignees ?? []).find((a) => a.profile);
   const status = asTaskStatus(task.status);
   const done = status === "done";
@@ -292,25 +312,30 @@ function TaskListRow({ task }: { task: Task }) {
         )}
       </div>
 
-      <form action={archived ? restore : archive} className="flex justify-end">
-        <button
-          type="submit"
-          aria-label={archived ? "Restore task" : "Delete task"}
-          title={archived ? "Restore task" : "Delete task"}
-          className={cn(
-            "grid size-6 place-items-center rounded text-muted-foreground transition",
-            archived
-              ? "hover:bg-muted hover:text-foreground"
-              : "opacity-0 hover:bg-muted hover:text-destructive focus-visible:opacity-100 group-hover/row:opacity-100",
-          )}
-        >
-          {archived ? (
-            <ArchiveRestore className="size-3.5" />
-          ) : (
-            <Trash2 className="size-3.5" />
-          )}
-        </button>
-      </form>
+      <div className="flex justify-end gap-0.5">
+        <form action={archived ? restore : archive} className="flex">
+          <button
+            type="submit"
+            aria-label={archived ? "Restore task" : "Delete task"}
+            title={archived ? "Restore task" : "Delete task"}
+            className={cn(
+              "grid size-6 place-items-center rounded text-muted-foreground transition",
+              archived
+                ? "hover:bg-muted hover:text-foreground"
+                : "opacity-0 hover:bg-muted hover:text-destructive focus-visible:opacity-100 group-hover/row:opacity-100",
+            )}
+          >
+            {archived ? (
+              <ArchiveRestore className="size-3.5" />
+            ) : (
+              <Trash2 className="size-3.5" />
+            )}
+          </button>
+        </form>
+        {archived && isAdmin && (
+          <PermanentDeleteButton target="task" id={task.id} name={task.title} />
+        )}
+      </div>
     </div>
   );
 }

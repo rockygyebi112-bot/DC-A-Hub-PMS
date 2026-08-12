@@ -44,6 +44,7 @@ import {
   type TaskStatus,
 } from './task-meta';
 import { AssigneePicker } from './assignee-picker';
+import { PermanentDeleteButton } from './permanent-delete-button';
 
 type Assignee = {
   user_id: string;
@@ -77,10 +78,13 @@ export function TaskDetail({
   task,
   areas,
   projects = [],
+  isAdmin = false,
 }: {
   task: Task;
   areas: Area[];
   projects?: Project[];
+  /** Permanent deletion of an archived task is admin-only. */
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -213,6 +217,17 @@ export function TaskDetail({
             </>
           )}
         </button>
+
+        {archived && isAdmin && (
+          <PermanentDeleteButton
+            target="task"
+            id={task.id}
+            name={task.title}
+            variant="text"
+            // The page it lives on is about to stop existing.
+            onDeleted={() => router.push('/workspace/internal')}
+          />
+        )}
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">

@@ -13,14 +13,18 @@ import {
 } from '@/lib/internal/actions';
 import type { InternalSubtask } from '@/lib/internal/queries';
 import { asTaskStatus } from './task-meta';
+import { PermanentDeleteButton } from './permanent-delete-button';
 import { cn } from '@/lib/utils';
 
 export function SubtasksCard({
   taskId,
   subtasks,
+  isAdmin = false,
 }: {
   taskId: string;
   subtasks: InternalSubtask[];
+  /** Permanent deletion of an archived subtask is admin-only. */
+  isAdmin?: boolean;
 }) {
   const [showArchived, setShowArchived] = useState(false);
   const active = subtasks.filter((s) => !s.archived_at);
@@ -53,11 +57,11 @@ export function SubtasksCard({
       </header>
       <div className="px-3 py-2">
         {active.map((s) => (
-          <SubtaskRow key={s.id} taskId={taskId} subtask={s} />
+          <SubtaskRow key={s.id} taskId={taskId} subtask={s} isAdmin={isAdmin} />
         ))}
         {showArchived &&
           archived.map((s) => (
-            <SubtaskRow key={s.id} taskId={taskId} subtask={s} />
+            <SubtaskRow key={s.id} taskId={taskId} subtask={s} isAdmin={isAdmin} />
           ))}
         <AddSubtask taskId={taskId} />
       </div>
@@ -68,9 +72,11 @@ export function SubtasksCard({
 function SubtaskRow({
   taskId,
   subtask,
+  isAdmin,
 }: {
   taskId: string;
   subtask: InternalSubtask;
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -153,6 +159,14 @@ function SubtaskRow({
           <Trash2 className="size-3.5" />
         )}
       </button>
+      {archived && isAdmin && (
+        <PermanentDeleteButton
+          target="task"
+          id={subtask.id}
+          name={subtask.title}
+          parentId={taskId}
+        />
+      )}
     </div>
   );
 }

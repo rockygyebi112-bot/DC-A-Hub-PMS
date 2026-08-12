@@ -129,9 +129,9 @@ export default async function InternalTaskPage({
         </div>
       </section>
 
-      <TaskDetail task={task} areas={areas} projects={projects} />
+      <TaskDetail task={task} areas={areas} projects={projects} isAdmin={isAdmin} />
 
-      <SubtasksCard taskId={taskId} subtasks={subtasks} />
+      <SubtasksCard taskId={taskId} subtasks={subtasks} isAdmin={isAdmin} />
 
       <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <TaskCommentsCard

@@ -124,7 +124,7 @@ export default async function InternalWorkspacePage({
         projects={projects}
         view={view}
         canManage={canManageSections}
-        canArchiveSections={canArchiveSections}
+        isAdmin={canArchiveSections}
       />
     </div>
   );

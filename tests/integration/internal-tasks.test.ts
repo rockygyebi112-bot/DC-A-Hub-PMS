@@ -12,6 +12,7 @@ import {
   restoreAreaWithTasks,
   restoreTaskTree,
 } from '@/lib/internal/archive';
+import { purgeArea, purgeTask, summariseTaskDeletion } from '@/lib/internal/purge';
 
 describe('internal task lifecycle', () => {
   // Areas this file creates; cleaned up by id so a concurrent test file's
@@ -153,6 +154,80 @@ describe('internal task lifecycle', () => {
     const { data: restored } = await admin.from('internal_tasks')
       .select('id, archived_at').in('id', [parent!.id, child!.id]);
     expect(restored?.every((r) => r.archived_at === null)).toBe(true);
+  });
+
+  it('refuses to permanently delete anything still active', async () => {
+    const admin = adminClient();
+    const { data: area } = await admin.from('internal_areas')
+      .insert({ name: `IW Temp ${Date.now()}` }).select('id').single();
+    createdAreaIds.push(area!.id);
+    const { data: task } = await admin.from('internal_tasks')
+      .insert({ area_id: area!.id, title: 'Still live' }).select('id').single();
+
+    const taskResult = await purgeTask(admin, task!.id);
+    const areaResult = await purgeArea(admin, area!.id);
+    expect(taskResult.ok).toBe(false);
+    expect(areaResult.ok).toBe(false);
+
+    // Nothing was touched.
+    const { data: stillThere } = await admin.from('internal_tasks')
+      .select('id').eq('id', task!.id).maybeSingle();
+    expect(stillThere).not.toBeNull();
+  });
+
+  it('permanently deletes an archived task with its subtasks', async () => {
+    const admin = adminClient();
+    const { data: area } = await admin.from('internal_areas')
+      .insert({ name: `IW Temp ${Date.now()}` }).select('id').single();
+    createdAreaIds.push(area!.id);
+    const { data: parent } = await admin.from('internal_tasks')
+      .insert({ area_id: area!.id, title: 'Doomed' }).select('id').single();
+    const { data: child } = await admin.from('internal_tasks')
+      .insert({ area_id: area!.id, title: 'Doomed child', parent_task_id: parent!.id })
+      .select('id').single();
+
+    await archiveTaskTree(admin, parent!.id);
+    expect((await purgeTask(admin, parent!.id)).ok).toBe(true);
+
+    const { data: rows } = await admin.from('internal_tasks')
+      .select('id').in('id', [parent!.id, child!.id]);
+    expect(rows ?? []).toEqual([]);
+  });
+
+  it('permanently deletes an archived section and its tasks', async () => {
+    const admin = adminClient();
+    const { data: area } = await admin.from('internal_areas')
+      .insert({ name: `IW Temp ${Date.now()}` }).select('id').single();
+    const { data: task } = await admin.from('internal_tasks')
+      .insert({ area_id: area!.id, title: 'Goes with the section' })
+      .select('id').single();
+
+    await archiveAreaWithTasks(admin, area!.id);
+    expect((await purgeArea(admin, area!.id)).ok).toBe(true);
+
+    // area_id is ON DELETE RESTRICT, so the section only goes if its tasks did.
+    const { data: areaRow } = await admin.from('internal_areas')
+      .select('id').eq('id', area!.id).maybeSingle();
+    const { data: taskRow } = await admin.from('internal_tasks')
+      .select('id').eq('id', task!.id).maybeSingle();
+    expect(areaRow).toBeNull();
+    expect(taskRow).toBeNull();
+  });
+
+  it('summarises what a permanent delete would take', async () => {
+    const admin = adminClient();
+    const { data: area } = await admin.from('internal_areas')
+      .insert({ name: `IW Temp ${Date.now()}` }).select('id').single();
+    createdAreaIds.push(area!.id);
+    const { data: parent } = await admin.from('internal_tasks')
+      .insert({ area_id: area!.id, title: 'Parent' }).select('id').single();
+    await admin.from('internal_tasks').insert([
+      { area_id: area!.id, title: 'Kid 1', parent_task_id: parent!.id },
+      { area_id: area!.id, title: 'Kid 2', parent_task_id: parent!.id },
+    ]);
+
+    const result = await summariseTaskDeletion(admin, parent!.id);
+    expect(result.ok && result.data?.subtasks).toBe(2);
   });
 
   it('counts only the active tasks in a section', async () => {

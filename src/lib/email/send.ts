@@ -6,7 +6,8 @@ export type EmailCategory =
   | "invite"
   | "password_reset"
   | "email_change"
-  | "activity_notification";
+  | "activity_notification"
+  | "task_assigned";
 
 export type SendEmailParams = {
   to: string | string[];

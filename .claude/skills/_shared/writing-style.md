@@ -21,8 +21,8 @@ partner or a client evaluator. Every sentence must carry information.
   earns its place.
 - No em-dash pairs used for dramatic asides; use a comma, a full stop, or
   parentheses instead.
-- No emoji, except the BID / CONSIDER / NO-BID status markers the digest format
-  explicitly defines.
+- No emoji, anywhere, for any reason — including section headers and status
+  markers. Use plain bold text labels instead.
 - Don't restate the question before answering, and don't summarise what you just said.
 - **Don't justify including something that fails a rule.** If an item fails a
   hard filter (e.g. an expired deadline), leave it out — do not explain why you

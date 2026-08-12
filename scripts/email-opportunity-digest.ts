@@ -53,6 +53,15 @@ function latestDigest(): string | null {
   return path.join(SCANS_DIR, digests[digests.length - 1]);
 }
 
+/**
+ * Drop the "## Run metadata" section (and anything after it) before emailing.
+ * That section is an internal log for the team's own record-keeping — kept in
+ * the saved digest file, but not something the recipient needs to see.
+ */
+function stripRunMetadata(md: string): string {
+  return md.replace(/\n##\s*Run metadata[\s\S]*$/i, "\n");
+}
+
 /** Minimal, dependency-free Markdown -> HTML (headings, bold, links, lists, hr). */
 function mdToHtml(md: string): string {
   const esc = (s: string) =>
@@ -86,6 +95,7 @@ async function main() {
   }
 
   const markdown = readFileSync(digestPath, "utf8");
+  const emailMarkdown = stripRunMetadata(markdown);
   const firstLine = markdown.split(/\r?\n/)[0]?.replace(/^#\s*/, "").trim();
   const subject = firstLine || `DC&A Hub Opportunity Scan — ${path.basename(digestPath)}`;
 
@@ -105,8 +115,8 @@ async function main() {
     from,
     to,
     subject,
-    html: mdToHtml(markdown),
-    text: markdown,
+    html: mdToHtml(emailMarkdown),
+    text: emailMarkdown,
     tags: [{ name: "category", value: "opportunity_digest" }],
   });
 

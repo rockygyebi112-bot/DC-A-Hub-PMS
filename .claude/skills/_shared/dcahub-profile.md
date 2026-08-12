@@ -96,4 +96,8 @@ Ghana for rapid mobilisation. **[CONFIRM]** full associate-consultant roster.
 ## Exclusions (what we do NOT do — auto-lower or drop)
 Not a construction/civil-engineering firm; not a standalone IT/software development
 house (M&E systems delivered in partnership only); opportunities with no research,
-M&E, evaluation, data-collection, or learning component.
+M&E, evaluation, data-collection, or learning component. Mining / extractives /
+critical-minerals sector expertise (governance, regulation, policy) is NOT part of
+our practice — treat extractives-sector specialist roles as capability fit 0 unless
+the assignment is really a research/MEL/data-collection job that happens to sit in
+that sector.

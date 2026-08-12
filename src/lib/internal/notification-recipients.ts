@@ -7,8 +7,10 @@
  * matters — never notify someone about their own action — lives here where it
  * can be tested directly.
  *
- * `createTask` always auto-assigns the creator for visibility, so the actor
- * appearing in the assignee list is the normal case, not an edge case.
+ * The actor can appear in `assigneeIds` when someone picks themselves in the
+ * assignee picker — neither the picker nor the form excludes self. The
+ * creator's auto-assignment in `createTask` is a separate insert and never
+ * reaches here.
  */
 export function resolveAssignmentRecipients(
   assigneeIds: string[],

@@ -22,7 +22,11 @@ describe('resolveAssignmentRecipients', () => {
     expect(resolveAssignmentRecipients([ALICE, ALICE, BOB], ACTOR)).toEqual([ALICE, BOB]);
   });
 
-  it('ignores empty-string ids from unfilled form fields', () => {
+  it('preserves the order the assignees were picked in', () => {
+    expect(resolveAssignmentRecipients([BOB, ALICE], ACTOR)).toEqual([BOB, ALICE]);
+  });
+
+  it('ignores falsy ids rather than trusting callers to pre-filter', () => {
     expect(resolveAssignmentRecipients(['', ALICE], ACTOR)).toEqual([ALICE]);
   });
 

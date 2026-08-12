@@ -54,9 +54,9 @@ describe('renderTaskAssignedEmail', () => {
 
   it('includes section, due date, priority and assigner in the html', () => {
     const { html } = renderTaskAssignedEmail(base);
-    expect(html).toContain('Business Development');
-    expect(html).toContain('2026-08-20');
-    expect(html).toContain('high');
+    expect(html).toContain('<strong>Section:</strong> Business Development');
+    expect(html).toContain('<strong>Due:</strong> 2026-08-20');
+    expect(html).toContain('<strong>Priority:</strong> high');
     expect(html).toContain('Ama Mensah');
     expect(html).toContain(base.taskUrl);
   });
@@ -83,5 +83,26 @@ describe('renderTaskAssignedEmail', () => {
     const { text } = renderTaskAssignedEmail(base);
     expect(text.startsWith(base.taskTitle)).toBe(true);
     expect(text.trimEnd().endsWith(base.taskUrl)).toBe(true);
+  });
+
+  it('lists the populated fields in the plain-text alternative', () => {
+    const { text } = renderTaskAssignedEmail(base);
+    expect(text).toContain('Section: Business Development');
+    expect(text).toContain('Due: 2026-08-20');
+    expect(text).toContain('Priority: high');
+  });
+
+  it('escapes html in the assigner name', () => {
+    const { html } = renderTaskAssignedEmail({
+      ...base, assignedBy: 'Ama <b>Mensah</b>',
+    });
+    expect(html).toContain('Ama &lt;b&gt;Mensah&lt;/b&gt;');
+  });
+
+  it('leaves the subject unescaped so mail clients show real characters', () => {
+    const { subject } = renderTaskAssignedEmail({
+      ...base, taskTitle: 'R&D review',
+    });
+    expect(subject).toBe("You've been assigned: R&D review");
   });
 });

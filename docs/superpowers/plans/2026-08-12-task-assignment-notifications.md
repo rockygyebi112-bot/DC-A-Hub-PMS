@@ -456,14 +456,119 @@ git commit -m "feat(email): add task assignment email template"
 ### Task 4: Notification writer
 
 **Files:**
+- Create: `src/lib/internal/task-labels.ts`
+- Modify: `src/components/internal/task-meta.ts`
 - Create: `src/lib/internal/notifications.ts`
 
-There is no unit test for this module: it is thin orchestration over the
+There is no unit test for the writer module: it is thin orchestration over the
 service-role Supabase client and Resend, and the two pieces worth testing (the
 recipient rule and the rendered email) are already covered by Tasks 2 and 3.
 It is verified end-to-end in Task 7.
 
-- [ ] **Step 1: Write the module**
+**Display formatting.** `internal_tasks.due_date` is a raw ISO string and
+`priority` a raw enum. Passing them through untouched would make this email the
+only surface in the product showing "2026-08-20" and "high" — every other
+surface formats them (`src/lib/format/date.ts`, whose header calls itself "a
+single, deterministic surface to call", and `TASK_PRIORITY_META` in
+`src/components/internal/task-meta.ts`). The writer therefore formats before
+calling the template.
+
+Dates are easy — `formatDate` already lives in `src/lib/`. Priority labels are
+not: they sit in a `components/` module that imports `lucide-react`, and having
+`src/lib/` import from `src/components/` would invert the dependency direction.
+Step 1 lifts the React-free part into `src/lib/` and has the component module
+build on it, so there is still exactly one source of truth for the labels.
+
+- [ ] **Step 1: Lift the priority labels out of the component layer**
+
+Create `src/lib/internal/task-labels.ts`:
+
+```ts
+/**
+ * Priority vocabulary for internal tasks, free of React and lucide-react so
+ * server code (the assignment email) can share it with the UI.
+ *
+ * `TASK_PRIORITY_META` in `src/components/internal/task-meta.ts` builds its
+ * badge styling on top of these labels, so the email and the task card can
+ * never disagree about what `high` is called.
+ */
+export type TaskPriority = "low" | "normal" | "high" | "urgent";
+
+export const TASK_PRIORITY_ORDER: TaskPriority[] = [
+  "low",
+  "normal",
+  "high",
+  "urgent",
+];
+
+export const TASK_PRIORITY_LABEL: Record<TaskPriority, string> = {
+  low: "Low",
+  normal: "Normal",
+  high: "High",
+  urgent: "Urgent",
+};
+
+/** Display label for a raw DB priority value; returns null for null/unknown. */
+export function priorityLabel(value: string | null): string | null {
+  if (!value) return null;
+  return TASK_PRIORITY_LABEL[value as TaskPriority] ?? value;
+}
+```
+
+Then in `src/components/internal/task-meta.ts`, delete the local `TaskPriority`
+type, `TASK_PRIORITY_ORDER`, and the hard-coded labels, and build on the new
+module instead. Replace this block:
+
+```ts
+export type TaskPriority = "low" | "normal" | "high" | "urgent";
+
+export const TASK_PRIORITY_ORDER: TaskPriority[] = ["low", "normal", "high", "urgent"];
+
+export const TASK_PRIORITY_META: Record<
+  TaskPriority,
+  { label: string; variant: "neutral" | "info" | "warning" | "destructive" }
+> = {
+  low: { label: "Low", variant: "neutral" },
+  normal: { label: "Normal", variant: "info" },
+  high: { label: "High", variant: "warning" },
+  urgent: { label: "Urgent", variant: "destructive" },
+};
+```
+
+with:
+
+```ts
+export type { TaskPriority };
+export { TASK_PRIORITY_ORDER };
+
+export const TASK_PRIORITY_META: Record<
+  TaskPriority,
+  { label: string; variant: "neutral" | "info" | "warning" | "destructive" }
+> = {
+  low: { label: TASK_PRIORITY_LABEL.low, variant: "neutral" },
+  normal: { label: TASK_PRIORITY_LABEL.normal, variant: "info" },
+  high: { label: TASK_PRIORITY_LABEL.high, variant: "warning" },
+  urgent: { label: TASK_PRIORITY_LABEL.urgent, variant: "destructive" },
+};
+```
+
+and add this import at the top of the file, below the `lucide-react` import:
+
+```ts
+import {
+  TASK_PRIORITY_LABEL,
+  TASK_PRIORITY_ORDER,
+  type TaskPriority,
+} from "@/lib/internal/task-labels";
+```
+
+Existing consumers import `TaskPriority`, `TASK_PRIORITY_ORDER`, and
+`TASK_PRIORITY_META` from `task-meta.ts` and keep working unchanged, because
+the first two are re-exported.
+
+Verify nothing broke: `npx tsc --noEmit` must pass before you continue.
+
+- [ ] **Step 2: Write the module**
 
 Create `src/lib/internal/notifications.ts`:
 
@@ -472,9 +577,11 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/app-url";
+import { formatDate } from "@/lib/format/date";
 import { sendEmail } from "@/lib/email/send";
 import { renderTaskAssignedEmail } from "@/lib/email/templates/task-assigned";
 import { resolveAssignmentRecipients } from "./notification-recipients";
+import { priorityLabel } from "./task-labels";
 
 /**
  * Notify staff that they've been assigned an internal task: one
@@ -546,11 +653,13 @@ export async function notifyInternalTaskAssigned({
     return { ok: false, reason: "RESEND_API_KEY is not configured" };
   }
 
+  // Formatted here, not in the template: the template is a dumb renderer, and
+  // these are the same labels the task card and detail page show.
   const { subject, html, text } = renderTaskAssignedEmail({
     taskTitle: task.title,
     sectionName,
-    dueDate: task.due_date ?? null,
-    priority: task.priority ?? null,
+    dueDate: task.due_date ? formatDate(task.due_date) : null,
+    priority: priorityLabel(task.priority ?? null),
     assignedBy,
     taskUrl: `${getAppUrl()}${href}`,
   });
@@ -579,18 +688,18 @@ export async function notifyInternalTaskAssigned({
 }
 ```
 
-- [ ] **Step 2: Verify it typechecks**
+- [ ] **Step 3: Verify it typechecks and lints**
 
 ```bash
-npx tsc --noEmit
+npx tsc --noEmit && npm run lint
 ```
 
-Expected: no errors. If `user_notifications` is unknown to the generated types because Step 5 of Task 1 could not run, add `// @ts-expect-error user_notifications lands in types.ts once db:types runs` above the `.from("user_notifications")` call rather than weakening the client's typing.
+Expected: no errors. `tsc` also confirms Step 1's refactor didn't break any existing `TASK_PRIORITY_META` / `TaskPriority` consumer. If `user_notifications` is unknown to the generated types because Step 5 of Task 1 could not run, add `// @ts-expect-error user_notifications lands in types.ts once db:types runs` above the `.from("user_notifications")` call rather than weakening the client's typing.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add src/lib/internal/notifications.ts
+git add src/lib/internal/task-labels.ts src/components/internal/task-meta.ts src/lib/internal/notifications.ts
 git commit -m "feat: add internal task assignment notification writer"
 ```
 

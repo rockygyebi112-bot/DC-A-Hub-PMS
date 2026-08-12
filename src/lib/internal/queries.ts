@@ -107,8 +107,11 @@ export async function listTasks(
     status?: string;
     assigneeId?: string;
     projectId?: string;
-    /** Include archived tasks, for the board's "Show archived" toggle. */
-    includeArchived?: boolean;
+    /**
+     * Return archived tasks INSTEAD of active ones — "Show archived" is a
+     * filter, not an addition, so the board never mixes the two.
+     */
+    archivedOnly?: boolean;
   } = {},
 ): Promise<InternalTaskWithAssignees[]> {
   const sb = await createClient();
@@ -117,7 +120,9 @@ export async function listTasks(
       .from('internal_tasks')
       .select(TASK_SELECT)
       .order('updated_at', { ascending: false });
-    if (!filter.includeArchived) q = q.is('archived_at', null);
+    q = filter.archivedOnly
+      ? q.not('archived_at', 'is', null)
+      : q.is('archived_at', null);
     // Subtasks (parent_task_id set) only show on the parent's detail page, never
     // in the board/list. The column is added by migration 0048; fall back to an
     // unfiltered query if it isn't there yet (no subtasks exist pre-migration).

@@ -32,6 +32,7 @@ export function TaskBoard({
   view = "list",
   canManage = false,
   isAdmin = false,
+  archivedView = false,
 }: {
   tasks: Task[];
   sections: Section[];
@@ -40,6 +41,8 @@ export function TaskBoard({
   canManage?: boolean;
   /** Archiving a section and deleting anything for good are admin-only. */
   isAdmin?: boolean;
+  /** Showing archived items only — nothing here is a place to add work. */
+  archivedView?: boolean;
 }) {
   const projectById = new Map(projects.map((p) => [p.id, p]));
   const bySection = new Map(sections.map((s) => [s.id, [] as Task[]]));
@@ -52,6 +55,7 @@ export function TaskBoard({
         bySection={bySection}
         canManage={canManage}
         isAdmin={isAdmin}
+        archivedView={archivedView}
       />
     );
   }
@@ -88,7 +92,7 @@ export function TaskBoard({
               )}
             </div>
           ))}
-          {!section.archived_at && (
+          {!section.archived_at && !archivedView && (
             <InlineAddTask areaId={section.id} variant="board" />
           )}
         </div>
@@ -102,7 +106,7 @@ export function TaskBoard({
         items={boardItems}
         canReorder={canManage}
         trailer={
-          canManage ? (
+          canManage && !archivedView ? (
             <div className="w-[260px] shrink-0 pt-0.5">
               <AddSection variant="board" />
             </div>
@@ -122,11 +126,13 @@ function TaskListView({
   bySection,
   canManage,
   isAdmin,
+  archivedView,
 }: {
   sections: Section[];
   bySection: Map<string, Task[]>;
   canManage: boolean;
   isAdmin: boolean;
+  archivedView: boolean;
 }) {
   const listItems: SortableItem[] = sections.map((section) => {
     const list = bySection.get(section.id) ?? [];
@@ -148,7 +154,7 @@ function TaskListView({
           {list.map((task) => (
             <TaskListRow key={task.id} task={task} isAdmin={isAdmin} />
           ))}
-          {!section.archived_at && (
+          {!section.archived_at && !archivedView && (
             <div className="border-t border-border/40 py-1 pl-[28px] pr-3">
               <InlineAddTask areaId={section.id} variant="list" />
             </div>
@@ -175,7 +181,7 @@ function TaskListView({
 
         <SortableSectionList items={listItems} canReorder={canManage} />
 
-        {canManage && (
+        {canManage && !archivedView && (
           <div className="px-3 py-3">
             <AddSection variant="list" />
           </div>

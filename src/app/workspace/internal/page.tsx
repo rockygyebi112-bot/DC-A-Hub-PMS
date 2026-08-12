@@ -36,17 +36,31 @@ export default async function InternalWorkspacePage({
   const params = await searchParams;
   const view = params.view === "board" ? "board" : "list";
   const showArchived = params.archived === "1";
-  const [areas, projects, tasks, allTasks] = await Promise.all([
+  const [allAreas, projects, tasks, allTasks] = await Promise.all([
     listAreas({ includeArchived: showArchived }),
     listWorkspaceProjects({ sort: "name" }).catch(() => []),
     listTasks({
       areaId: params.area,
       status: params.status,
       projectId: params.project,
-      includeArchived: showArchived,
+      archivedOnly: showArchived,
     }),
-    listTasks({ projectId: params.project }),
+    // Drives the filter-chip counts, so it follows the same archived/active
+    // split as the board — otherwise the chips would count active tasks while
+    // the list below showed archived ones.
+    listTasks({ projectId: params.project, archivedOnly: showArchived }),
   ]);
+
+  // In the archived view, show only sections with something to show: the
+  // archived ones (so they can be restored or cleared out) and any still-active
+  // section holding a task that was archived on its own. Listing every active
+  // section would fill the page with empty columns.
+  const areas = showArchived
+    ? allAreas.filter(
+        (area) =>
+          area.archived_at || tasks.some((task) => task.area_id === area.id),
+      )
+    : allAreas;
 
   // Both staff and admin can manage sections (create/rename/reorder) once
   // migration 0047 opens the write policy. The page is already gated to those
@@ -118,14 +132,21 @@ export default async function InternalWorkspacePage({
         )}
       </div>
 
-      <TaskBoard
-        tasks={tasks}
-        sections={areas}
-        projects={projects}
-        view={view}
-        canManage={canManageSections}
-        isAdmin={canArchiveSections}
-      />
+      {showArchived && areas.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+          Nothing archived.
+        </p>
+      ) : (
+        <TaskBoard
+          tasks={tasks}
+          sections={areas}
+          projects={projects}
+          view={view}
+          canManage={canManageSections}
+          isAdmin={canArchiveSections}
+          archivedView={showArchived}
+        />
+      )}
     </div>
   );
 }

@@ -150,8 +150,10 @@ export function NotificationsBell({
     }
 
     (async () => {
+      let userId: string | undefined;
       try {
         const { data } = await sb.auth.getSession();
+        userId = data.session?.user.id;
         const token = data.session?.access_token;
         if (token) {
           await sb.realtime.setAuth(token);
@@ -160,22 +162,37 @@ export function NotificationsBell({
         // best-effort; the subscription will still be attempted below
       }
       if (cancelled) return;
-      channel = sb
+      let builder = sb
         .channel(`notifications-bell-${surface}`)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "activity_log" },
           scheduleRefresh,
-        )
-        .subscribe((status) => {
-          if (
-            status === "CHANNEL_ERROR" ||
-            status === "TIMED_OUT" ||
-            status === "CLOSED"
-          ) {
-            console.warn(`[notifications-bell] realtime channel ${status}`);
-          }
-        });
+        );
+      // Internal-task notifications (migration 0049) are per-recipient, so the
+      // subscription is filtered to this user's rows. Workspace only — the
+      // portal feed never includes them.
+      if (surface === "workspace" && userId) {
+        builder = builder.on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "user_notifications",
+            filter: `user_id=eq.${userId}`,
+          },
+          scheduleRefresh,
+        );
+      }
+      channel = builder.subscribe((status) => {
+        if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
+          console.warn(`[notifications-bell] realtime channel ${status}`);
+        }
+      });
     })();
 
     return () => {
@@ -293,7 +310,12 @@ export function NotificationsBell({
                         )}
                       </p>
                       <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                        {entry.project_name ?? "Project"}
+                        {/* activity_log rows always belong to a project; a
+                            user_notification carries a section name that may be
+                            absent, and "Project" would be a lie there. */}
+                        {entry.source === "user_notification"
+                          ? entry.project_name
+                          : entry.project_name ?? "Project"}
                         {entry.actor_name ? ` · by ${entry.actor_name}` : ""}
                       </p>
                       <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">

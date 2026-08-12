@@ -32,6 +32,7 @@ import {
   deleteInternalProofComment,
 } from '@/lib/internal/proofs';
 import type { InternalProof, InternalComment } from '@/lib/internal/queries';
+import { MAX_PROOF_BYTES } from '@/lib/uploads';
 import { CommentComposer, CommentList, type ComposerUser } from './comments';
 
 /** Adapt an internal proof to the shape `fileVisuals` reads (icon/colour). */
@@ -280,6 +281,26 @@ function DeleteDocButton({
   );
 }
 
+/**
+ * Pre-flight size check, returning a reason or null. The server validates each
+ * file, but the Server Action body limit applies to the batch as a whole, so a
+ * set of individually-legal files can still exceed it. Catching both here stops
+ * an oversize upload before it leaves the browser, where the host would reject
+ * it with a 413 that reads as a page crash rather than a message.
+ */
+export function tooLarge(batch: File[]): string | null {
+  const cap = formatBytes(MAX_PROOF_BYTES);
+  const over = batch.find((f) => f.size > MAX_PROOF_BYTES);
+  if (over) {
+    return `${over.name} is ${formatBytes(over.size)}. The limit is ${cap} per file.`;
+  }
+  const total = batch.reduce((sum, f) => sum + f.size, 0);
+  if (total > MAX_PROOF_BYTES) {
+    return `Those ${batch.length} files total ${formatBytes(total)}. Upload them in batches of ${cap} or less.`;
+  }
+  return null;
+}
+
 /** Compact file uploader: stage files, optional caption, then upload. */
 function Uploader({ taskId }: { taskId: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -302,6 +323,11 @@ function Uploader({ taskId }: { taskId: string }) {
       toast.error('Choose at least one file');
       return;
     }
+    const oversize = tooLarge(files);
+    if (oversize) {
+      toast.error(oversize);
+      return;
+    }
     const snapshot = files;
     const cap = caption;
     setFiles([]);
@@ -310,16 +336,23 @@ function Uploader({ taskId }: { taskId: string }) {
       const fd = new FormData();
       snapshot.forEach((f) => fd.append('proofs', f));
       if (cap.trim()) fd.set('caption', cap.trim());
-      const res = await uploadInternalTaskProofs(taskId, fd);
-      if (res.ok) {
-        toast.success(
-          snapshot.length === 1 ? 'Document uploaded' : 'Documents uploaded',
-        );
-      } else {
+      try {
+        const res = await uploadInternalTaskProofs(taskId, fd);
+        if (res.ok) {
+          toast.success(
+            snapshot.length === 1 ? 'Document uploaded' : 'Documents uploaded',
+          );
+          return;
+        }
         toast.error(res.error ?? 'Upload failed');
-        setFiles(snapshot);
-        setCaption(cap);
+      } catch {
+        // A rejected action — a dropped connection, or a body-size 413 from
+        // the host — would otherwise bubble to the route error boundary and
+        // replace the whole page with "Couldn't load this page".
+        toast.error('Upload failed. The file may be too large to send.');
       }
+      setFiles(snapshot);
+      setCaption(cap);
     });
   }
 

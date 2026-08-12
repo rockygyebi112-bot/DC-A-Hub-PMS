@@ -54,6 +54,27 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  experimental: {
+    serverActions: {
+      // Every upload surface (activity proofs, receipts, internal task
+      // documents) posts its files through a Server Action. Next caps a Server
+      // Action body at 1 MB by default, and enforces it in a stream transform
+      // that runs BEFORE the action body — so `validateUpload`'s 25 MB
+      // allowance never got a say, and any document over 1 MB died as a thrown
+      // ApiError(413). A throw is not an `{ ok: false }` result, so it bypassed
+      // the toast and escalated to the route error boundary: users saw
+      // "Couldn't load this page" with no hint that size was the problem.
+      //
+      // Keep this in step with MAX_PROOF_BYTES / MAX_RECEIPT_BYTES in
+      // src/lib/uploads.ts — tests/uploads/server-action-body-limit.test.ts
+      // fails if it drifts below them.
+      //
+      // NOTE: on Vercel the platform caps a serverless request body at 4.5 MB
+      // regardless of this setting, so files above that still need the
+      // direct-to-storage upload path rather than a Server Action.
+      bodySizeLimit: "25mb",
+    },
+  },
   // The AI-agents API route reads the Claude Code skill markdown at runtime
   // (`.claude/skills/**`). Next only bundles files it can statically see being
   // imported, so trace these in explicitly or they're missing in production.

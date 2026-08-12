@@ -48,10 +48,22 @@ export const ACTIVITY_ACTION_VERB: Record<ActivityAction, string> = {
   proof_mentioned: "mentioned you in",
 };
 
+/**
+ * Labels for notification types that are NOT activity_log actions. Kept apart
+ * from ACTIVITY_ACTION_LABEL so the ActivityAction union stays in sync with the
+ * activity_log.action DB enum, as the comment above promises. These come from
+ * `user_notifications.type` and only ever appear in the bell — the admin
+ * dashboard feed reads activity_log alone, so they need no VERB entry.
+ */
+export const NOTIFICATION_ONLY_LABEL: Record<string, string> = {
+  internal_task_assigned: "You were assigned a task",
+};
+
 /** Look up the headline label; fallback humanises unknown action codes. */
 export function actionLabel(action: string): string {
   return (
     ACTIVITY_ACTION_LABEL[action as ActivityAction] ??
+    NOTIFICATION_ONLY_LABEL[action] ??
     action.replaceAll("_", " ")
   );
 }

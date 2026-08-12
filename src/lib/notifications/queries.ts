@@ -4,9 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 
 export type NotificationEntry = {
   id: string;
+  /**
+   * Which table this came from. `activity_log` rows are project-scoped events;
+   * `user_notification` rows are per-recipient messages with no project (e.g.
+   * internal task assignment), so `project_id` is null and `project_name`
+   * carries a section name instead.
+   */
+  source: "activity_log" | "user_notification";
   action: string;
   created_at: string;
-  project_id: string;
+  project_id: string | null;
   project_name: string | null;
   activity_id: string | null;
   activity_name: string | null;
@@ -42,6 +49,52 @@ const PORTAL_VISIBLE_ACTIONS = new Set([
   "proof_commented",
   "proof_mentioned",
 ]);
+
+type UserNotificationRow = {
+  id: string;
+  type: string;
+  title: string;
+  subtitle: string | null;
+  href: string | null;
+  actor_name: string | null;
+  created_at: string;
+};
+
+/**
+ * Per-recipient notifications (migration 0049) mapped onto the shared entry
+ * shape: the task title renders as the headline suffix and the section name as
+ * the subtitle, so the bell needs no special-casing beyond the label lookup.
+ *
+ * Workspace-only by design — clients in the portal must never see internal work.
+ */
+async function fetchUserNotifications(
+  sb: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<NotificationEntry[]> {
+  const { data, error } = await sb
+    .from("user_notifications")
+    .select("id, type, title, subtitle, href, actor_name, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(FEED_LIMIT);
+  if (error) {
+    console.error("[notifications] user_notifications read failed", error);
+    return [];
+  }
+  return ((data ?? []) as UserNotificationRow[]).map((row) => ({
+    id: row.id,
+    source: "user_notification" as const,
+    action: row.type,
+    created_at: row.created_at,
+    project_id: null,
+    project_name: row.subtitle,
+    activity_id: null,
+    activity_name: row.title,
+    actor_name: row.actor_name,
+    href: row.href,
+    meta: null,
+  }));
+}
 
 export async function getNotificationFeed(
   hrefBase: "portal" | "workspace" = "portal",
@@ -85,6 +138,12 @@ export async function getNotificationFeed(
   ]);
 
   const lastReadAt = cursor?.last_read_at ?? null;
+  // Started here (not awaited) so it overlaps the activity_log hydration below,
+  // and so the early return further down can still await it.
+  const internalEntriesPromise: Promise<NotificationEntry[]> =
+    hrefBase === "workspace"
+      ? fetchUserNotifications(sb, user.id)
+      : Promise.resolve([]);
   // Comments are noisy — there's no point notifying users about events
   // they themselves triggered. We only suppress this for proof_commented
   // since the existing actions (proof_added, marked_done, started) tend
@@ -104,7 +163,11 @@ export async function getNotificationFeed(
     return true;
   });
   if (entries.length === 0) {
-    return { entries: [], unreadCount: 0, lastReadAt };
+    const internalOnly = (await internalEntriesPromise).slice(0, FEED_LIMIT);
+    const unread = lastReadAt
+      ? internalOnly.filter((e) => e.created_at > lastReadAt).length
+      : internalOnly.length;
+    return { entries: internalOnly, unreadCount: unread, lastReadAt };
   }
 
   const projectIds = Array.from(new Set(entries.map((row) => row.project_id).filter(Boolean)));
@@ -144,6 +207,7 @@ export async function getNotificationFeed(
     }
     return {
       id: row.id,
+      source: "activity_log" as const,
       action: row.action,
       created_at: row.created_at,
       project_id: projectId,
@@ -160,12 +224,16 @@ export async function getNotificationFeed(
     };
   });
 
+  const merged = [...formatted, ...(await internalEntriesPromise)]
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+    .slice(0, FEED_LIMIT);
+
   const unreadCount = lastReadAt
-    ? formatted.filter((e) => e.created_at > lastReadAt).length
-    : formatted.length;
+    ? merged.filter((e) => e.created_at > lastReadAt).length
+    : merged.length;
 
   return {
-    entries: formatted,
+    entries: merged,
     unreadCount,
     lastReadAt,
   };

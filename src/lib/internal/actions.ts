@@ -8,6 +8,7 @@ import { currentUserId } from '@/lib/auth/session';
 import { requireRole } from '@/lib/auth/require-role-server';
 import { dbErrorMessage } from '@/lib/db-errors';
 import { areaSchema, taskSchema } from './schemas';
+import { notifyInternalTaskAssigned } from './notifications';
 import type { ActionResult } from '@/lib/action-result';
 
 function formValue(fd: FormData, key: string) {
@@ -156,12 +157,29 @@ export async function createTask(
   if (extraRaw.length) {
     const parsedIds = idsSchema.safeParse(extraRaw);
     if (parsedIds.success && parsedIds.data.length) {
-      await sb
+      // `.select()` so we notify only the assignments the database confirmed.
+      // The upsert is one statement: a single bad id rolls all of them back,
+      // and emailing someone about an assignment that doesn't exist would
+      // point them at a task they can't read.
+      const { data: assigned, error: assignError } = await sb
         .from('internal_task_assignees')
         .upsert(
           parsedIds.data.map((uid) => ({ task_id: task.id, user_id: uid })),
           { onConflict: 'task_id,user_id', ignoreDuplicates: true },
-        );
+        )
+        .select('user_id');
+      if (assignError) {
+        console.error('[createTask] assignee upsert failed', assignError);
+      } else if (assigned?.length) {
+        // Belt-and-braces: the writer already guarantees it never throws.
+        await notifyInternalTaskAssigned({
+          taskId: task.id,
+          assigneeIds: assigned.map((r) => r.user_id),
+          actorUserId: userId,
+        }).catch((err) => {
+          console.error('[createTask] assignment notification failed', err);
+        });
+      }
     }
   }
 
@@ -279,13 +297,28 @@ export async function addAssignee(
   const auth = await requireRole(['admin', 'staff']);
   if (!auth.ok) return auth;
   const sb = await createClient();
-  const { error } = await sb
+  // `.select()` so an ignored duplicate comes back as an empty array: re-adding
+  // an existing assignee changes nothing and must not notify.
+  const { data: inserted, error } = await sb
     .from('internal_task_assignees')
     .upsert(
       { task_id: taskId, user_id: userId },
       { onConflict: 'task_id,user_id', ignoreDuplicates: true },
-    );
+    )
+    .select('user_id');
   if (error) return { ok: false, error: dbErrorMessage(error) };
+
+  if ((inserted?.length ?? 0) > 0) {
+    // Belt-and-braces: the writer already guarantees it never throws.
+    await notifyInternalTaskAssigned({
+      taskId,
+      assigneeIds: [userId],
+      actorUserId: auth.userId,
+    }).catch((err) => {
+      console.error('[addAssignee] assignment notification failed', err);
+    });
+  }
+
   revalidatePath(`/workspace/internal/${taskId}`);
   return { ok: true };
 }

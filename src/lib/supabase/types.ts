@@ -1390,6 +1390,53 @@ export type Database = {
         }
         Relationships: []
       }
+      user_notifications: {
+        Row: {
+          actor_name: string | null
+          actor_user_id: string | null
+          created_at: string
+          href: string | null
+          id: string
+          internal_task_id: string | null
+          subtitle: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          href?: string | null
+          id?: string
+          internal_task_id?: string | null
+          subtitle?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          href?: string | null
+          id?: string
+          internal_task_id?: string | null
+          subtitle?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notifications_internal_task_id_fkey"
+            columns: ["internal_task_id"]
+            isOneToOne: false
+            referencedRelation: "internal_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       project_activity_counts: {

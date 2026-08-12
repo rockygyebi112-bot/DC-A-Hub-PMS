@@ -19,7 +19,24 @@ import { priorityLabel } from "./task-labels";
  * Never throws. Assignment must succeed even when notification doesn't, so
  * callers `await` this with a `.catch()` and ignore the result.
  */
-export async function notifyInternalTaskAssigned({
+export async function notifyInternalTaskAssigned(params: {
+  taskId: string;
+  assigneeIds: string[];
+  actorUserId: string;
+}): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    return await deliver(params);
+  } catch (err) {
+    // The contract above is load-bearing: callers are entitled to skip their
+    // own .catch(). Misconfigured env (RESEND_FROM_EMAIL, service-role key)
+    // throws from deep inside the email/supabase clients.
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error("[notify-task-assigned] unexpected failure", err);
+    return { ok: false, reason };
+  }
+}
+
+async function deliver({
   taskId,
   assigneeIds,
   actorUserId,
@@ -38,7 +55,11 @@ export async function notifyInternalTaskAssigned({
     .select("id, title, due_date, priority, area_id")
     .eq("id", taskId)
     .single();
-  if (!task) return { ok: false, reason: "Task not found" };
+  if (!task) {
+    const reason = "Task not found";
+    console.error("[notify-task-assigned]", reason);
+    return { ok: false, reason };
+  }
 
   const [{ data: area }, { data: profiles }, { data: actor }] = await Promise.all([
     admin.from("internal_areas").select("name").eq("id", task.area_id).maybeSingle(),
@@ -53,11 +74,21 @@ export async function notifyInternalTaskAssigned({
       .maybeSingle(),
   ]);
 
+  if ((profiles?.length ?? 0) !== recipients.length) {
+    console.warn("[notify-task-assigned] some recipients have no profile row", {
+      recipients: recipients.length,
+      profiles: profiles?.length ?? 0,
+    });
+  }
+
   const sectionName = area?.name ?? null;
   const assignedBy = actor?.full_name ?? "A colleague";
   const href = `/workspace/internal/${taskId}`;
 
-  // Bell rows first — these must survive a Resend outage.
+  // Bell rows first — these must survive a Resend outage. This is a single
+  // multi-row insert, so it is atomic across recipients: one bad row (e.g. an
+  // assignee id with no matching profile) fails the whole statement and every
+  // recipient loses their bell row, so we must not report success if it fails.
   const { error: insertError } = await admin.from("user_notifications").insert(
     recipients.map((userId) => ({
       user_id: userId,
@@ -75,7 +106,9 @@ export async function notifyInternalTaskAssigned({
   }
 
   if (!process.env.RESEND_API_KEY) {
-    return { ok: false, reason: "RESEND_API_KEY is not configured" };
+    const reason = "RESEND_API_KEY is not configured";
+    console.error("[notify-task-assigned]", reason);
+    return { ok: false, reason };
   }
 
   // Formatted here, not in the template: the template is a dumb renderer, and
@@ -91,7 +124,9 @@ export async function notifyInternalTaskAssigned({
 
   const results = await Promise.all(
     (profiles ?? [])
-      .filter((profile) => Boolean(profile.email))
+      .filter((profile): profile is typeof profile & { email: string } =>
+        Boolean(profile.email),
+      )
       .map((profile) =>
         sendEmail({
           to: profile.email,
@@ -108,6 +143,11 @@ export async function notifyInternalTaskAssigned({
   );
 
   const failed = results.find((result) => !result.ok);
-  if (failed && !failed.ok) return { ok: false, reason: failed.error };
+  if (failed && !failed.ok) {
+    console.error("[notify-task-assigned] email send failed", failed.error);
+    return { ok: false, reason: failed.error };
+  }
+
+  if (insertError) return { ok: false, reason: insertError.message };
   return { ok: true };
 }

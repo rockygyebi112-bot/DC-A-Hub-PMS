@@ -1,9 +1,5 @@
 import { Ban, CheckCircle2, Circle, Timer, type LucideIcon } from "lucide-react";
-import {
-  TASK_PRIORITY_LABEL,
-  TASK_PRIORITY_ORDER,
-  type TaskPriority,
-} from "@/lib/internal/task-labels";
+import { TASK_PRIORITY_LABEL, type TaskPriority } from "@/lib/internal/task-labels";
 
 /**
  * Shared presentation metadata for internal tasks — one source of truth for the
@@ -37,7 +33,7 @@ export function asTaskStatus(value: string): TaskStatus {
 }
 
 export type { TaskPriority };
-export { TASK_PRIORITY_ORDER };
+export { TASK_PRIORITY_ORDER } from "@/lib/internal/task-labels";
 
 export const TASK_PRIORITY_META: Record<
   TaskPriority,

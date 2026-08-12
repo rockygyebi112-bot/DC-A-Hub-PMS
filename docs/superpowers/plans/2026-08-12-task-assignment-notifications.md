@@ -1188,10 +1188,29 @@ Clicking it navigates to `/workspace/internal/<taskId>`.
 
 - [ ] **Step 5: Verify the email**
 
-Check the Resend dashboard for a delivery tagged `category=task_assigned`. If
-`RESEND_API_KEY` is unset locally, confirm instead that the server log records
-the `RESEND_API_KEY is not configured` reason and that Step 3's bell row still
-exists — that is the intended degraded behaviour.
+Check the Resend dashboard for a delivery tagged `category=task_assigned`, and
+confirm the body shows a formatted due date ("20 Aug 2026", not "2026-08-20")
+and a capitalised priority ("High", not "high"). If `RESEND_API_KEY` is unset
+locally, confirm instead that the server log records the
+`[notify-task-assigned] RESEND_API_KEY is not configured` line and that Step 3's
+bell row still exists — that is the intended degraded behaviour.
+
+- [ ] **Step 5b: Verify a duplicate re-assignment notifies nothing**
+
+This is the one piece of logic with no automated coverage. Note the current row
+count:
+
+```bash
+npx supabase db query "select count(*) from user_notifications"
+```
+
+Then add the *same* user who is already assigned from Step 2 again (you may need
+to re-add them via a second browser tab, since the picker filters out current
+assignees). Re-run the count.
+
+Expected: unchanged. `ignoreDuplicates: true` makes the upsert a no-op, the
+`.select()` returns an empty array, and nothing is sent. If the count went up,
+the duplicate gate is broken.
 
 - [ ] **Step 6: Verify the portal is unaffected**
 

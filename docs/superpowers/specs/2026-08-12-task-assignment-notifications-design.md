@@ -220,13 +220,24 @@ rows do not render a bare "Project".
 | Failure | Behaviour |
 |---|---|
 | Resend down / `RESEND_API_KEY` unset | Bell row still written; assignment succeeds; reason returned and logged. |
-| `user_notifications` insert fails | Logged; email still attempted; assignment succeeds. |
+| `user_notifications` insert fails | Logged; email still attempted; `{ ok: false }` returned; assignment succeeds. |
 | Recipient profile has no email | That recipient is skipped for email, still gets the bell row. |
+| Recipient has no profile row at all | Warned; bell row written, no email. |
 | Task or area fetch fails | Notification abandoned, `{ ok: false }` returned; assignment succeeds. |
+| **The assignment write itself fails** | Logged at the call site; nothing notified. The assignee upserts use `.select()` so only database-confirmed assignments notify — a single bad id rolls the whole statement back, and emailing someone about an assignment that doesn't exist would point them at a task they cannot read. |
+| Misconfigured env (`RESEND_FROM_EMAIL`, service-role key) | Caught by the writer's top-level `try/catch`; logged; `{ ok: false }` returned. The writer genuinely never throws. |
 
-## Known trade-off
+## Known trade-offs
 
-Unassigning and reassigning the same person notifies them again, deduped only
-by Resend's 24-hour idempotency window on an identical key. This is intended:
-a genuine reassignment is worth a second notification. If it proves noisy, a
-unique index on `(user_id, internal_task_id, type)` would suppress repeats.
+**Re-assignment within 24 hours is bell-only.** The Resend idempotency key is
+`internal-task-assigned/${taskId}/${userId}` — identical across an
+unassign/reassign cycle. So if someone is removed and re-added inside Resend's
+24-hour window, they get a fresh bell row but no second email. That asymmetry
+is acceptable: the bell is the complete record, and the alternative (salting the
+key with a timestamp) would defeat the retry protection the key exists for. If a
+second email ever becomes genuinely necessary, the fix is a separate
+"re-assigned" notification type rather than weakening the key.
+
+**Adding someone who is already assigned notifies nothing at all.** Both call
+sites gate on `.select()` returning a row, and `ignoreDuplicates: true` means a
+duplicate upsert returns an empty array. Nothing changed, so nothing is sent.

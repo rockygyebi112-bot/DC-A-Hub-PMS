@@ -157,21 +157,29 @@ export async function createTask(
   if (extraRaw.length) {
     const parsedIds = idsSchema.safeParse(extraRaw);
     if (parsedIds.success && parsedIds.data.length) {
-      await sb
+      // `.select()` so we notify only the assignments the database confirmed.
+      // The upsert is one statement: a single bad id rolls all of them back,
+      // and emailing someone about an assignment that doesn't exist would
+      // point them at a task they can't read.
+      const { data: assigned, error: assignError } = await sb
         .from('internal_task_assignees')
         .upsert(
           parsedIds.data.map((uid) => ({ task_id: task.id, user_id: uid })),
           { onConflict: 'task_id,user_id', ignoreDuplicates: true },
-        );
-      // Notification failures must never fail the assignment — same pattern as
-      // notifyClientViewersActivityDone in src/lib/workspace/actions.ts.
-      await notifyInternalTaskAssigned({
-        taskId: task.id,
-        assigneeIds: parsedIds.data,
-        actorUserId: userId,
-      }).catch((err) => {
-        console.error('[createTask] assignment notification failed', err);
-      });
+        )
+        .select('user_id');
+      if (assignError) {
+        console.error('[createTask] assignee upsert failed', assignError);
+      } else if (assigned?.length) {
+        // Belt-and-braces: the writer already guarantees it never throws.
+        await notifyInternalTaskAssigned({
+          taskId: task.id,
+          assigneeIds: assigned.map((r) => r.user_id),
+          actorUserId: userId,
+        }).catch((err) => {
+          console.error('[createTask] assignment notification failed', err);
+        });
+      }
     }
   }
 
@@ -300,13 +308,12 @@ export async function addAssignee(
     .select('user_id');
   if (error) return { ok: false, error: dbErrorMessage(error) };
 
-  const actorUserId = await currentUserId();
-  if (actorUserId && (inserted?.length ?? 0) > 0) {
-    // Notification failures must never fail the assignment.
+  if ((inserted?.length ?? 0) > 0) {
+    // Belt-and-braces: the writer already guarantees it never throws.
     await notifyInternalTaskAssigned({
       taskId,
       assigneeIds: [userId],
-      actorUserId,
+      actorUserId: auth.userId,
     }).catch((err) => {
       console.error('[addAssignee] assignment notification failed', err);
     });

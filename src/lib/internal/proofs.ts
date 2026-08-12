@@ -10,6 +10,7 @@ import {
   validateUpload,
   sanitizeFileName,
   checkUploadContent,
+  withDownloadName,
 } from '@/lib/uploads';
 import { notifyInternalTaskMentioned } from '@/lib/internal/notifications';
 import type { ActionResult } from '@/lib/action-result';
@@ -64,6 +65,8 @@ export async function uploadInternalTaskProofs(
 
   const caption = note(formData, 'caption') || null;
   for (const file of files) {
+    // Sanitised for the storage key; the row keeps the author's own spelling
+    // so the app shows "DARE Work Enabling Data.pdf", not "DARE_Work_...".
     const safeName = sanitizeFileName(file.name);
     const path = `internal/tasks/${taskId}/${crypto.randomUUID()}-${safeName}`;
     const { error: uploadError } = await sb.storage
@@ -76,7 +79,7 @@ export async function uploadInternalTaskProofs(
     const { error: insertError } = await sb.from('internal_task_proofs').insert({
       task_id: taskId,
       file_path: path,
-      file_name: safeName,
+      file_name: file.name,
       mime_type: file.type || null,
       size_bytes: file.size,
       caption,
@@ -121,9 +124,14 @@ export async function deleteInternalTaskProof(
 /**
  * Mint a short-lived (5 min) signed URL for an internal document. Staff-only,
  * so no client-style password/audit gate — RLS already restricts the read.
+ *
+ * `mode: 'download'` asks storage to serve the file as an attachment named
+ * after the original upload. 'view' is left alone so PDFs and images still
+ * preview in a tab rather than landing in the downloads folder.
  */
 export async function requestInternalProofAccess(
   proofId: string,
+  mode: 'view' | 'download' = 'view',
 ): Promise<ActionResult<{ url: string; fileName: string }>> {
   const auth = await requireRole([...STAFF]);
   if (!auth.ok) return auth;
@@ -142,10 +150,11 @@ export async function requestInternalProofAccess(
   if (!signed?.signedUrl) {
     return { ok: false, error: 'Could not resolve document URL' };
   }
-  return {
-    ok: true,
-    data: { url: signed.signedUrl, fileName: proof.file_name },
-  };
+  const url =
+    mode === 'download'
+      ? withDownloadName(signed.signedUrl, proof.file_name)
+      : signed.signedUrl;
+  return { ok: true, data: { url, fileName: proof.file_name } };
 }
 
 // ---------- task-level comments ----------

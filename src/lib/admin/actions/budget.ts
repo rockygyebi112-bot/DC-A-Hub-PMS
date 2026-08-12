@@ -148,7 +148,8 @@ async function uploadReceipt(
       upsert: false,
     });
   if (error) throw error;
-  return { path, name: safeName };
+  // Sanitised name is in the path; the caller stores the original for display.
+  return { path, name: file.fileName };
 }
 
 async function deleteReceipt(path: string | null | undefined) {

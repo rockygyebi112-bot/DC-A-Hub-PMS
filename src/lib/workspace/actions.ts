@@ -819,7 +819,9 @@ export async function uploadProofs(activityId: string, formData: FormData): Prom
       activity_id: activityId,
       kind: "file",
       file_path: path,
-      file_name: safeName,
+      // Sanitised name goes in the path above; the row keeps the original so
+      // the UI and the download both show what the uploader actually called it.
+      file_name: file.name,
       mime_type: file.type || null,
       size_bytes: file.size,
       caption: formValue(formData, "caption") || null,

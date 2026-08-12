@@ -133,7 +133,34 @@ export function checkUnsafeFileName(name: string): string | null {
   return null;
 }
 
-/** Strip path separators and other risky characters from a user-supplied name. */
+/**
+ * Ask Supabase storage to serve an object under a given filename.
+ *
+ * Storage reads a `download` query parameter and answers with
+ * `content-disposition: attachment; filename=...`. Without it the browser
+ * names the saved file after the last path segment, which is the sanitised
+ * name behind its uuid prefix — "33b91fce-…-DARE_Work_Enabling_Data".
+ *
+ * Built here rather than via supabase-js's `download` option because that
+ * option runs `encodeURI` over the whole URL, which leaves `&` and `#`
+ * unescaped: a file called "Q1 & Q2.pdf" would cut the name short at the
+ * ampersand and corrupt the token before it.
+ */
+export function withDownloadName(signedUrl: string, fileName: string): string {
+  const name = fileName.trim();
+  if (!name) return signedUrl;
+  const separator = signedUrl.includes("?") ? "&" : "?";
+  return `${signedUrl}${separator}download=${encodeURIComponent(name)}`;
+}
+
+/**
+ * Strip path separators and other risky characters from a user-supplied name.
+ *
+ * This is for STORAGE PATHS only. The display name stored alongside it keeps
+ * the author's original spelling — `checkUnsafeFileName` has already rejected
+ * the genuinely dangerous shapes, and mangling "DARE Work Enabling Data.pdf"
+ * into "DARE_Work_Enabling_Data.pdf" on screen serves nobody.
+ */
 export function sanitizeFileName(name: string): string {
   return (
     name

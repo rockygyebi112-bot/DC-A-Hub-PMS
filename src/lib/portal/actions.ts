@@ -319,7 +319,8 @@ export async function portalUploadActivityDocuments(
       activity_id: activityId,
       kind: "file",
       file_path: path,
-      file_name: safeName,
+      // Path is sanitised; the row keeps the client's original filename.
+      file_name: file.name,
       mime_type: file.type || null,
       size_bytes: file.size,
       uploaded_by: auth.userId,

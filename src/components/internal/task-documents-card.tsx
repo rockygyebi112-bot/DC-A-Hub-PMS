@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react';
 import {
+  Download,
   ExternalLink,
   Loader2,
   MessageSquare,
@@ -194,6 +195,7 @@ function DocumentRow({
             </span>
             <div className="flex shrink-0 items-center gap-1">
               <OpenButton proofId={proof.id} />
+              <DownloadButton proofId={proof.id} />
             </div>
           </div>
 
@@ -251,6 +253,47 @@ function OpenButton({ proofId }: { proofId: string }) {
         <ExternalLink className="size-3.5" />
       )}
       Open
+    </button>
+  );
+}
+
+/**
+ * Save the document under the name it was uploaded with.
+ *
+ * Uses a synthetic anchor rather than `window.open`: the URL carries an
+ * attachment disposition, so a popup tab would open only to close itself, and
+ * popup blockers reject it often enough that `OpenButton` has to warn about it.
+ */
+function DownloadButton({ proofId }: { proofId: string }) {
+  const [pending, start] = useTransition();
+  function save() {
+    start(async () => {
+      const res = await requestInternalProofAccess(proofId, 'download');
+      if (!res.ok || !res.data?.url) {
+        toast.error(res.ok ? 'Could not download document' : res.error);
+        return;
+      }
+      const link = document.createElement('a');
+      link.href = res.data.url;
+      link.download = res.data.fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    });
+  }
+  return (
+    <button
+      type="button"
+      onClick={save}
+      disabled={pending}
+      className="inline-flex h-7 items-center gap-1.5 rounded-md border bg-background px-2.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50"
+    >
+      {pending ? (
+        <Loader2 className="size-3.5 animate-spin" />
+      ) : (
+        <Download className="size-3.5" />
+      )}
+      Download
     </button>
   );
 }

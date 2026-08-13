@@ -51,32 +51,6 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* SRSF Brand Colors - Green */
-  --color-srsf-green-50: #f0fbe8;
-  --color-srsf-green-100: #ddf5cc;
-  --color-srsf-green-200: #bbeb99;
-  --color-srsf-green-300: #8fdb5c;
-  --color-srsf-green-400: #6bcc33;
-  --color-srsf-green-500: #5BBF3A;
-  --color-srsf-green-600: #3d9922;
-  --color-srsf-green-700: #2f7319;
-  --color-srsf-green-800: #285c18;
-  --color-srsf-green-900: #244d19;
-  --color-srsf-green-950: #0f2b08;
-
-  /* SRSF Brand Colors - Purple */
-  --color-srsf-purple-50: #f5f1f9;
-  --color-srsf-purple-100: #ebe4f3;
-  --color-srsf-purple-200: #d4c5e5;
-  --color-srsf-purple-300: #b89cd3;
-  --color-srsf-purple-400: #9a6fbd;
-  --color-srsf-purple-500: #7f4fa6;
-  --color-srsf-purple-600: #6B2D7B;
-  --color-srsf-purple-700: #5a2b72;
-  --color-srsf-purple-800: #4b265e;
-  --color-srsf-purple-900: #3f224e;
-  --color-srsf-purple-950: #250e32;
-
   /* DC&A Hub Brand Colors */
   --color-dca-navy-50:  #eef2fb;
   --color-dca-navy-100: #d3dcef;
@@ -122,10 +96,18 @@
   --secondary: hsl(225 80% 16%); /* deep navy #031B4E */
   --secondary-foreground: hsl(0 0% 100%);
   --muted: hsl(214 25% 94%);
-  --muted-foreground: hsl(220 12% 48%);
+  /* 48% failed WCAG 1.4.3 at 4.26:1 against --background. 44% is the lightest
+     value that clears 4.5:1 on all three surfaces this text sits on:
+     background (4.92), card (5.28) and muted (4.58). */
+  --muted-foreground: hsl(220 12% 44%);
   --accent: hsl(221 83% 96%);
   --accent-foreground: hsl(221 83% 38%);
-  --destructive: hsl(0 78% 56%);
+  /* `destructive` is rendered as TEXT on a tint of itself (bg-destructive/10,
+     see the button and badge variants), never as a solid fill. Contrast must
+     therefore be measured against the composited tint, not the bare card:
+     the original 56% managed only 4.03:1 that way. 40% clears AA on every
+     surface/opacity pairing the variants actually produce. */
+  --destructive: hsl(0 78% 40%);
   --border: hsl(220 15% 91%);
   --input: hsl(220 15% 91%);
   --ring: hsl(221 83% 53%);
@@ -174,6 +156,40 @@
   --status-at-risk:    hsl(38 92% 50%);   /* amber */
   --status-delayed:    hsl(0 78% 56%);    /* red */
   --status-not-started: hsl(220 13% 72%); /* gray */
+
+  /* Semantic pill trios (surface / text / border).
+     One token set per meaning rather than per colour, so a pill is chosen by
+     what it says ("this is healthy") and not by a hue. Text values are picked
+     to clear 4.5:1 against their own surface (WCAG 1.4.3). */
+  --pill-success-bg:     hsl(160 65% 94%);
+  --pill-success-fg:     hsl(160 70% 22%);
+  --pill-success-border: hsl(160 55% 78%);
+  --pill-success-dot:    hsl(160 64% 38%);
+
+  --pill-warning-bg:     hsl(38 92% 93%);
+  --pill-warning-fg:     hsl(28 85% 28%);
+  --pill-warning-border: hsl(38 80% 76%);
+  --pill-warning-dot:    hsl(38 92% 45%);
+
+  --pill-danger-bg:      hsl(0 86% 96%);
+  --pill-danger-fg:      hsl(0 70% 36%);
+  --pill-danger-border:  hsl(0 70% 85%);
+  --pill-danger-dot:     hsl(0 78% 52%);
+
+  --pill-info-bg:        hsl(221 90% 96%);
+  --pill-info-fg:        hsl(221 83% 34%);
+  --pill-info-border:    hsl(221 80% 84%);
+  --pill-info-dot:       hsl(221 83% 53%);
+
+  --pill-accent-bg:      hsl(192 85% 94%);
+  --pill-accent-fg:      hsl(196 90% 25%);
+  --pill-accent-border:  hsl(192 70% 78%);
+  --pill-accent-dot:     hsl(192 88% 40%);
+
+  --pill-neutral-bg:     hsl(220 16% 95%);
+  --pill-neutral-fg:     hsl(220 15% 32%);
+  --pill-neutral-border: hsl(220 14% 85%);
+  --pill-neutral-dot:    hsl(220 13% 60%);
 }
 
 .dark {
@@ -188,10 +204,15 @@
   --secondary: hsl(225 80% 16%);
   --secondary-foreground: hsl(0 0% 100%);
   --muted: hsl(224 11% 20%);
-  --muted-foreground: hsl(215 10% 56%);
+  /* 56% cleared card/background but only managed 3.93:1 on the --muted
+     surface. 61% clears 4.5:1 on all three. */
+  --muted-foreground: hsl(215 10% 61%);
   --accent: hsl(221 70% 22%);
   --accent-foreground: hsl(217 91% 78%);
-  --destructive: hsl(0 72% 60%);
+  /* Dark uses a heavier bg-destructive/20 tint, so it needs to go lighter
+     than light mode goes dark. 60% measured 4.34:1 against the composite;
+     76% clears AA on card (4.87) and background (5.49). */
+  --destructive: hsl(0 72% 76%);
   --border: hsl(224 10% 22%);
   --input: hsl(224 10% 22%);
   --ring: hsl(217 91% 60%);
@@ -228,6 +249,38 @@
   --status-at-risk:     hsl(38 92% 55%);
   --status-delayed:     hsl(0 78% 60%);
   --status-not-started: hsl(220 13% 50%);
+
+  /* Semantic pill trios (dark). Surfaces are low-chroma so they sit on the
+     dark card without glowing; text is lifted well past 4.5:1 against them. */
+  --pill-success-bg:     hsl(160 45% 16%);
+  --pill-success-fg:     hsl(160 60% 76%);
+  --pill-success-border: hsl(160 40% 28%);
+  --pill-success-dot:    hsl(160 64% 48%);
+
+  --pill-warning-bg:     hsl(35 45% 16%);
+  --pill-warning-fg:     hsl(38 90% 72%);
+  --pill-warning-border: hsl(35 40% 30%);
+  --pill-warning-dot:    hsl(38 92% 55%);
+
+  --pill-danger-bg:      hsl(0 40% 17%);
+  --pill-danger-fg:      hsl(0 85% 80%);
+  --pill-danger-border:  hsl(0 35% 32%);
+  --pill-danger-dot:     hsl(0 78% 60%);
+
+  --pill-info-bg:        hsl(221 45% 19%);
+  --pill-info-fg:        hsl(217 90% 78%);
+  --pill-info-border:    hsl(221 40% 32%);
+  --pill-info-dot:       hsl(217 91% 60%);
+
+  --pill-accent-bg:      hsl(196 45% 16%);
+  --pill-accent-fg:      hsl(192 80% 72%);
+  --pill-accent-border:  hsl(196 40% 28%);
+  --pill-accent-dot:     hsl(192 85% 55%);
+
+  --pill-neutral-bg:     hsl(224 12% 22%);
+  --pill-neutral-fg:     hsl(215 15% 76%);
+  --pill-neutral-border: hsl(224 10% 32%);
+  --pill-neutral-dot:    hsl(220 10% 55%);
 }
 
 @layer base {
@@ -430,7 +483,7 @@
     border-radius: 9999px;
     flex-shrink: 0;
   }
-  .status-dot-active    { background: var(--color-srsf-green-500); box-shadow: 0 0 0 3px hsl(104 53% 49% / 0.18); }
+  .status-dot-active    { background: var(--pill-success-dot); box-shadow: 0 0 0 3px hsl(160 64% 42% / 0.18); }
   .status-dot-paused    { background: hsl(38 92% 50%); }
   .status-dot-planning  { background: hsl(220 13% 60%); }
   .status-dot-completed { background: hsl(210 60% 50%); }
@@ -544,11 +597,15 @@
     justify-content: center;
     flex-shrink: 0;
   }
-  .kpi-tile-blue   { background: var(--color-dca-blue-50);  color: var(--color-dca-blue-600); }
-  .kpi-tile-green  { background: hsl(160 65% 94%);          color: hsl(160 64% 32%); }
-  .kpi-tile-purple { background: hsl(265 80% 96%);          color: hsl(265 60% 48%); }
-  .kpi-tile-amber  { background: hsl(38 92% 94%);           color: hsl(38 92% 38%); }
-  .kpi-tile-cyan   { background: var(--color-dca-cyan-50);  color: var(--color-dca-cyan-600); }
+  /* Same story as the delivery pills: these were light-only literals, so the
+     tiles stayed pale on the dark dashboard. Routed through the semantic
+     trios. `purple` is kept as a key for callers but now resolves to DC&A
+     navy — there is no purple in the brand. */
+  .kpi-tile-blue   { background: var(--pill-info-bg);    color: var(--pill-info-fg); }
+  .kpi-tile-green  { background: var(--pill-success-bg); color: var(--pill-success-fg); }
+  .kpi-tile-purple { background: var(--pill-neutral-bg); color: var(--pill-neutral-fg); }
+  .kpi-tile-amber  { background: var(--pill-warning-bg); color: var(--pill-warning-fg); }
+  .kpi-tile-cyan   { background: var(--pill-accent-bg);  color: var(--pill-accent-fg); }
 
   /* Status pills (delivery semantics) */
   .delivery-pill {
@@ -563,10 +620,13 @@
     border: 1px solid transparent;
     white-space: nowrap;
   }
-  .delivery-pill-on-track    { background: hsl(160 65% 94%); color: hsl(160 64% 28%); border-color: hsl(160 65% 82%); }
-  .delivery-pill-at-risk     { background: hsl(38 92% 94%);  color: hsl(38 92% 32%);  border-color: hsl(38 92% 80%); }
-  .delivery-pill-delayed     { background: hsl(0 78% 95%);   color: hsl(0 78% 38%);   border-color: hsl(0 78% 84%); }
-  .delivery-pill-not-started { background: hsl(220 14% 94%); color: hsl(220 12% 38%); border-color: hsl(220 14% 86%); }
+  /* Delivery pills share the semantic --pill-* trios, so they pick up dark
+     mode for free. Previously these were light-only literals and turned into
+     near-white blocks on the dark dashboard. */
+  .delivery-pill-on-track    { background: var(--pill-success-bg); color: var(--pill-success-fg); border-color: var(--pill-success-border); }
+  .delivery-pill-at-risk     { background: var(--pill-warning-bg); color: var(--pill-warning-fg); border-color: var(--pill-warning-border); }
+  .delivery-pill-delayed     { background: var(--pill-danger-bg);  color: var(--pill-danger-fg);  border-color: var(--pill-danger-border); }
+  .delivery-pill-not-started { background: var(--pill-neutral-bg); color: var(--pill-neutral-fg); border-color: var(--pill-neutral-border); }
 
   .status-dot-on-track    { background: var(--status-on-track); box-shadow: 0 0 0 3px hsl(160 64% 42% / 0.18); }
   .status-dot-at-risk     { background: var(--status-at-risk);  box-shadow: 0 0 0 3px hsl(38 92% 50% / 0.18); }

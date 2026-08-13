@@ -33,10 +33,10 @@ function relative(iso: string) {
 // registered color scale (no raw hsl literals) means the palette tracks any
 // future brand-token change automatically.
 const AVATAR_PALETTE = [
-  "bg-dca-blue-100 text-dca-blue-700",
-  "bg-srsf-green-100 text-srsf-green-700",
-  "bg-srsf-purple-100 text-srsf-purple-700",
-  "bg-dca-cyan-50 text-dca-cyan-600",
+  "bg-dca-blue-100 text-dca-blue-800",
+  "bg-dca-cyan-100 text-dca-cyan-600",
+  "bg-dca-navy-100 text-dca-navy-700",
+  "bg-dca-blue-50 text-dca-blue-700",
 ];
 
 function paletteFor(name: string) {

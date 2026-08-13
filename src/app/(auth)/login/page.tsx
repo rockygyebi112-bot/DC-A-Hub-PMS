@@ -109,7 +109,6 @@ function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            placeholder="you@example.com"
             autoComplete="email"
             className="h-10"
           />

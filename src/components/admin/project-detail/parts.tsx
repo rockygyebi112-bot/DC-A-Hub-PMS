@@ -139,7 +139,7 @@ export function NextMilestonesCard({
   now: number;
 }) {
   return (
-    <section className="rounded-[14px] border bg-card shadow-card">
+    <section className="rounded-xl border bg-card shadow-card">
       <header className="flex items-center justify-between border-b px-5 py-3.5">
         <h2 className="font-heading text-sm font-semibold tracking-tight">Next milestones</h2>
         <Link href={viewAllHref} className="text-xs font-medium text-primary hover:underline">

@@ -63,7 +63,9 @@ export function SkeletonCard({
       role="status"
       aria-label="Loading"
       className={cn(
-        "rounded-2xl border bg-card p-5 shadow-card",
+        // Matches <Card>'s rounded-xl so the skeleton and the real thing are
+        // the same shape.
+        "rounded-xl border bg-card p-5 shadow-card",
         className
       )}
     >

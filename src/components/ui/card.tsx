@@ -7,7 +7,9 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "rounded-xl border bg-card text-card-foreground shadow-sm",
+        // shadow-card (not Tailwind's shadow-sm) so every card in the app
+        // draws its elevation from the same --card-shadow token.
+        "rounded-xl border bg-card text-card-foreground shadow-card",
         className,
       )}
       {...props}

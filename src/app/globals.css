@@ -138,9 +138,14 @@
   --sidebar-width: 240px;
   --topbar-height: 58px;
 
-  /* elevation */
-  --card-shadow: none;
-  --card-shadow-hover: none;
+  /* Elevation. Three steps only: resting cards, hover, and true overlays.
+     Both resting values used to be `none`, which made .shadow-card and
+     .shadow-card-hover no-ops in the ~14 files that applied them while the
+     base <Card> reached for Tailwind's shadow-sm instead — two elevation
+     systems, one of them inert. These are deliberately shallow; depth on a
+     dense admin UI reads as noise. */
+  --card-shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
+  --card-shadow-hover: 0 2px 4px rgb(16 24 40 / 0.05), 0 4px 8px rgb(16 24 40 / 0.07);
   --card-shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.10), 0 4px 8px rgba(0, 0, 0, 0.06);
   --topbar-blur: saturate(180%) blur(16px);
 
@@ -234,9 +239,11 @@
   --sidebar-border: hsl(225 35% 22%);
   --sidebar-ring: hsl(217 91% 60%);
 
-  /* elevation (dark) */
-  --card-shadow: none;
-  --card-shadow-hover: none;
+  /* Elevation (dark). Shadows barely read against a dark ground, so the
+     resting steps stay near-invisible and the border carries the separation
+     instead; only true overlays get real depth. */
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.30);
+  --card-shadow-hover: 0 2px 6px rgb(0 0 0 / 0.40);
   --card-shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.35);
 
   /* status colors (dark) */
@@ -292,6 +299,7 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
   }
 
   /* Display typography */
@@ -302,11 +310,6 @@
 
   code, kbd, samp, pre, .font-mono {
     font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
-  }
-
-  /* Smooth scrolling for the entire page */
-  html {
-    scroll-behavior: smooth;
   }
 
   /* Consistent focus states */

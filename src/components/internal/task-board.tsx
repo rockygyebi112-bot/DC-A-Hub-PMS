@@ -64,6 +64,7 @@ export function TaskBoard({
     const list = bySection.get(section.id) ?? [];
     return {
       id: section.id,
+      label: section.name,
       header: (
         <SectionHeading
           id={section.id}
@@ -138,6 +139,7 @@ function TaskListView({
     const list = bySection.get(section.id) ?? [];
     return {
       id: section.id,
+      label: section.name,
       header: (
         <SectionHeading
           id={section.id}

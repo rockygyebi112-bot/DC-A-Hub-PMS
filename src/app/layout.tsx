@@ -5,17 +5,12 @@ import { Providers } from "./providers";
 import { themeScript } from "@/lib/theme/script";
 import "./globals.css";
 
-// Inter — the de-facto enterprise SaaS UI font (Linear, Stripe, Notion).
-// Same family for body and headings, loaded ONCE; both CSS variables point
-// at the single instance. Previously we instantiated `Inter()` twice which
-// downloaded two overlapping weight sets and shipped duplicate WOFF2 files.
+// DM Sans carries both body copy and headings, loaded once. `--font-heading`
+// in globals.css aliases `--font-sans` so the UI reads as a single typeface.
 const dmSans = DM_Sans({
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700", "800"],
-  // Multiple CSS variables resolving to the same font instance is supported
-  // natively by next/font. `--font-sans` powers body copy, `--font-heading`
-  // is referenced by the `.font-heading` utility in globals.css.
   variable: "--font-sans",
 });
 
@@ -27,7 +22,7 @@ const syne = Syne({
 });
 
 const dmMono = DM_Mono({
-  variable: "--font-geist-mono",
+  variable: "--font-dm-mono",
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500"],

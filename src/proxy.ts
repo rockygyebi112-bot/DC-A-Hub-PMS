@@ -34,7 +34,6 @@ const PUBLIC_PREFIXES = [
   "/manifest.json",
   "/icons",
   "/programs",
-  "/srsf-logo.png",
 ];
 
 const PROTECTED_PREFIXES = ["/admin", "/workspace", "/portal", "/account"];
@@ -85,7 +84,7 @@ export const config = {
       //   - Static files in /public (logos, manifest, icons, programs)
       //   - Anything ending in a static asset extension
       source:
-        "/((?!api|_next|auth|login|forgot-password|reset-password|accept-invite|favicon\\.ico|logo\\.png|srsf-logo\\.png|manifest\\.json|icons|programs|.*\\.(?:png|jpg|jpeg|gif|svg|webp|avif|ico|json|xml|txt|woff|woff2|ttf|otf|map)).*)",
+        "/((?!api|_next|auth|login|forgot-password|reset-password|accept-invite|favicon\\.ico|logo\\.png|manifest\\.json|icons|programs|.*\\.(?:png|jpg|jpeg|gif|svg|webp|avif|ico|json|xml|txt|woff|woff2|ttf|otf|map)).*)",
       // Skip RSC prefetch requests entirely. Defence-in-depth is preserved by
       // the layout-level getCurrentProfile() checks on actual navigation.
       missing: [

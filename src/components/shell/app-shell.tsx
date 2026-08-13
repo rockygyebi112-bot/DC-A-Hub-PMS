@@ -77,14 +77,9 @@ export function AppShell({
     // overflow-x-auto container.
     <BreadcrumbProvider seed={breadcrumbSeed}>
     <div className="flex min-h-screen overflow-x-clip bg-background text-foreground">
-      {/* Keyboard skip link: hidden until focused, then jumps past the sidebar
-          and topbar straight to the main content. */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:shadow-md focus:ring-2 focus:ring-primary"
-      >
-        Skip to main content
-      </a>
+      {/* The skip link lives in the root layout (`.skip-to-content`) and already
+          targets `#main-content` below. A second one here made keyboard users
+          tab through two identical links before reaching the nav. */}
       {/* Global route-change progress bar (top of viewport). */}
       <Suspense fallback={null}>
         <NavProgress />

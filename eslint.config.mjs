@@ -45,6 +45,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Per-run .docx build scratch written by the document skills. These are
+    // gitignored throwaways, but eslint still walked them and reported
+    // errors that had nothing to do with the app.
+    "proposals/**",
+    "evaluations/**",
   ]),
   {
     files: ["src/components/**/*.{ts,tsx}"],

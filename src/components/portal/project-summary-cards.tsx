@@ -1,6 +1,7 @@
 import { Activity, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { completionPercent } from "@/lib/format/progress";
 
 /* -------------------- Card shell -------------------- */
 
@@ -95,7 +96,7 @@ function ActivityStatusRow({
       : tone === "amber"
         ? "bg-amber-500"
         : "bg-emerald-500";
-  const pct = total === 0 ? 0 : Math.round((value / total) * 100);
+  const pct = completionPercent(value, total);
   return (
     <div className="flex items-center gap-2">
       <span className={cn("size-1.5 shrink-0 rounded-full", dot)} aria-hidden />

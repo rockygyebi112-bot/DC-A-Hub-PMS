@@ -16,12 +16,10 @@ import {
 import { cn } from "@/lib/utils";
 import { DaysBadge } from "./badges";
 import type { WorkspaceViewProps } from "./types";
+import { completionPercent } from "@/lib/format/progress";
 
 export function SnapshotStrip(props: WorkspaceViewProps) {
-  const percent =
-    props.totalCount === 0
-      ? 0
-      : Math.round((props.doneCount / props.totalCount) * 100);
+  const percent = completionPercent(props.doneCount, props.totalCount);
   const allActivities = props.phases.flatMap((p) => p.activities);
   const total = allActivities.length;
   const doneCount = allActivities.filter((a) => a.status === "done").length;
@@ -31,9 +29,9 @@ export function SnapshotStrip(props: WorkspaceViewProps) {
   const notStartedCount = allActivities.filter(
     (a) => a.status === "not_started",
   ).length;
-  const pct = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100));
+  const pct = (n: number) => completionPercent(n, total);
   const budgetPercent = props.budget.hasBudget && props.budget.total > 0
-    ? Math.min(100, Math.round((props.budget.spent / props.budget.total) * 100))
+    ? completionPercent(props.budget.spent, props.budget.total)
     : 0;
 
   return (

@@ -6,6 +6,7 @@ import { deleteBudgetCategory } from "@/lib/admin/actions/budget";
 import type { BudgetCategory } from "@/lib/admin/queries/budget";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "./formatters";
+import { spendPercent } from "@/lib/format/progress";
 
 export function CategoryTable({
   projectId,
@@ -36,8 +37,7 @@ export function CategoryTable({
           const allocated = cat.allocated_amount;
           const spent = cat.spent_amount;
           const remaining = allocated - spent;
-          const percent =
-            allocated > 0 ? Math.min(999, Math.round((spent / allocated) * 100)) : 0;
+          const percent = spendPercent(spent, allocated);
           const over = allocated > 0 && spent > allocated;
           const barColor = over
             ? "bg-red-500"
@@ -142,8 +142,7 @@ export function CategoryTable({
             const allocated = cat.allocated_amount;
             const spent = cat.spent_amount;
             const remaining = allocated - spent;
-            const percent =
-              allocated > 0 ? Math.min(999, Math.round((spent / allocated) * 100)) : 0;
+            const percent = spendPercent(spent, allocated);
             const over = allocated > 0 && spent > allocated;
             const barColor = over
               ? "bg-red-500"

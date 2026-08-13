@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { throwIfError } from "@/lib/supabase/errors";
+import { spendPercent } from "@/lib/format/progress";
 
 export type ProjectBudget = {
   id: string;
@@ -228,7 +229,7 @@ export async function getBudgetSummary(
 
   const total = toNumber(budget?.total_amount ?? 0);
   const remaining = total - spent;
-  const percent = total > 0 ? Math.round((spent / total) * 100) : 0;
+  const percent = spendPercent(spent, total);
 
   return {
     hasBudget: !!budget,

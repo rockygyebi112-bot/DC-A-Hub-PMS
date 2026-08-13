@@ -15,6 +15,7 @@ import { getProject } from "@/lib/admin/queries";
 import { SetBreadcrumbLabels } from "@/components/shell/breadcrumb-context";
 import { getBudgetSummary } from "@/lib/admin/queries/budget";
 import { listProjectPhases, listProjectTeam } from "@/lib/workspace/queries";
+import { completionPercent } from "@/lib/format/progress";
 
 export default async function ProjectOverviewPage({
   params,
@@ -43,10 +44,7 @@ export default async function ProjectOverviewPage({
   );
   const clientTotal = clientActivities.length;
   const clientDone = clientActivities.filter((a) => a.status === "done").length;
-  const percent =
-    totalActivities === 0
-      ? 0
-      : Math.round((doneActivities / totalActivities) * 100);
+  const percent = completionPercent(doneActivities, totalActivities);
 
   // Health derivation
   const today = new Date();

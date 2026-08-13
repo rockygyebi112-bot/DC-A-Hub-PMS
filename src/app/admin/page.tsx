@@ -29,6 +29,7 @@ import {
 import { getAdminCounts } from "@/lib/admin/queries";
 import { createClient } from "@/lib/supabase/server";
 import { actionVerb } from "@/lib/notifications/labels";
+import { completionPercent } from "@/lib/format/progress";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -126,9 +127,8 @@ function classifyHealth(
 }
 
 function activityCompletion(activities: ActivityRow[]) {
-  if (activities.length === 0) return 0;
   const done = activities.filter((a) => a.status === "done").length;
-  return Math.round((done / activities.length) * 100);
+  return completionPercent(done, activities.length);
 }
 
 // ---------------------------------------------------------------------------

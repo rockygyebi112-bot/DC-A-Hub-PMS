@@ -1,5 +1,6 @@
 import type { WorkspacePhase } from "@/lib/workspace/queries";
 import { cn } from "@/lib/utils";
+import { completionPercent } from "@/lib/format/progress";
 
 type PhaseStatus = "completed" | "in_progress" | "not_started";
 
@@ -40,7 +41,7 @@ export function WorkplanProgressTable({
     const status = inProgress > 0 && done < total
       ? "in_progress"
       : derivePhaseStatus(done, total);
-    const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+    const percent = completionPercent(done, total);
     return { phase, total, done, status, percent };
   });
 

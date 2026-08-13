@@ -10,6 +10,7 @@ import {
   listProjectTeam,
   listWorkspaceProjects,
 } from "@/lib/workspace/queries";
+import { completionPercent } from "@/lib/format/progress";
 
 export type PortalManager = {
   user_id: string;
@@ -44,10 +45,10 @@ export async function getPortalProjectDetail(projectId: string) {
     project,
     phases,
     manager,
-    percentComplete:
-      project.clientTotalCount === 0
-        ? 0
-        : Math.round((project.clientDoneCount / project.clientTotalCount) * 100),
+    percentComplete: completionPercent(
+      project.clientDoneCount,
+      project.clientTotalCount,
+    ),
   };
 }
 

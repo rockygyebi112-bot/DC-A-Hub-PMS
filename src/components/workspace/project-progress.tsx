@@ -1,3 +1,5 @@
+import { completionPercent } from '@/lib/format/progress';
+
 export function ProjectProgress({
   done,
   total,
@@ -7,7 +9,7 @@ export function ProjectProgress({
   total: number;
   unit?: string;
 }) {
-  const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+  const percent = completionPercent(done, total);
 
   return (
     <div className="space-y-2">

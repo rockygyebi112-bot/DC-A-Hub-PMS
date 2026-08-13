@@ -5,6 +5,7 @@ import { SectionCard } from "@/components/admin/ui/section-card";
 import { StatusPill } from "@/components/admin/ui/status-pill";
 import { ActivityStatus } from "@/components/workspace/status-badge";
 import type { WorkspacePhase } from "@/lib/workspace/queries";
+import { completionPercent } from "@/lib/format/progress";
 
 /**
  * Phases tab content — collapsible per-phase cards with their activity list
@@ -37,7 +38,7 @@ export function ProjectPhases({
         const total = phase.activities.length;
         const done = phase.activities.filter((a) => a.status === "done").length;
         const inProgress = phase.activities.filter((a) => a.status === "in_progress").length;
-        const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+        const pct = completionPercent(done, total);
         const phaseStatus: "planning" | "active" | "completed" =
           total === 0 ? "planning" : done === total ? "completed" : "active";
 

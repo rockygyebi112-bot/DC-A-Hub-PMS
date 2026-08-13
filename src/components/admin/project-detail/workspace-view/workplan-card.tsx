@@ -16,6 +16,7 @@ import { formatDate } from "@/components/admin/project-detail/parts";
 import { cn } from "@/lib/utils";
 import { PhaseBadge, PriorityDot, StatusBadge } from "./badges";
 import type { WVActivity, WVPhase } from "./types";
+import { completionPercent } from "@/lib/format/progress";
 
 function PhaseHeader({
   phase,
@@ -28,7 +29,7 @@ function PhaseHeader({
 }) {
   const total = phase.activities.length;
   const done = phase.activities.filter((a) => a.status === "done").length;
-  const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+  const percent = completionPercent(done, total);
   const barColor =
     total === 0 || done === 0
       ? "bg-muted-foreground/40"

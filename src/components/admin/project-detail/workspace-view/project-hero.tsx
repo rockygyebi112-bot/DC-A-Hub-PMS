@@ -3,12 +3,10 @@ import { Clock, Eye, Pencil, SlidersHorizontal } from "lucide-react";
 import { UserAvatar } from "@/components/admin/ui/user-avatar";
 import { formatRelative } from "@/components/admin/project-detail/parts";
 import type { WorkspaceViewProps } from "./types";
+import { completionPercent } from "@/lib/format/progress";
 
 export function ProjectHero(props: WorkspaceViewProps) {
-  const percent =
-    props.totalCount === 0
-      ? 0
-      : Math.round((props.doneCount / props.totalCount) * 100);
+  const percent = completionPercent(props.doneCount, props.totalCount);
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="min-w-0 space-y-2">

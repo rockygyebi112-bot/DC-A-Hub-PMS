@@ -6,6 +6,7 @@ import { SectionCard } from "@/components/admin/ui/section-card";
 import { ActivityStatus } from "@/components/workspace/status-badge";
 import { PhaseActivities } from "@/components/portal/phase-activities";
 import { cn } from "@/lib/utils";
+import { completionPercent } from "@/lib/format/progress";
 
 type ActivityStatusKey = "not_started" | "in_progress" | "done";
 
@@ -143,7 +144,7 @@ export function PortalWorkplanPhases({
           (a) => a.status === "in_progress",
         ).length;
         const notStarted = total - done - inProgress;
-        const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+        const pct = completionPercent(done, total);
         const phaseStatus: ActivityStatusKey =
           total === 0
             ? "not_started"

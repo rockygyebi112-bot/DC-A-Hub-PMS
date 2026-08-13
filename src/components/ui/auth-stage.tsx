@@ -37,9 +37,12 @@ export function AuthStage() {
           keeping its luminance, which is what separates a tint from a wash. */}
       <div className="absolute inset-0 bg-secondary mix-blend-color" />
 
-      {/* Veil. Heaviest on the side the card sits, lightest on the side the
-          subjects occupy, so the photograph still reads as a photograph. */}
-      <div className="absolute inset-0 bg-linear-105 from-secondary/90 from-25% to-secondary/45" />
+      {/* Veil. Lightest over the subjects on the left, heaviest on the right
+          where the card sits — the glass card is translucent, so the backdrop
+          it samples has to be dark and predictable or its text loses contrast.
+          (This gradient previously ran the other way, burying the subjects
+          under 90% navy and leaving the card on the lightest part.) */}
+      <div className="absolute inset-0 bg-linear-105 from-secondary/55 from-15% to-secondary/94" />
 
       {/* Lifts the very bottom so the footer line keeps its contrast. */}
       <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-secondary/70 to-transparent" />

@@ -429,8 +429,10 @@
   /* Frosted-glass topbar */
   .topbar-glass {
     background: hsl(0 0% 100% / 0.88);
+    /* Authoring the -webkit- pair by hand made Lightning CSS emit only the
+       prefixed form, which current Chromium rejects — this blur had been
+       silently doing nothing. Let the toolchain add prefixes. */
     backdrop-filter: var(--topbar-blur);
-    -webkit-backdrop-filter: var(--topbar-blur);
   }
   .dark .topbar-glass {
     background: hsl(224 14% 10% / 0.78);
@@ -500,8 +502,8 @@
   /* Mobile bottom nav (glassmorphism) */
   .mobile-nav {
     background: hsl(0 0% 100% / 0.85);
+    /* Same silently-dead blur as .topbar-glass — see the note there. */
     backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
   }
   .dark .mobile-nav {
     background: hsl(224 14% 10% / 0.80);
@@ -731,4 +733,75 @@
 @utility row-cv-card {
   content-visibility: auto;
   contain-intrinsic-size: auto 96px;
+}
+
+/* ----------------------------------------------------------------
+   Auth glass surface
+   ----------------------------------------------------------------
+   Translucent card for the auth pages, sampling the photographic stage
+   behind it. Two things make this readable rather than merely pretty:
+
+   1. The stage's veil is ~94% navy where this card sits, so the blurred
+      backdrop is dark and predictable no matter what the photo is doing.
+   2. The scope remaps the theme tokens to a light-on-dark set, the same
+      technique `.sidebar-navy` uses. Without this the card would inherit
+      `--foreground` (near-black in light mode) and put dark text on a
+      dark blur.
+
+   Because the backdrop is always the dark stage, this surface deliberately
+   looks identical in light and dark mode — it is its own scope, not a
+   theme variant. */
+@utility auth-glass {
+  /* Sheen first, so the light appears to catch the top-left edge, then a
+     soft body gradient. Kept in `background` rather than a ::before so
+     there is no stacking-order fight with the card's own content. */
+  background:
+    radial-gradient(110% 65% at 10% -12%, hsl(0 0% 100% / 0.10), transparent 58%),
+    linear-gradient(160deg, hsl(0 0% 100% / 0.09), hsl(0 0% 100% / 0.04) 50%, hsl(0 0% 100% / 0.07));
+  /* No manual -webkit- pair here: Lightning CSS adds prefixes from the
+     project's browser targets, and authoring both made it emit ONLY the
+     prefixed form — which current Chromium no longer accepts, so the blur
+     silently did nothing. */
+  backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid hsl(0 0% 100% / 0.16);
+  box-shadow:
+    inset 0 1px 0 0 hsl(0 0% 100% / 0.22),   /* lit top lip */
+    inset 0 -1px 0 0 hsl(222 60% 4% / 0.18), /* shaded bottom lip */
+    0 24px 60px -12px hsl(222 60% 4% / 0.55),
+    0 2px 8px -2px hsl(222 60% 4% / 0.35);
+
+  color: hsl(0 0% 100%);
+  --foreground: hsl(0 0% 100%);
+  --card-foreground: hsl(0 0% 100%);
+  --muted: hsl(0 0% 100% / 0.10);
+  --muted-foreground: hsl(212 38% 86%);
+  --border: hsl(0 0% 100% / 0.18);
+  /* An input's only affordance here is its border, so it has to clear the 3:1
+     non-text contrast bar (WCAG 1.4.11) against the glass. 0.26 did not. */
+  --input: hsl(0 0% 100% / 0.55);
+  --accent: hsl(0 0% 100% / 0.12);
+  --accent-foreground: hsl(0 0% 100%);
+  /* A solid #2563EB button cannot carry white text at 4.5:1. On this dark
+     ground the button inverts instead: a light brand blue with deep navy
+     text, which clears AA comfortably and reads crisper on glass. */
+  --primary: hsl(207 96% 82%);
+  --primary-foreground: hsl(222 65% 12%);
+  --destructive: hsl(2 92% 78%);
+
+  /* The focus indicator is painted app-wide as `--ring` at 50% alpha. A tinted
+     ring cannot reach the 3:1 that WCAG 1.4.11 asks of a focus indicator on a
+     surface this light — hsl(199 89% 77%) topped out at 2.5:1 under the sheen,
+     and lightening it does not help because ring and glass converge. White
+     does: 3.41:1 at 50% alpha over the lightest glass, 4.24:1 over the rest.
+     Retuning the token beats adding a rule to override the ring, which loses
+     to the app's `*` outline-color rule regardless of specificity. */
+  --ring: hsl(0 0% 100%);
+
+  /* Users who ask for less transparency, or more contrast, get a solid
+     surface. The glass is decoration; legibility is not negotiable. */
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+    background: hsl(224 58% 10%);
+    backdrop-filter: none;
+    border-color: hsl(0 0% 100% / 0.28);
+  }
 }

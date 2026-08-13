@@ -204,7 +204,11 @@
   --card-foreground: hsl(215 20% 90%);
   --popover: hsl(224 13% 16%);
   --popover-foreground: hsl(215 20% 90%);
-  --primary: hsl(217 91% 60%);
+  /* 60% left `text-primary` links at 4.38:1 on --card and 4.16:1 on --popover,
+     both under AA — it only passed on the darkest surface. 64% is the lightest
+     step that clears 4.5:1 on all three, and it raises the contrast of
+     --primary-foreground on primary-filled buttons from 4.88 to 5.64. */
+  --primary: hsl(217 91% 64%);
   --primary-foreground: hsl(224 14% 10%);
   --secondary: hsl(225 80% 16%);
   --secondary-foreground: hsl(0 0% 100%);
@@ -220,7 +224,8 @@
   --destructive: hsl(0 72% 76%);
   --border: hsl(224 10% 22%);
   --input: hsl(224 10% 22%);
-  --ring: hsl(217 91% 60%);
+  /* Tracks --primary so the focus ring stays the same colour as the accent. */
+  --ring: hsl(217 91% 64%);
   --chart-1: hsl(217 91% 60%);
   --chart-2: hsl(192 85% 60%);
   --chart-3: hsl(225 60% 75%);
@@ -419,20 +424,6 @@
   }
   .page-enter {
     animation: pageEnter 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
-  }
-
-  /* Auth background — blue/cyan to match logo */
-  .auth-bg {
-    background:
-      radial-gradient(circle at 18% 22%, hsl(199 89% 48% / 0.18), transparent 55%),
-      radial-gradient(circle at 82% 78%, hsl(187 85% 53% / 0.16), transparent 55%),
-      linear-gradient(135deg, hsl(210 35% 98%) 0%, hsl(204 45% 94%) 60%, hsl(199 50% 90%) 100%);
-  }
-  .dark .auth-bg {
-    background:
-      radial-gradient(circle at 18% 22%, hsl(199 89% 48% / 0.22), transparent 55%),
-      radial-gradient(circle at 82% 78%, hsl(187 85% 53% / 0.18), transparent 55%),
-      linear-gradient(135deg, hsl(222 30% 8%) 0%, hsl(210 40% 12%) 60%, hsl(204 45% 14%) 100%);
   }
 
   /* Frosted-glass topbar */

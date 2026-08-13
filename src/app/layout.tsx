@@ -43,7 +43,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "DC&A Hub PMS",
+  // `template` lets a route set just its own name ("Sign in") and get the
+  // product suffix appended, so tab titles, history and bookmarks are
+  // distinguishable instead of every page reading "DC&A Hub PMS".
+  title: {
+    default: "DC&A Hub PMS",
+    template: "%s · DC&A Hub PMS",
+  },
   description: "DC&A Hub Project Management System",
   // Point the browser tab icon at our DC&A Hub assets. Without this explicit
   // configuration Next.js falls back to its default favicon.

@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { AuthCard } from "@/components/ui/auth-card";
@@ -124,14 +125,18 @@ function LoginForm() {
             className="h-10"
           />
         </AuthField>
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <input
-            type="checkbox"
+        {/* Wrapping label with no `id` on the Checkbox — the pattern already
+            used in uploads-gate and proof-access-button. Passing an `id` makes
+            base-ui point the control's aria-labelledby at `<id>-label`, which
+            leaves it with no accessible name unless that element exists. */}
+        <label className="flex items-center gap-2">
+          <Checkbox
             checked={remember}
-            onChange={(e) => setRemember(e.target.checked)}
-            className="size-4 rounded border-border accent-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            onCheckedChange={(checked) => setRemember(checked === true)}
           />
-          Keep me signed in on this device
+          <span className="text-sm text-muted-foreground">
+            Keep me signed in on this device
+          </span>
         </label>
         <Button
           type="submit"
@@ -141,7 +146,7 @@ function LoginForm() {
           {loading ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" />
-              Signing in...
+              Signing in…
             </>
           ) : (
             "Sign in"

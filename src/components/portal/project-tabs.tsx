@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, FolderOpen, LayoutDashboard, ListChecks } from "lucide-react";
+import { unescoDashboardPath } from "@/lib/unesco-dashboards/routes";
 import { cn } from "@/lib/utils";
 
 type Tab = {
@@ -20,9 +21,11 @@ type Tab = {
 export function PortalProjectTabs({
   projectId,
   hasEvaluation = false,
+  hasDashboards = false,
 }: {
   projectId: string;
   hasEvaluation?: boolean;
+  hasDashboards?: boolean;
 }) {
   const pathname = usePathname();
   const base = `/portal/projects/${projectId}`;
@@ -46,6 +49,14 @@ export function PortalProjectTabs({
       icon: FolderOpen,
       match: (p, b) => p.startsWith(`${b}/uploads`),
     },
+    ...(hasDashboards
+      ? [{
+          href: unescoDashboardPath(projectId),
+          label: "Dashboards",
+          icon: BarChart3,
+          match: (p: string, b: string) => p === `${b}/dashboards` || p.startsWith(`${b}/dashboards/`),
+        }]
+      : []),
     ...(hasEvaluation
       ? [
           {

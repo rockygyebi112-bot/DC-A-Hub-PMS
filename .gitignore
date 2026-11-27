@@ -65,3 +65,6 @@ proposals/**/build-docx.js
 
 # Evaluation-designer: per-run docx build scratch
 evaluations/**/build-docx.js
+
+# Authenticated UNESCO snapshots contain restricted project data.
+/private/unesco-dashboards/

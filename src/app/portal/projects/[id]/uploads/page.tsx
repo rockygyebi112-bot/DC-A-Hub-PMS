@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/admin/ui/page-header";
+import { isUnescoProject } from "@/lib/unesco-dashboards/access";
 import { PortalProjectTabs } from "@/components/portal/project-tabs";
 import { UploadsGate } from "@/components/portal/uploads-gate";
 import { countProjectDocuments, getPortalProject } from "@/lib/portal/queries";
@@ -24,7 +25,7 @@ export default async function PortalProjectUploadsPage({
         title={`${project.name} · Uploads`}
         subtitle="Confidential documents shared with you on this project."
       />
-      <PortalProjectTabs projectId={project.id} />
+      <PortalProjectTabs projectId={project.id} hasDashboards={isUnescoProject(project.id)} />
       <UploadsGate projectId={project.id} totalCount={totalCount} />
     </div>
   );

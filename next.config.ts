@@ -54,7 +54,11 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  outputFileTracingIncludes: {
+    "/api/projects/\\[id\\]/dashboards/\\[slug\\]/content": ["./private/unesco-dashboards/*.html"],
+  },
   experimental: {
+    authInterrupts: true,
     serverActions: {
       // Every upload surface (activity proofs, receipts, internal task
       // documents) posts its files through a Server Action. Next caps a Server
@@ -108,6 +112,16 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: securityHeaders,
+      },
+      {
+        source: "/api/projects/:id/dashboards/:slug/content",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; frame-ancestors 'self'; sandbox allow-scripts; base-uri 'none'; form-action 'none'",
+          },
+        ],
       },
       {
         // Long-lived caching for our static brand assets in /public. The CDN

@@ -14,7 +14,7 @@ export type GuardResult =
  * Wrapped in React `cache()` so layout + page + guard + action share a single
  * round-trip per request instead of each re-querying project_members.
  */
-const getProjectRole = cache(
+export const getProjectRole = cache(
   async (userId: string, projectId: string): Promise<string | null> => {
     const sb = await createClient();
     const { data } = await sb

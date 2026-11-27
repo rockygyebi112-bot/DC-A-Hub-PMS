@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/admin/ui/page-header";
+import { isUnescoProject } from "@/lib/unesco-dashboards/access";
 import { PortalProjectTabs } from "@/components/portal/project-tabs";
 import { PortalWorkplanPhases } from "@/components/portal/workplan-phases";
 import { getPortalProjectDetail } from "@/lib/portal/queries";
@@ -29,7 +30,7 @@ export default async function PortalProjectWorkplanPage({
         subtitle={`${doneActivities} of ${totalActivities} activities completed across ${phases.length} phase${phases.length === 1 ? "" : "s"}.`}
       />
 
-      <PortalProjectTabs projectId={project.id} />
+      <PortalProjectTabs projectId={project.id} hasDashboards={isUnescoProject(project.id)} />
 
       <PortalWorkplanPhases projectId={project.id} phases={phases} />
     </div>

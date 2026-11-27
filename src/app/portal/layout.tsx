@@ -1,3 +1,5 @@
+import { headers } from "next/headers";
+import { isDashboardPagePath } from "@/lib/unesco-dashboards/routes";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
@@ -19,7 +21,10 @@ export default async function PortalLayout({
     getCurrentProfile(),
     getWorkspaceLayoutData("").catch(() => null),
   ]);
-  if (!profile) redirect("/login");
+  if (!profile) {
+    const next = (await headers()).get("x-pms-dashboard-path");
+    redirect(next && isDashboardPagePath(next) ? `/login?next=${encodeURIComponent(next)}` : "/login");
+  }
   const layout = layoutResult ?? { projects: [] };
   const { projects } = layout;
 

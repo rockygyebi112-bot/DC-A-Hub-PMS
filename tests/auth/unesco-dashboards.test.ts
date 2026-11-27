@@ -10,8 +10,10 @@ const mocks = vi.hoisted(() => ({
   role: vi.fn(),
   rpc: vi.fn(),
   read: vi.fn(),
+  guest: vi.fn(),
 }));
 vi.mock("@/lib/auth/session", () => ({ getSessionUser: mocks.session }));
+vi.mock("@/lib/unesco-dashboards/guest-links", () => ({ getGuestDashboardProject: mocks.guest }));
 vi.mock("@/lib/auth/guards", () => ({ getProjectRole: mocks.role }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: () => ({ rpc: mocks.rpc }) }));
 vi.mock("node:fs/promises", () => ({ readFile: mocks.read, default: { readFile: mocks.read } }));
@@ -47,7 +49,7 @@ describe("UNESCO dashboard access", () => {
     expect(mocks.read).not.toHaveBeenCalled();
   });
 
-  it("serves only the summary snapshot for a member with reporting access", async () => {
+  it("serves both snapshots for an active UNESCO project viewer", async () => {
     vi.stubEnv("UNESCO_PROJECT_ID", project);
     mocks.session.mockResolvedValue({ userId: "report-reader", isActive: true });
     mocks.role.mockResolvedValue("viewer");
@@ -59,17 +61,39 @@ describe("UNESCO dashboard access", () => {
     expect(await summary.text()).toBe("<html>summary fixture</html>");
     expect(mocks.read).toHaveBeenCalledWith(join(process.cwd(), "private", "unesco-dashboards", "UNESCO_Youth_in_Work.html"), "utf8");
     const restricted = await request(project, "participant-trajectory");
-    expect(restricted.status).toBe(403);
-    expect(await restricted.text()).toBe("");
+    expect(restricted.status).toBe(200);
+    expect(mocks.read).toHaveBeenCalledWith(join(process.cwd(), "private", "unesco-dashboards", "UNESCO_Participant_Trajectory.html"), "utf8");
+    expect(mocks.read).toHaveBeenCalledTimes(2);
+  });
+
+  it("rechecks guest access for each HTML request and scopes it to the invited dashboard", async () => {
+    const token = "a".repeat(43);
+    const guestRequest = (id: string, slug: string) =>
+      GET(new Request(`https://pms.example/content?guest=${token}`), {
+        params: Promise.resolve({ id, slug }),
+      });
+
+    mocks.guest.mockImplementation(async (_id, slug) => slug === "participant-trajectory" ? project : null);
+    mocks.read.mockResolvedValue("<html>summary fixture</html>");
+    const report = await guestRequest(project, "participant-trajectory");
+    expect(report.status).toBe(200);
+    expect(report.headers.get("cache-control")).toBe("private, no-store");
+    expect((await guestRequest(project, "youth-in-work")).status).toBe(404);
+    expect((await guestRequest(other, "participant-trajectory")).status).toBe(404);
+    mocks.guest.mockResolvedValue(null);
+    expect((await guestRequest(project, "participant-trajectory")).status).toBe(404);
     expect(mocks.read).toHaveBeenCalledTimes(1);
+    expect(mocks.session).not.toHaveBeenCalled();
   });
 
   it.each(["youth-in-work", "participant-trajectory"])("preserves a safe sign-in return to %s", (slug) => {
-    const path = `/portal/projects/${project}/dashboards/${slug}`;
-    const response = proxy(new NextRequest(`https://pms.example${path}`));
-    const location = new URL(response.headers.get("location")!);
-    expect(location.pathname).toBe("/login");
-    expect(safeRedirectPath(location.searchParams.get("next"))).toBe(path);
+    for (const identifier of ["unesco", project]) {
+      const path = `/portal/projects/${identifier}/dashboards/${slug}`;
+      const response = proxy(new NextRequest(`https://pms.example${path}`));
+      const location = new URL(response.headers.get("location")!);
+      expect(location.pathname).toBe("/login");
+      expect(safeRedirectPath(location.searchParams.get("next"))).toBe(path);
+    }
     expect(safeRedirectPath("//example.org")).toBe("/");
   });
 });

@@ -2,9 +2,12 @@ import Link from "next/link";
 import { forbidden, notFound, redirect } from "next/navigation";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { CopyDashboardLink } from "@/components/portal/copy-dashboard-link";
+import { DashboardGuestLink } from "@/components/portal/dashboard-guest-link";
+import { DashboardViewer } from "@/components/portal/dashboard-viewer";
 import { PortalProjectTabs } from "@/components/portal/project-tabs";
 import { getPortalProjectDetail } from "@/lib/portal/queries";
 import { getEvaluationForProject } from "@/lib/evaluations/queries";
+import { createServiceClient } from "@/lib/supabase/server";
 import { getUnescoDashboardAccess } from "@/lib/unesco-dashboards/access";
 import {
   isUnescoDashboardSlug, unescoDashboardPath, unescoDashboards,
@@ -17,14 +20,16 @@ export default async function UnescoDashboardPage({
 }: {
   params: Promise<{ id: string; report?: string[] }>;
 }) {
-  const { id, report = [] } = await params;
+  const { id: projectKey, report = [] } = await params;
+  const id = projectKey === "unesco" ? process.env.UNESCO_PROJECT_ID : projectKey;
+  if (!id) notFound();
   const [slug] = report;
   if (report.length > 1 || (slug !== undefined && !isUnescoDashboardSlug(slug))) notFound();
 
   const access = await getUnescoDashboardAccess(id);
   if (access.status === "missing") notFound();
   if (access.status === "signed-out") {
-    redirect(`/login?next=${encodeURIComponent(unescoDashboardPath(id, slug))}`);
+    redirect(`/login?next=${encodeURIComponent(unescoDashboardPath(slug))}`);
   }
   if (access.status === "denied" || (slug && !access.allowed.includes(slug))) forbidden();
 
@@ -33,6 +38,12 @@ export default async function UnescoDashboardPage({
     getEvaluationForProject(id),
   ]);
   if (!detail) forbidden();
+  const managesInvitations = slug && access.projectRole === "manager";
+  const invitations = managesInvitations
+    ? await createServiceClient().from("unesco_dashboard_guest_links")
+        .select("id, email, expires_at").eq("project_id", id).eq("dashboard_slug", slug)
+        .gt("expires_at", new Date().toISOString()).order("email")
+    : null;
 
   return (
     <div className="min-w-0 space-y-4">
@@ -40,28 +51,25 @@ export default async function UnescoDashboardPage({
       <PortalProjectTabs projectId={id} hasEvaluation={!!evaluation} hasDashboards />
       {slug ? (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-xl font-semibold">{unescoDashboards[slug].title}</h2>
-            <CopyDashboardLink path={unescoDashboardPath(id, slug)} />
-          </div>
-          <iframe
-            className="h-[80dvh] min-h-[24rem] w-full rounded border bg-white"
+          {managesInvitations && (invitations?.data
+            ? <DashboardGuestLink key={slug} projectId={id} slug={slug} invitations={invitations.data} />
+            : <p role="status">Guest invitation management is temporarily unavailable.</p>)}
+          <DashboardViewer
             title={unescoDashboards[slug].title}
-            src={`/api/projects/${id}/dashboards/${slug}/content`}
-            sandbox="allow-scripts"
+            path={unescoDashboardPath(slug)}
+            source={`/api/projects/${id}/dashboards/${slug}/content`}
           />
         </>
       ) : (
         <>
           <h2 className="text-xl font-semibold">Dashboards</h2>
-          {access.allowed.length === 0 && <p>No dashboards are available to your account.</p>}
           <ul className="space-y-2">
             {access.allowed.map((item) => (
               <li key={item} className="flex flex-wrap items-center justify-between gap-2 rounded border p-3">
-                <Link className="font-medium text-primary hover:underline" href={unescoDashboardPath(id, item)}>
+                <Link className="font-medium text-primary hover:underline" href={unescoDashboardPath(item)}>
                   {unescoDashboards[item].title}
                 </Link>
-                <CopyDashboardLink path={unescoDashboardPath(id, item)} />
+                <CopyDashboardLink path={unescoDashboardPath(item)} />
               </li>
             ))}
           </ul>

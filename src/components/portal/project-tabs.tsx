@@ -51,10 +51,12 @@ export function PortalProjectTabs({
     },
     ...(hasDashboards
       ? [{
-          href: unescoDashboardPath(projectId),
+          href: unescoDashboardPath(),
           label: "Dashboards",
           icon: BarChart3,
-          match: (p: string, b: string) => p === `${b}/dashboards` || p.startsWith(`${b}/dashboards/`),
+          match: (p: string, b: string) =>
+              p === unescoDashboardPath() || p.startsWith(`${unescoDashboardPath()}/`) ||
+              p === `${b}/dashboards` || p.startsWith(`${b}/dashboards/`),
         }]
       : []),
     ...(hasEvaluation

@@ -3,10 +3,11 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CopyDashboardLink } from "./copy-dashboard-link";
 import { unescoDashboards, type UnescoDashboardSlug } from "@/lib/unesco-dashboards/routes";
-import { inviteDashboardGuest, revokeDashboardGuest } from "@/lib/unesco-dashboards/guest-link-actions";
+import { createDashboardShareLink, inviteDashboardGuest, revokeDashboardGuest } from "@/lib/unesco-dashboards/guest-link-actions";
 
-type Invitation = { id: string; email: string; expires_at: string };
+type Invitation = { id: string; email: string | null; expires_at: string };
 
 export function DashboardGuestLink({ projectId, slug, invitations }: { projectId: string; slug: UnescoDashboardSlug; invitations: Invitation[] }) {
   const [entries, setEntries] = useState(invitations);
@@ -29,13 +30,27 @@ export function DashboardGuestLink({ projectId, slug, invitations }: { projectId
     });
   }
 
+  function createShareLink() {
+    startTransition(async () => {
+      try {
+        const result = await createDashboardShareLink(projectId, slug);
+        if (!result.link) return setMessage(result.error ?? "The share link could not be created.");
+        const link = result.link;
+        setEntries((current) => [...current, link]);
+        setMessage("Share link created. Use Copy share link to share it.");
+      } catch {
+        setMessage("The share link could not be created.");
+      }
+    });
+  }
+
   function revoke(id: string) {
     startTransition(async () => {
       try {
         const result = await revokeDashboardGuest(projectId, slug, id);
         if (result.error) return setMessage(result.error);
         setEntries((current) => current.filter((item) => item.id !== id));
-        setMessage("Invitation revoked.");
+        setMessage("Access revoked.");
       } catch {
         setMessage("The invitation could not be revoked.");
       }
@@ -44,17 +59,30 @@ export function DashboardGuestLink({ projectId, slug, invitations }: { projectId
 
   return (
     <section className="space-y-3 rounded border p-3">
-      <h2 className="font-semibold">Manage {unescoDashboards[slug].title} invitations</h2>
+      <h2 className="font-semibold">Share {unescoDashboards[slug].title}</h2>
+      <p className="text-sm">Anyone with a share link can open this dashboard for seven days without signing in. Revoke the link at any time.</p>
+      <Button type="button" size="sm" disabled={pending} onClick={createShareLink}>Create share link</Button>
+      <ul className="space-y-2">
+        {entries.filter((entry) => entry.email === null).map((entry) => (
+          <li key={entry.id} className="flex flex-wrap items-center gap-2 text-sm">
+            <CopyDashboardLink path={`/share/dashboards/${entry.id}`} label="Copy share link" />
+            <span className="text-muted-foreground">Expires {entry.expires_at.slice(0, 10)} UTC</span>
+            <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => revoke(entry.id)}>Revoke share link</Button>
+          </li>
+        ))}
+      </ul>
+      <h3 className="font-semibold">Email invitations</h3>
       <p className="text-sm">Invited guests verify their email and receive access for seven days. Sending a new invitation to the same address resets its access.</p>
       <form className="flex flex-wrap items-center gap-2" onSubmit={(event) => { event.preventDefault(); invite(); }}>
         <Input className="w-full sm:w-64" type="email" aria-label="Guest email address" placeholder="Email address" value={email} onChange={(event) => setEmail(event.target.value)} required />
         <Button type="submit" size="sm" disabled={pending}>Send invitation</Button>
       </form>
       <ul className="space-y-2">
-        {entries.map((entry) => (
+        {entries.filter((entry) => entry.email !== null).map((entry) => (
           <li key={entry.id} className="flex flex-wrap items-center gap-2 text-sm">
             <span className="break-all">{entry.email}</span>
             <span className="text-muted-foreground">Expires {entry.expires_at.slice(0, 10)} UTC</span>
+            <CopyDashboardLink path={`/share/dashboards/${entry.id}`} label="Copy guest link" />
             <Button type="button" size="sm" variant="outline" aria-label={`Revoke invitation for ${entry.email}`} disabled={pending} onClick={() => revoke(entry.id)}>Revoke</Button>
           </li>
         ))}

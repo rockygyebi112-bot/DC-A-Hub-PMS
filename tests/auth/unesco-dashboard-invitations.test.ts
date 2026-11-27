@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { inviteDashboardGuest, revokeDashboardGuest } from "@/lib/unesco-dashboards/guest-link-actions";
+import { createDashboardShareLink, inviteDashboardGuest, revokeDashboardGuest } from "@/lib/unesco-dashboards/guest-link-actions";
 import { getGuestDashboardProject, hashGuestLink } from "@/lib/unesco-dashboards/guest-links";
 
 const mocks = vi.hoisted(() => ({
@@ -58,10 +58,42 @@ describe("UNESCO email invitations", () => {
     }), expect.anything());
   });
 
+  it("creates a manager-only share link without an email or delivery", async () => {
+    mocks.access.mockResolvedValue({ status: "member", projectRole: "viewer" });
+    expect(await createDashboardShareLink(project, "participant-trajectory")).toHaveProperty("error");
+    expect(mocks.from).not.toHaveBeenCalled();
+
+    mocks.access.mockResolvedValue({ status: "member", projectRole: "manager", userId: "manager" });
+    const link = { id: invitation, email: null, expires_at: "2027-01-01T00:00:00Z" };
+    const insert = vi.fn().mockReturnValue({ select: () => ({ single: async () => ({ data: link }) }) });
+    mocks.from.mockReturnValue({ insert });
+    expect(await createDashboardShareLink(project, "participant-trajectory")).toEqual({ link });
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({
+      project_id: project, dashboard_slug: "participant-trajectory", email: null,
+    }));
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
+
+  it("serves a live share link without cookies and rejects it after revocation", async () => {
+    vi.stubEnv("UNESCO_PROJECT_ID", project);
+    const lookup = vi.fn().mockResolvedValue({ data: {
+      id: invitation, project_id: project, dashboard_slug: "participant-trajectory",
+      email: null, session_hash: null,
+    } });
+    mocks.from.mockReturnValue({ select: () => ({
+      eq: () => ({ gt: () => ({ maybeSingle: lookup }) }),
+    }) });
+    expect(await getGuestDashboardProject(invitation, "participant-trajectory")).toBe(project);
+    expect(await getGuestDashboardProject(invitation, "youth-in-work")).toBeNull();
+    expect(mocks.cookie).not.toHaveBeenCalled();
+    lookup.mockResolvedValue({ data: null });
+    expect(await getGuestDashboardProject(invitation, "participant-trajectory")).toBeNull();
+  });
+
   it("requires the verified browser cookie and denies a revoked invitation", async () => {
     vi.stubEnv("UNESCO_PROJECT_ID", project);
     const session = "a".repeat(43);
-    const lookup = vi.fn().mockResolvedValue({ data: { project_id: project, dashboard_slug: "participant-trajectory", session_hash: hashGuestLink(session) } });
+    const lookup = vi.fn().mockResolvedValue({ data: { id: invitation, email, project_id: project, dashboard_slug: "participant-trajectory", session_hash: hashGuestLink(session) } });
     const eq = vi.fn().mockReturnValue({ gt: () => ({ maybeSingle: lookup }) });
     mocks.from.mockReturnValue({ select: () => ({ eq }) });
 

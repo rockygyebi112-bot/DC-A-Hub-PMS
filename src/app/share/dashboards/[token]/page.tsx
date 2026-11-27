@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { DashboardViewer } from "@/components/portal/dashboard-viewer";
 import { DashboardGuestVerification } from "@/components/portal/dashboard-guest-verification";
-import { getActiveInvitation, guestTokenPattern, matchesGuestSession } from "@/lib/unesco-dashboards/guest-links";
+import { canOpenGuestDashboard, getActiveInvitation, guestTokenPattern } from "@/lib/unesco-dashboards/guest-links";
 import { unescoDashboards } from "@/lib/unesco-dashboards/routes";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export default async function GuestDashboardPage({ params, searchParams }: {
   if (!invitation) notFound();
   const slug = invitation.dashboard_slug;
   const { title } = unescoDashboards[slug];
-  if (!(await matchesGuestSession(id, invitation.session_hash))) {
+  if (!(await canOpenGuestDashboard(invitation))) {
     return (
       <main className="mx-auto max-w-xl space-y-4 p-6">
         <h1 className="text-2xl font-semibold">{title} invitation</h1>

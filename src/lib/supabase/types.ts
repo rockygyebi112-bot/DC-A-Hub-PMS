@@ -1396,7 +1396,7 @@ export type Database = {
           challenge_hash: string | null
           dashboard_slug: string
           created_by: string
-          email: string
+          email: string | null
           expires_at: string
           id: string
           project_id: string
@@ -1407,7 +1407,7 @@ export type Database = {
           challenge_hash?: string | null
           dashboard_slug: string
           created_by: string
-          email: string
+          email?: string | null
           expires_at: string
           id?: string
           project_id: string
@@ -1418,7 +1418,7 @@ export type Database = {
           challenge_hash?: string | null
           dashboard_slug?: string
           created_by?: string
-          email?: string
+          email?: string | null
           expires_at?: string
           id?: string
           project_id?: string

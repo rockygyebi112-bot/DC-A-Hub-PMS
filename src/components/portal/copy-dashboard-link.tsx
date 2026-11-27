@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-export function CopyDashboardLink({ path, label = "Copy dashboard link" }: { path: string; label?: string }) {
+export function CopyDashboardLink({ path, label = "Copy PMS link" }: { path: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   const [fallback, setFallback] = useState("");
 

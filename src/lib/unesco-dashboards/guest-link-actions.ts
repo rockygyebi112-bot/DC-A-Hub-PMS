@@ -54,9 +54,25 @@ export async function inviteDashboardGuest(projectId: string, slug: UnescoDashbo
     challenge_hash: hashGuestLink(token),
     challenge_expires_at: new Date(now + 15 * 60 * 1000).toISOString(),
   }, { onConflict: "project_id,dashboard_slug,email" }).select("id, email, expires_at").single();
-  if (error || !data) return { error: "The invitation could not be created." };
+  if (error || !data || !data.email) return { error: "The invitation could not be created." };
   const sent = await deliver(data.email, `/share/dashboards/${data.id}?verify=${token}`, false, slug);
-  return { invitation: data, sent };
+  return { invitation: { ...data, email: data.email }, sent };
+}
+
+export async function createDashboardShareLink(projectId: string, slug: UnescoDashboardSlug) {
+  const access = await getUnescoDashboardAccess(projectId);
+  if (!isUnescoDashboardSlug(slug) || access.status !== "member" || access.projectRole !== "manager") {
+    return { error: "Only UNESCO project managers can create share links." };
+  }
+  const { data, error } = await createServiceClient().from("unesco_dashboard_guest_links").insert({
+    project_id: projectId,
+    dashboard_slug: slug,
+    created_by: access.userId,
+    email: null,
+    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  }).select("id, email, expires_at").single();
+  if (error || !data) return { error: "The share link could not be created." };
+  return { link: data };
 }
 
 export async function revokeDashboardGuest(projectId: string, slug: UnescoDashboardSlug, id: string) {
@@ -71,7 +87,7 @@ export async function revokeDashboardGuest(projectId: string, slug: UnescoDashbo
 
 export async function requestDashboardGuestVerification(id: string) {
   const invitation = await getActiveInvitation(id);
-  if (!invitation) return;
+  if (!invitation?.email) return;
   const token = randomBytes(32).toString("base64url");
   const now = Date.now();
   const hash = hashGuestLink(token);
@@ -101,6 +117,7 @@ export async function verifyDashboardGuest(id: string, token: string) {
     .update({ challenge_hash: null, challenge_expires_at: null, session_hash: hashGuestLink(session) })
     .eq("id", id)
     .eq("project_id", projectId)
+    .not("email", "is", null)
     .eq("challenge_hash", hashGuestLink(token))
     .gt("challenge_expires_at", now)
     .gt("expires_at", now)

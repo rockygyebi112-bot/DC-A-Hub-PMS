@@ -4,6 +4,7 @@ import { getResend, getEmailFrom } from "./client";
 
 export type EmailCategory =
   | "invite"
+  | "dashboard_invitation"
   | "password_reset"
   | "email_change"
   | "activity_notification"

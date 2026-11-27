@@ -10,11 +10,11 @@ export function isUnescoDashboardSlug(value: string): value is UnescoDashboardSl
   return unescoDashboardSlugs.some((slug) => slug === value);
 }
 
-export function unescoDashboardPath(projectId: string, slug?: UnescoDashboardSlug) {
-  const base = `/portal/projects/${projectId}/dashboards`;
+export function unescoDashboardPath(slug?: UnescoDashboardSlug) {
+  const base = "/portal/projects/unesco/dashboards";
   return slug ? `${base}/${slug}` : base;
 }
 
 export function isDashboardPagePath(path: string) {
-  return /^\/portal\/projects\/[\da-f-]+\/dashboards(?:\/(?:youth-in-work|participant-trajectory))?$/i.test(path);
+  return /^\/portal\/projects\/(?:unesco|[\da-f-]+)\/dashboards(?:\/(?:youth-in-work|participant-trajectory))?$/i.test(path);
 }

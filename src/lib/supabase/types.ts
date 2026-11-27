@@ -1390,6 +1390,50 @@ export type Database = {
         }
         Relationships: []
       }
+      unesco_dashboard_guest_links: {
+        Row: {
+          challenge_expires_at: string | null
+          challenge_hash: string | null
+          dashboard_slug: string
+          created_by: string
+          email: string
+          expires_at: string
+          id: string
+          project_id: string
+          session_hash: string | null
+        }
+        Insert: {
+          challenge_expires_at?: string | null
+          challenge_hash?: string | null
+          dashboard_slug: string
+          created_by: string
+          email: string
+          expires_at: string
+          id?: string
+          project_id: string
+          session_hash?: string | null
+        }
+        Update: {
+          challenge_expires_at?: string | null
+          challenge_hash?: string | null
+          dashboard_slug?: string
+          created_by?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          project_id?: string
+          session_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unesco_dashboard_guest_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_notifications: {
         Row: {
           actor_name: string | null

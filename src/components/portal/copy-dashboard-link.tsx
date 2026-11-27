@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-export function CopyDashboardLink({ path }: { path: string }) {
+export function CopyDashboardLink({ path, label = "Copy dashboard link" }: { path: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   const [fallback, setFallback] = useState("");
 
@@ -22,7 +22,7 @@ export function CopyDashboardLink({ path }: { path: string }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
       <Button type="button" size="sm" variant="outline" onClick={copy}>
-        Copy dashboard link
+        {label}
       </Button>
       <span role="status" className="text-sm">{copied && "Link copied"}</span>
       {fallback && (

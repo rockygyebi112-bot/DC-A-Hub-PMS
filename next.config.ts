@@ -114,6 +114,14 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       {
+        source: "/share/dashboards/:token",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+      {
         source: "/api/projects/:id/dashboards/:slug/content",
         headers: [
           { key: "X-Frame-Options", value: "SAMEORIGIN" },

@@ -47,8 +47,15 @@ describe("UNESCO email invitations", () => {
     expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({
       to: email,
       subject: expect.stringContaining("Participant Trajectory"),
-      text: expect.stringContaining(`https://pms.example/share/dashboards/${invitation}`),
+      text: expect.stringContaining(`https://pms.example/share/dashboards/${invitation}?verify=`),
     }));
+    const message = mocks.send.mock.calls[0]?.[0]?.text as string;
+    const token = new URL(message.split("\n").at(-1)!).searchParams.get("verify");
+    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
+      challenge_hash: hashGuestLink(token!),
+      challenge_expires_at: expect.any(String),
+    }), expect.anything());
   });
 
   it("requires the verified browser cookie and denies a revoked invitation", async () => {

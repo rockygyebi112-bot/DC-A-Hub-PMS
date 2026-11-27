@@ -9,14 +9,14 @@ export function DashboardGuestVerification({ id, token }: { id: string; token?: 
   const [pending, startTransition] = useTransition();
   return (
     <div className="space-y-3">
-      <p>Verify the email address that received this invitation to open the dashboard.</p>
+      <p>{token ? "Confirm access to open the dashboard in this browser." : "Request a fresh access link at the invited email address."}</p>
       {token && <Button type="button" disabled={pending} onClick={() => startTransition(async () => {
         if (!(await verifyDashboardGuest(id, token))) setMessage("This verification link has expired or already been used.");
-      })}>Verify and open dashboard</Button>}
+      })}>Open dashboard</Button>}
       <Button type="button" variant="outline" disabled={pending} onClick={() => startTransition(async () => {
         await requestDashboardGuestVerification(id);
         setMessage("Check the invited inbox for a verification link. You can request another after one minute.");
-      })}>Email me a verification link</Button>
+      })}>Email a fresh link</Button>
       <p role="status">{message}</p>
     </div>
   );

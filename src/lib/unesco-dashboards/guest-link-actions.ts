@@ -18,7 +18,7 @@ async function deliver(email: string, path: string, verification: boolean, slug:
   const title = unescoDashboards[slug].title;
   const message = verification
     ? `Use this one-time link to verify your email and open ${title}. It expires in 15 minutes.`
-    : `You were invited to view the UNESCO ${title} dashboard. Open the invitation to verify your email.`;
+    : `You were invited to view the UNESCO ${title} dashboard. Open the link to confirm access in your browser. The link expires in 15 minutes, and you can request a fresh link from the same page.`;
   try {
     const result = await sendEmail({
       to: email,
@@ -41,19 +41,21 @@ export async function inviteDashboardGuest(projectId: string, slug: UnescoDashbo
   const email = emailSchema.safeParse(emailInput);
   if (!email.success) return { error: "Enter a valid email address." };
 
+  const token = randomBytes(32).toString("base64url");
+  const now = Date.now();
   const sb = createServiceClient();
   const { data, error } = await sb.from("unesco_dashboard_guest_links").upsert({
     project_id: projectId,
     dashboard_slug: slug,
     created_by: access.userId,
     email: email.data,
-    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    expires_at: new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString(),
     session_hash: null,
-    challenge_hash: null,
-    challenge_expires_at: null,
+    challenge_hash: hashGuestLink(token),
+    challenge_expires_at: new Date(now + 15 * 60 * 1000).toISOString(),
   }, { onConflict: "project_id,dashboard_slug,email" }).select("id, email, expires_at").single();
   if (error || !data) return { error: "The invitation could not be created." };
-  const sent = await deliver(data.email, `/share/dashboards/${data.id}`, false, slug);
+  const sent = await deliver(data.email, `/share/dashboards/${data.id}?verify=${token}`, false, slug);
   return { invitation: data, sent };
 }
 

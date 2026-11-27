@@ -28,12 +28,16 @@ export async function getActiveInvitation(id: string) {
   return { ...data, dashboard_slug: data.dashboard_slug };
 }
 
-export async function matchesGuestSession(id: string, sessionHash: string | null) {
+export async function canOpenGuestDashboard(invitation: { id: string; email: string | null; session_hash: string | null }) {
+  return invitation.email === null || await matchesGuestSession(invitation.id, invitation.session_hash);
+}
+
+async function matchesGuestSession(id: string, sessionHash: string | null) {
   const token = (await cookies()).get(guestCookie(id))?.value;
   return !!(sessionHash && token && guestTokenPattern.test(token) && hashGuestLink(token) === sessionHash);
 }
 
 export async function getGuestDashboardProject(invitationId: string, slug: UnescoDashboardSlug) {
   const invitation = await getActiveInvitation(invitationId);
-  return invitation?.dashboard_slug === slug && await matchesGuestSession(invitationId, invitation.session_hash) ? invitation.project_id : null;
+  return invitation?.dashboard_slug === slug && await canOpenGuestDashboard(invitation) ? invitation.project_id : null;
 }

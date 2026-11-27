@@ -33,7 +33,10 @@ export async function GET(
     join(process.cwd(), "private", "unesco-dashboards", unescoDashboards[slug].filename),
     "utf8",
   );
-  return new Response(html, {
+  const report = html
+    .replace("total:'Outcome interviews'", "total:'Participant'")
+    .replace("chart('How participants linked their work to DARE'", "chart('Youth in Work Category'");
+  return new Response(report, {
     headers: { ...privateHeaders, "Content-Type": "text/html; charset=utf-8" },
   });
 }

@@ -66,6 +66,16 @@ describe("UNESCO dashboard access", () => {
     expect(mocks.read).toHaveBeenCalledTimes(2);
   });
 
+  it.each(["youth-in-work", "participant-trajectory"])("updates only the requested labels in %s", async (slug) => {
+    vi.stubEnv("UNESCO_PROJECT_ID", project);
+    mocks.session.mockResolvedValue({ userId: "report-reader", isActive: true });
+    mocks.role.mockResolvedValue("viewer");
+    mocks.rpc.mockResolvedValue({ data: true });
+    mocks.read.mockResolvedValue("total:'Outcome interviews';chart('How participants linked their work to DARE');table(['Outcome interviews'])");
+    const report = await request(project, slug);
+    expect(await report.text()).toBe("total:'Participant';chart('Youth in Work Category');table(['Outcome interviews'])");
+  });
+
   it("rechecks guest access for each HTML request and scopes it to the invited dashboard", async () => {
     const token = "a".repeat(43);
     const guestRequest = (id: string, slug: string) =>

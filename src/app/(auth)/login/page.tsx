@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -80,7 +81,7 @@ function LoginForm() {
     // App Router's cached RSC result for "/" — which, from the logged-out
     // state, is a redirect back to /login — causing a login loop. A full
     // load forces a fresh server request that sees the new auth cookie.
-    window.location.assign("/");
+    window.location.assign(safeRedirectPath(searchParams.get("next")));
   }
 
   return (

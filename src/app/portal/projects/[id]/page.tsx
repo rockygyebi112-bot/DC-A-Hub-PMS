@@ -8,6 +8,7 @@ import {
   WorkplanCard,
 } from "@/components/portal/project-summary-cards";
 import { NeedHelpCard } from "@/components/portal/side-cards";
+import { isUnescoProject } from "@/lib/unesco-dashboards/access";
 import { PortalProjectTabs } from "@/components/portal/project-tabs";
 import { WorkplanProgressTable } from "@/components/portal/workplan-progress-table";
 import { getEvaluationForProject } from "@/lib/evaluations/queries";
@@ -69,6 +70,7 @@ export default async function PortalProjectPage({
       <PortalProjectTabs
         projectId={project.id}
         hasEvaluation={!!evaluation}
+        hasDashboards={isUnescoProject(project.id)}
       />
 
       {/* Summary cards. Manager + timeline + overall progress used to live

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isDashboardPagePath } from "@/lib/unesco-dashboards/routes";
 
 /**
  * Next.js proxy (formerly middleware).
@@ -66,10 +67,16 @@ export function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
+    if (isDashboardPagePath(pathname)) url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  if (!pathname.startsWith("/portal/")) return NextResponse.next();
+
+  const headers = new Headers(request.headers);
+  headers.delete("x-pms-dashboard-path");
+  if (isDashboardPagePath(pathname)) headers.set("x-pms-dashboard-path", pathname);
+  return NextResponse.next({ request: { headers } });
 }
 
 export const config = {

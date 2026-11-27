@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 
+import { PortalProjectTabs } from '@/components/portal/project-tabs';
+import { isUnescoProject } from '@/lib/unesco-dashboards/access';
 import { DashboardView } from '@/components/evaluations/dashboard-view';
 import { getEvaluation, getEvaluationForProject } from '@/lib/evaluations/queries';
 import { getPortalProjectDetail } from '@/lib/portal/queries';
@@ -33,7 +35,7 @@ export default async function PortalDashboardPage({
   );
   if (!hh) notFound();
 
-  return (
+  const dashboard = (
     <DashboardView
       projectId={projectId}
       evaluationId={ev.id}
@@ -50,4 +52,10 @@ export default async function PortalDashboardPage({
       showStaffControls={false}
     />
   );
+  return isUnescoProject(projectId) ? (
+    <div className="space-y-6">
+      <PortalProjectTabs projectId={projectId} hasEvaluation hasDashboards />
+      {dashboard}
+    </div>
+  ) : dashboard;
 }
